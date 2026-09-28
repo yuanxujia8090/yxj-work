@@ -17,21 +17,25 @@ SOURCE="$(cd "$SOURCE" && pwd -P)"
 INSTALLED="$(cd "$INSTALLED" && pwd -P)"
 fail() { printf 'check-workflow: %s\n' "$1" >&2; exit 1; }
 
-for skill in yxj-work yxj-work-long yxj-work-handoff; do
+runtime_skills() { grep -vE '^[[:space:]]*(#|$)' "$SOURCE/scripts/runtime-skills.txt"; }
+
+while IFS= read -r skill; do
   [[ -d "$INSTALLED/$skill" ]] || fail "missing installed $skill"
   marker="$INSTALLED/$skill/.yxj-work-installed"
   [[ -f "$marker" ]] || fail "missing install marker for $skill"
   grep -Fqx "source=$SOURCE" "$marker" || fail "invalid install source for $skill"
-done
+done < <(runtime_skills)
 
-# Compare all source files under skills. The marker is intentionally ignored.
-while IFS= read -r -d '' src; do
-  rel="${src#"$SOURCE/"}"
-  [[ "$rel" == skills/* ]] || continue
-  dst="$INSTALLED/${rel#skills/}"
-  [[ -f "$dst" ]] || fail "missing installed file $rel"
-  cmp -s "$src" "$dst" || fail "installed content differs: $rel"
-done < <(find "$SOURCE/skills" -type f -print0)
+# Compare every runtime skill's source files. The marker is intentionally ignored.
+# Non-runtime material under skills/ (see skills/README.md) is not installed, so it is not compared.
+while IFS= read -r skill; do
+  while IFS= read -r -d '' src; do
+    rel="${src#"$SOURCE/"}"
+    dst="$INSTALLED/${rel#skills/}"
+    [[ -f "$dst" ]] || fail "missing installed file $rel"
+    cmp -s "$src" "$dst" || fail "installed content differs: $rel"
+  done < <(find "$SOURCE/skills/$skill" -type f -print0)
+done < <(runtime_skills)
 
 # Installed runtime files must preserve the same boundary checks.
 if grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$INSTALLED/yxj-work" "$INSTALLED/yxj-work-long" "$INSTALLED/yxj-work-handoff"; then

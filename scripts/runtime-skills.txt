@@ -1,0 +1,6 @@
+# Runtime skills: the only directories install.sh copies into ~/.pi/agent/skills.
+# Everything else under skills/ is repository material (see skills/README.md) and is not installed.
+# One directory name per line; blank lines and # comments are ignored.
+yxj-work
+yxj-work-long
+yxj-work-handoff

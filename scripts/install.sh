@@ -17,8 +17,12 @@ done
 bash "$ROOT/scripts/check-repo.sh"
 mkdir -p "$DEST"
 
+runtime_skills() { grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/runtime-skills.txt"; }
+skill_list="$(runtime_skills)"
+[[ -n "$skill_list" ]] || { printf 'install: %s lists no skill\n' "$ROOT/scripts/runtime-skills.txt" >&2; exit 1; }
+
 # Validate every target before changing any target. This prevents a partial update.
-for skill in yxj-work yxj-work-long yxj-work-handoff; do
+while IFS= read -r skill; do
   dst="$DEST/$skill"
   marker="$dst/.yxj-work-installed"
   if [[ -e "$dst" && "$UPDATE" -ne 1 ]]; then
@@ -33,15 +37,15 @@ for skill in yxj-work yxj-work-long yxj-work-handoff; do
     printf 'install: refusing to update %s because it belongs to another source repository\n' "$dst" >&2
     exit 1
   fi
-done
+done < <(runtime_skills)
 
-for skill in yxj-work yxj-work-long yxj-work-handoff; do
+while IFS= read -r skill; do
   src="$ROOT/skills/$skill"
   dst="$DEST/$skill"
   rm -rf "$dst"
   mkdir -p "$dst"
   cp -R "$src"/. "$dst"/
   printf 'source=%s\ninstalled_at=%s\n' "$ROOT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$dst/.yxj-work-installed"
-done
+done < <(runtime_skills)
 
 printf 'install: installed yxj-work skills into %s\n' "$DEST"
