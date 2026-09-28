@@ -26,13 +26,18 @@ for file in "$ROOT"/skills/yxj-work/SKILL.md "$ROOT"/skills/yxj-work-long/SKILL.
   [[ -f "$file" ]] || fail "missing runtime file $file"
 done
 
+# Every project skill is user-invoked only; a missing marker would allow automatic injection.
+while IFS= read -r file; do
+  grep -Fqx 'disable-model-invocation: true' "$file" || fail "skill allows automatic invocation: ${file#"$ROOT/"}"
+done < <(find "$ROOT/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -print | sort)
+
 # Every listed runtime skill must exist; the list is the single source of truth for install.sh.
 while IFS= read -r skill; do
   [[ -f "$ROOT/skills/$skill/SKILL.md" ]] || fail "runtime-skills.txt lists missing skill: $skill"
 done < <(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/runtime-skills.txt")
 
 # The English marker is checked separately below; the Chinese/English skills use the numeric marker.
-for marker in 'name: yxj-work' 'name: yxj-work-long' 'name: yxj-work-handoff' '.work-docs' 'status: done' 'blocked_by' 'attempted_paths' 'unblock_condition' 'next_action' 'external_skill_write_outside_work_docs' '连续 3 次' '20 次工具调用' '30 次工具调用' '60 次工具调用' '30 分钟' 'calls_since_progress' 'last_progress_at' 'budget' 'strategy_fingerprints' 'evidence freshness' 'index.md' 'source=' 'static'; do
+for marker in 'name: yxj-work' 'name: yxj-work-long' 'name: yxj-work-handoff' '.work-docs' 'status: done' 'blocked_by' 'attempted_paths' 'unblock_condition' 'next_action' 'external_skill_write_outside_work_docs' '连续 3 次' '20 次工具调用' '30 次工具调用' '60 次工具调用' '30 分钟' 'calls_since_progress' 'calls_since_progress' 'last_progress_at' 'budget' 'strategy_fingerprints' 'evidence freshness' 'index.md' 'source=' 'static' '只能由用户主动调用' '自动扫描、推荐、注入' '替用户触发'; do
   grep -R -F -- "$marker" "$ROOT/skills" >/dev/null || fail "missing marker: $marker"
 done
 
