@@ -1,0 +1,40 @@
+run_at: 2026-09-28T11:23:46Z
+
+== bash -n scripts/*.sh ==
+bash -n: scripts/check-repo.sh: passed
+bash -n: scripts/check-state.sh: passed
+bash -n: scripts/check-workflow.sh: passed
+bash -n: scripts/install.sh: passed
+bash -n: scripts/test-fixtures.sh: passed
+bash -n: scripts/test-install.sh: passed
+
+== check-repo ==
+check-repo: passed
+
+== test-install ==
+test-install: passed
+
+== test-fixtures ==
+fixtures: passed
+
+== temporary install/check-workflow ==
+check-repo: passed
+install: installed yxj-work skills into /var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/tmp.ZP7fumEd2w
+check-workflow: passed
+temporary_install_dir: /var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/tmp.ZP7fumEd2w
+
+== check-state current task ==
+check-state: passed
+
+== old skill hashes ==
+/Users/yuanxj/.pi/agent/skills/yxj-mode/playbooks/review.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode/playbooks/ops.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode/playbooks/design.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode-long/SKILL.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode/playbooks/plan.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode/playbooks/bugfix.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-handoff/SKILL.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode/SKILL.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode/playbooks/exec.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode/playbooks/investigate.md: OK
+/Users/yuanxj/.pi/agent/skills/yxj-mode/scripts/check-plan.sh: OK
