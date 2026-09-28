@@ -24,7 +24,8 @@ For a task running in `<execution-root>`:
 ```
 
 - `{YYYYMMDD}`: local date when the task is first created.
-- `{NN}`: two-digit counter, restarting at `01` each day.
+- `{NN}`: two-digit counter, restarting at `01` each day. Per-day numbering keeps the next number
+  discoverable by listing one day's directories, and keeps the counter at two digits as history grows.
 - `{slug}`: short lowercase kebab-case task name.
 
 Allocate the number before creating the directory:
