@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-- task_id：`yxj-work-independent-workflow-20260928`
+- task_id：`20260928-01-yxj-work-independent-workflow`
 - stage：`handoff`
 - status：`done`
 - 已按推荐选择：两轮安装校验，因为它能在任何删除动作前验证三个目标，避免部分更新。
@@ -45,5 +45,5 @@
 
 ```bash
 cd /Users/yuanxj/Documents/github/yxj-work
-bash scripts/check-state.sh .work-docs/tasks/yxj-work-independent-workflow-20260928
+bash scripts/check-state.sh .work-docs/tasks/20260928-01-yxj-work-independent-workflow
 ```

@@ -8,11 +8,13 @@
 - `yxj-work-long`：跨阶段、跨会话和长时间任务入口。
 - `yxj-work-handoff`：在 `.work-docs/tasks/<task-id>/handoff.md` 写入可恢复交接。
 
+`scripts/runtime-skills.txt` 是运行时清单：`install.sh` 与 `check-workflow.sh` 都只认它列出的目录。`skills/` 下其余目录（27 个外部 skill，见 `skills/README.md`）是仓库素材，不参与安装与一致性校验。
+
 本仓库不修改、覆盖、删除或运行时依赖已有的同类旧 skill。
 
 ## 安装
 
-在本仓库根目录运行：
+安装哪些 skill 由 `scripts/runtime-skills.txt` 决定（默认三个自研入口）。在本仓库根目录运行：
 
 ```bash
 bash scripts/check-repo.sh
@@ -56,6 +58,8 @@ bash scripts/check-workflow.sh \
     ├── audit/
     └── tmp/
 ```
+
+`<task-id>` 是目录名，格式 `{YYYYMMDD}-{NN}-{slug}`（例 `20260928-01-yxj-work-independent-workflow`）：日期为创建当天，`{NN}` 为当日内两位自增序号（不回收空号），`{slug}` 为任务短名。取号与续用规则见 `docs/file-boundary.md`。
 
 所有工作流持久文件必须位于 `.work-docs/`。用户明确指定的项目代码是任务目标，不伪装成工作流文档；第三方 skill 的报告、日志、缓存、下载和中间文件必须能指定到任务目录，否则隔离或阻塞。
 

@@ -14,7 +14,7 @@ disable-model-invocation: true
 
 ## 开工
 
-在当前命令执行目录初始化唯一 `.work-docs`，创建 L3 任务契约和状态。每个阶段写文件范围、done_when、验证命令、依赖和产物位置。父任务及子任务都必须使用唯一 task id。
+在当前命令执行目录初始化唯一 `.work-docs`，创建 L3 任务契约和状态。每个阶段写文件范围、done_when、验证命令、依赖和产物位置。父任务及子任务都必须使用唯一 task id（目录名格式 `{YYYYMMDD}-{NN}-{slug}`，取号规则见 `docs/file-boundary.md`）。
 
 ## 进展、预算和熔断
 

@@ -38,7 +38,7 @@
   - result: `install: installed ...` and `check-workflow: passed`
   - last_edit_at: `2026-09-28T11:22:57Z`
   - layer: `runtime/local`
-- command: `bash scripts/check-state.sh .work-docs/tasks/yxj-work-independent-workflow-20260928`
+- command: `bash scripts/check-state.sh .work-docs/tasks/20260928-01-yxj-work-independent-workflow`
   - run_at: `2026-09-28T11:23:46Z`
   - result: `check-state: passed`
   - last_edit_at: `2026-09-28T11:22:57Z`

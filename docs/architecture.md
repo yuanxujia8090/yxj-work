@@ -16,7 +16,7 @@ Generic Pi skills remain external dependencies. They are not copied or renamed m
 
 1. Classify the request as L0 fast-answer or L1/L2/L3 work.
 2. For L1/L2/L3, resolve the current execution directory and initialize one `.work-docs` root.
-3. Create or reuse a task directory keyed by `task_id`.
+3. Create or reuse a task directory named `{YYYYMMDD}-{NN}-{slug}` (format and number-allocation rule: `docs/file-boundary.md`); the `task_id` field equals that directory name.
 4. Write contract/state before durable work.
 5. Run the selected playbook and record evidence.
 6. Verify required layers and apply the done gate.

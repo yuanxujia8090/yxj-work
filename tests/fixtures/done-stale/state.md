@@ -1,4 +1,4 @@
-task_id: fixture-done-stale
+task_id: 20260101-01-fixture-done-stale
 level: L1
 stage: verify
 status: done

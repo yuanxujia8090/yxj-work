@@ -15,6 +15,27 @@ For a task running in `<execution-root>`:
 └── tmp/
 ```
 
+## Task id format
+
+`<task-id>` is the task directory name, never a bare slug:
+
+```text
+{YYYYMMDD}-{NN}-{slug}          e.g. 20260928-01-yxj-work-independent-workflow
+```
+
+- `{YYYYMMDD}`: local date when the task is first created.
+- `{NN}`: two-digit counter, restarting at `01` each day.
+- `{slug}`: short lowercase kebab-case task name.
+
+Allocate the number before creating the directory:
+
+1. Read `.work-docs/index.md`. If an in-progress task covers the same scope, reuse its id; do not allocate a new one.
+2. Otherwise list `.work-docs/tasks/` and take the highest `{NN}` among directories starting with today's date, then add 1.
+3. Never reuse or renumber the number of a task that was completed or removed.
+4. Append the new task to `.work-docs/index.md`.
+
+The `task_id` field in `contract.md` and `state.md` equals the full directory name, so the task stays locatable from its own records.
+
 - `outputs/`: final reports, designs, plans, manuals.
 - `evidence/`: command output, source pointers, reproducible measurements, failure evidence.
 - `audit/`: decisions, checkpoints, work-in-progress and failure records.

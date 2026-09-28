@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # yxj-work-handoff
 
-交接文件只能写入当前任务的 `.work-docs/tasks/<task-id>/handoff.md`，不得写入工作区外部的交接目录。
+交接文件只能写入当前任务的 `.work-docs/tasks/<task-id>/handoff.md`，不得写入工作区外部的交接目录。`<task-id>` 是完整目录名，形如 `20260928-01-yxj-work-independent-workflow`。
 
 执行顺序：
 

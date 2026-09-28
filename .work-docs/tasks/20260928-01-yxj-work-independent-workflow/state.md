@@ -1,4 +1,4 @@
-task_id: yxj-work-independent-workflow-20260928
+task_id: 20260928-01-yxj-work-independent-workflow
 level: L3
 stage: handoff
 status: done
@@ -20,7 +20,7 @@ evidence:static|command=bash scripts/check-repo.sh|run_at=2026-09-28T11:23:46Z|r
 evidence:install-test|command=bash scripts/test-install.sh|run_at=2026-09-28T11:23:46Z|result=passed|last_edit_at=2026-09-28T11:16:48Z
 evidence:fixture-test|command=bash scripts/test-fixtures.sh|run_at=2026-09-28T11:23:46Z|result=passed|last_edit_at=2026-09-28T11:06:20Z
 evidence:temporary-install|command=bash scripts/install.sh --dest <temporary-dir> && bash scripts/check-workflow.sh --source "$PWD" --installed <temporary-dir>|run_at=2026-09-28T11:23:46Z|result=passed|last_edit_at=2026-09-28T11:22:57Z
-evidence:state-check|command=bash scripts/check-state.sh .work-docs/tasks/yxj-work-independent-workflow-20260928|run_at=2026-09-28T11:23:46Z|result=passed|last_edit_at=2026-09-28T11:22:57Z
+evidence:state-check|command=bash scripts/check-state.sh .work-docs/tasks/20260928-01-yxj-work-independent-workflow|run_at=2026-09-28T11:23:46Z|result=passed|last_edit_at=2026-09-28T11:22:57Z
 evidence:old-hashes|command=shasum -a 256 -c evidence/old-skills.sha256|run_at=2026-09-28T11:23:46Z|result=passed|last_edit_at=2026-09-28T11:19:00Z
 unknowns: 未运行生产、外部网络或消费者集成验证；契约未要求这些层级
 blocked_by: none

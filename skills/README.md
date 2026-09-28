@@ -184,6 +184,7 @@
 ## 5. 文件目录规范改造（已完成，附验证）
 
 依据 `docs/file-boundary.md`（唯一规范）：工作流产物只能落 `<execution-root>/.work-docs/tasks/<task-id>/`，
+其中 `<task-id>` 是完整目录名 `{YYYYMMDD}-{NN}-{slug}`（如 `20260928-01-yxj-work-independent-workflow`），
 分 `outputs/`、`evidence/`、`audit/`、`tmp/`；项目代码与项目文档属"任务目标"，可原地改但路径要先写进 contract 与 evidence。
 
 ### 5.1 统一边界块

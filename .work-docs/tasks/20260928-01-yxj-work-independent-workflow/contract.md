@@ -1,6 +1,6 @@
 # Contract
 
-- task_id: `yxj-work-independent-workflow-20260928`
+- task_id: `20260928-01-yxj-work-independent-workflow`
 - scope: 完成 `/Users/yuanxj/Documents/github/yxj-work` 独立工作流仓库，并与旧 `yxj-mode` 体系隔离。
 - allowed: 只修改本仓库；工作流持久文件写入本仓库 `.work-docs/` 任务目录。
 - forbidden: 不修改、移动、删除、重命名 `/Users/yuanxj/.pi/agent/skills/yxj-mode/`、`yxj-mode-long/`、`yxj-handoff/`；不提交、推送或创建 PR；不写入外部 `.audit/`、`00-Inbox/`、Wiki、项目 docs 或仓库根目录工作流文件。

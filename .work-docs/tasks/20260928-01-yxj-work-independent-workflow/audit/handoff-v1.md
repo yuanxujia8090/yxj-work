@@ -60,7 +60,7 @@
 
 ## 5. 已有验证证据
 
-详见：`/Users/yuanxj/Documents/github/yxj-work/.work-docs/tasks/yxj-work-independent-workflow-20260928/evidence/verification.md`
+详见：`/Users/yuanxj/Documents/github/yxj-work/.work-docs/tasks/20260928-01-yxj-work-independent-workflow/evidence/verification.md`
 
 已通过：
 
@@ -120,7 +120,7 @@ bash scripts/check-workflow.sh \
 
 ## 8. 关键约束
 
-- 不要把 handoff 复制到其他目录；当前交接包固定在源仓库 `.work-docs/tasks/yxj-work-independent-workflow-20260928/`。
+- 不要把 handoff 复制到其他目录；当前交接包固定在源仓库 `.work-docs/tasks/20260928-01-yxj-work-independent-workflow/`。
 - 不要写入 `00-Inbox/`、Wiki、项目 docs、外部 `local://` 或外部 `.audit/`。
 - 不要手工编辑安装后的 `~/.pi/agent/skills/yxj-work*` 副本；只改源仓库后通过安装脚本安装。
 - 不要修改、移动、删除或重命名旧 skill。
@@ -130,7 +130,7 @@ bash scripts/check-workflow.sh \
 
 新 Agent 首先读取：
 
-1. 本文件：`/Users/yuanxj/Documents/github/yxj-work/.work-docs/tasks/yxj-work-independent-workflow-20260928/handoff.md`
+1. 本文件：`/Users/yuanxj/Documents/github/yxj-work/.work-docs/tasks/20260928-01-yxj-work-independent-workflow/handoff.md`
 2. 同目录的 `state.md`
 3. 同目录的 `contract.md`
 4. 同目录的 `evidence/verification.md`
