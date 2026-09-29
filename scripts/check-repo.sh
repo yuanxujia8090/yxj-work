@@ -15,7 +15,7 @@ need skills/yxj-work-handoff/SKILL.md
 need scripts/check-repo.sh
 need scripts/install.sh
 need scripts/check-workflow.sh
-need scripts/check-state.sh
+need skills/yxj-work/scripts/check-state.sh
 need scripts/test-install.sh
 need scripts/test-fixtures.sh
 need scripts/test-flow.sh
@@ -40,9 +40,9 @@ for marker in 'name: yxj-work' 'name: yxj-work-long' 'name: yxj-work-handoff' '.
   grep -R -F -- "$marker" "$ROOT/skills" >/dev/null || fail "missing marker: $marker"
 done
 
-work_thresholds="$(grep -Eo 'L1/L2[^。]*20 次工具调用|L3 和 long 模式[^。]*60 次工具调用|L1/L2/L3 的预算分别为 30/100/400 次工具调用' "$ROOT/skills/yxj-work/SKILL.md" | tr '\n' ';')"
+work_thresholds="$(grep -Eo 'L1/L2[^。]*20 次工具调用|L3 和 long 模式[^。]*60 次工具调用|L1/L2/L3 的预算分别为 60/150/400 次工具调用' "$ROOT/skills/yxj-work/SKILL.md" | tr '\n' ';')"
 long_thresholds="$(grep -Eo '60 次工具调用或 30 分钟' "$ROOT/skills/yxj-work-long/SKILL.md" | tr '\n' ';')"
-[[ "$work_thresholds" == *'20 次工具调用'* && "$work_thresholds" == *'60 次工具调用'* && "$work_thresholds" == *'30/100/400 次工具调用'* ]] || fail 'yxj-work thresholds missing'
+[[ "$work_thresholds" == *'20 次工具调用'* && "$work_thresholds" == *'60 次工具调用'* && "$work_thresholds" == *'60/150/400 次工具调用'* ]] || fail 'yxj-work thresholds missing'
 [[ "$long_thresholds" == *'60 次工具调用或 30 分钟'* ]] || fail 'yxj-work-long thresholds missing'
 
 # Runtime files may mention old names only in explicit protection/reference text.

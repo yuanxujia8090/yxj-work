@@ -73,7 +73,7 @@ bash scripts/check-workflow.sh \
 
 `state.md` 是按行记录的状态文件：除了基本字段，还要记录 `calls_since_progress`、`last_progress_at`、`budget: used/limit`、`strategy_fingerprints`。有效进展只指新增 done_when 证据，或 required 验证从失败/未运行变为通过。每条 evidence 都记录 `command`、`run_at`、`result` 和相关文件的 `last_edit_at`；运行时间早于文件修改时间的证据不能支撑交付。新任务先读 `.work-docs/index.md`，相同范围的进行中任务直接续接。
 
-`check-state.sh` 可验证状态文件；`tests/fixtures/` 和 `test-fixtures.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值和阻塞字段缺失。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
+`check-state.sh`（随技能安装到 `skills/yxj-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；`tests/fixtures/` 和 `test-fixtures.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值和阻塞字段缺失。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
 
 ## 完成判定
 

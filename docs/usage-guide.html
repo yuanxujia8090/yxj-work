@@ -230,8 +230,8 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update</code></pre>
 <table>
   <thead><tr><th>层级</th><th>典型规模</th><th>工具调用预算</th><th>无进展阈值</th></tr></thead>
   <tbody>
-    <tr><td>L1</td><td>一次读取 + 一个小改动</td><td>30</td><td>20 次工具调用</td></tr>
-    <tr><td>L2</td><td>多步骤、需要设计和计划</td><td>100</td><td>20 次工具调用</td></tr>
+    <tr><td>L1</td><td>一次读取 + 一个小改动</td><td>60</td><td>20 次工具调用</td></tr>
+    <tr><td>L2</td><td>多步骤、需要设计和计划</td><td>150</td><td>20 次工具调用</td></tr>
     <tr><td>L3 / long</td><td>跨阶段、跨会话、过夜</td><td>400，另有 8 小时上限</td><td>每个子任务 60 次工具调用或 30 分钟</td></tr>
   </tbody>
 </table>
@@ -909,7 +909,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills"        # 安装
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update   # 更新已安装副本
 bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"   # 源与安装目标对照
-bash scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;         # 校验状态文件
+bash skills/yxj-work/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 校验状态文件
 bash scripts/test-fixtures.sh                                  # 夹具回归
 bash scripts/test-install.sh                                   # 安装回归
 bash scripts/test-flow.sh                                      # 流程回归</code></pre>

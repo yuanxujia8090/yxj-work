@@ -1,6 +1,6 @@
 # Execute Playbook
 
-1. Read contract, plan, state, target files, callers, tests and current differences.
+1. Read contract, plan, state, target files, callers, tests, current differences, and the workspace baseline (cwd, branch/worktree, pending changes).
 2. List the current logical change and its required verification before editing.
 3. Modify only files inside the task boundary. User project files are targets; workflow records stay in `.work-docs`.
 4. Verify from narrow to broad: `syntax/config`, `static`, `runtime/local`, `external`, `consumer` as required by the contract.

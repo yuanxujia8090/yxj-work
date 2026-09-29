@@ -34,6 +34,7 @@ Allocate the number before creating the directory:
 2. Otherwise list `.work-docs/tasks/` and take the highest `{NN}` among directories starting with today's date, then add 1.
 3. Never reuse or renumber the number of a task that was completed or removed.
 4. Append the new task to `.work-docs/index.md`.
+5. Concurrency: two sessions may allocate the same number. After appending the index line, re-read `tasks/` and `index.md`; if the number is taken, keep the first task, move the later one to the next free number, and record the conflict in `audit/`.
 
 The `task_id` field in `contract.md` and `state.md` equals the full directory name, so the task stays locatable from its own records.
 
