@@ -47,10 +47,19 @@ while IFS= read -r line; do
   req_status="${line##*status=}"; req_status="${req_status%% *}"; req_status="${req_status%%|*}"
   [[ "$req_status" == passed ]] || { [[ "$status" != done ]] || fail "done state has required verification $req_status"; }
 done < "$TASK_DIR/state.md"
+# Reject non-zero-padded timestamps; normalize space/T separators; fixed-width prefix keeps string order correct.
+evidence_ts() {
+  local v="$1" field="$2" ev="$3"
+  [[ -n "$v" ]] || fail "evidence $ev: missing $field"
+  v="${v// /T}"
+  [[ "$v" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2})? ]] || fail "evidence $ev: invalid $field: $v (expected YYYY-MM-DD[THH:MM])"
+  printf '%s' "$v"
+}
 while IFS='|' read -r label command run_at result last_edit rest; do
   [[ "$label" == evidence:* ]] || continue
-  run_at="${run_at#*run_at=}"; run_at="${run_at%% *}"
-  last_edit="${last_edit#*last_edit_at=}"; last_edit="${last_edit%% *}"
-  [[ "$run_at" < "$last_edit" ]] && fail "evidence is stale: ${label#evidence: }"
+  ev="${label#evidence:}"
+  run_norm="$(evidence_ts "${run_at#*run_at=}" run_at "$ev")"
+  edit_norm="$(evidence_ts "${last_edit#*last_edit_at=}" last_edit_at "$ev")"
+  [[ "$run_norm" < "$edit_norm" ]] && fail "evidence is stale: $ev"
 done < "$TASK_DIR/state.md"
 printf 'check-state: passed\n'
