@@ -5,7 +5,7 @@ status: in_progress
 done_when: make progress
 calls_since_progress: 20
 last_progress_at: 2026-09-28T18:00:00Z
-budget: 2/30
+budget: 2/60
 strategy_fingerprints: none
 required_verification: check-state status=passed evidence=evidence/check.txt
 evidence:check|command=printf passed|run_at=2026-09-28T20:00:00Z|result=passed|last_edit_at=2026-09-28T19:00:00Z

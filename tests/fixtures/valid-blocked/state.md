@@ -5,7 +5,7 @@ status: blocked
 done_when: dependency returns
 calls_since_progress: 21
 last_progress_at: 2026-09-28T18:00:00Z
-budget: 22/100
+budget: 22/150
 strategy_fingerprints: scripts/check-state.sh + blocked fixture + missing dependency
 blocked_by: missing dependency
 unblock_condition: dependency is available

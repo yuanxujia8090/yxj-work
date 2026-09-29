@@ -90,4 +90,12 @@ touch "$tmp/linkdest/yxj-why"
 bash "$ROOT/scripts/install.sh" --dest "$tmp/linkdest" --unlink >/dev/null 2>&1
 if [[ ! -f "$tmp/linkdest/yxj-why" ]]; then fail 'unlink removed a non-symlink entry'; fi
 
+# Unlink on a mixed tree in one pass: repo links removed, foreign links and plain files kept.
+ln -s "$ROOT/skills/yxj-work" "$tmp/linkdest/yxj-work"
+ln -s "$tmp/elsewhere" "$tmp/linkdest/yxj-architect"
+bash "$ROOT/scripts/install.sh" --dest "$tmp/linkdest" --unlink >/dev/null 2>&1
+if [[ -e "$tmp/linkdest/yxj-work" || -L "$tmp/linkdest/yxj-work" ]]; then fail 'mixed unlink removed a repo link'; fi
+if [[ ! -L "$tmp/linkdest/yxj-architect" ]]; then fail 'mixed unlink removed a foreign link'; fi
+if [[ ! -f "$tmp/linkdest/yxj-why" ]]; then fail 'mixed unlink removed a plain file'; fi
+
 printf 'test-install: passed\n'

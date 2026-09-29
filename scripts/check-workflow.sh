@@ -53,6 +53,15 @@ while IFS= read -r skill; do
   done < <(find "$SOURCE/skills/$skill" -type f -print0)
 done < <(runtime_skills)
 
+# Reverse check: a copied skill must not contain files absent from the source tree.
+while IFS= read -r skill; do
+  [[ -L "$INSTALLED/$skill" ]] && continue
+  while IFS= read -r -d '' inst; do
+    rel="${inst#"$INSTALLED/"}"
+    [[ -f "$SOURCE/skills/${rel}" ]] || fail "unexpected installed file: $rel"
+  done < <(find "$INSTALLED/$skill" -type f ! -name '.yxj-work-installed' -print0)
+done < <(runtime_skills)
+
 # Installed runtime files must preserve the same boundary checks.
 # grep exit code: 0 = violation found, 1 = clean, >=2 = the check itself broke (never a pass).
 rc=0

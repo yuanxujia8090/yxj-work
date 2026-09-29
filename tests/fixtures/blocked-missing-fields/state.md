@@ -5,7 +5,7 @@ status: blocked
 done_when: dependency returns
 calls_since_progress: 1
 last_progress_at: 2026-09-28T20:00:00Z
-budget: 2/30
+budget: 2/60
 strategy_fingerprints: none
 blocked_by: missing dependency
 next_action: ask owner
