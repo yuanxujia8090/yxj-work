@@ -7,3 +7,5 @@ task-id 即 `tasks/` 下的目录名，格式 `{YYYYMMDD}-{NN}-{slug}`：`{YYYYM
 | 20260928-01-yxj-work-independent-workflow | 完成 yxj-work 独立工作流仓库并与旧 yxj-mode 隔离 | done | 2026-09-28 |
 | 20260928-02-yxj-work-skill-flow-review | 审查 yxj-work 与辅助 skill 的整合，并按结论接入（随安装分发、不可语义唤起、由流程主动读取） | done | 2026-09-28 |
 | 20260928-03-yxj-work-flow-evaluation | 优化普通与长任务流程，并验证开发、排查修复、调研和跨天恢复 | done | 2026-09-28 |
+| 20260929-01-readme-consistency-check | 检查 README 相关文档与仓库现状（c20d1e7 改动 + 软链部署）的一致性，产出需更新清单 | done | 2026-09-29 |
+| 20260929-02-check-script-hardening | 补强 check-workflow 软链模式、check-state 枚举校验、check-repo 跨文档断言 | done | 2026-09-29 |

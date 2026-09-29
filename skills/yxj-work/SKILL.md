@@ -84,7 +84,7 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 - L2：任务类型、done_when、允许/禁止改动、验证层级、产物位置、阶段和下一入口。
 - L3：L2 加每个 checkpoint 的状态、证据、依赖、阻塞和第一步。
 
-`state.md` 使用简单的按行格式：每个字段一行 `key: value`；required 验证一行 `required_verification: name status=passed evidence=path`；证据一行 `evidence:name|command=...|run_at=...|result=...|last_edit_at=...`。固定记录 `task_id`、`level`、`stage`、`status`、`done_when`、`evidence`、`unknowns`、`blocked_by`、`unblock_condition`、`next_action`、`calls_since_progress`、`last_progress_at`、`budget`（`used/limit`）、`strategy_fingerprints`、`updated_at`。验证层级为 `syntax/config`、`static`、`runtime/local`、`external`、`consumer`，每层只能是 `passed|failed|not_run|blocked` 并带 evidence 指针。`status` 仅取 `in_progress|done|blocked|stopped|cancelled`；`stage` 使用路由中定义的阶段名。
+`state.md` 使用简单的按行格式：每个字段一行 `key: value`；required 验证一行 `required_verification: name status=passed evidence=path`；证据一行 `evidence:name|command=...|run_at=...|result=...|last_edit_at=...`。固定记录 `task_id`、`level`、`stage`、`status`、`done_when`、`evidence`、`unknowns`、`blocked_by`、`unblock_condition`、`next_action`、`calls_since_progress`、`last_progress_at`、`budget`（`used/limit`）、`strategy_fingerprints`、`updated_at`。验证层级为 `syntax/config`、`static`、`runtime/local`、`external`、`consumer`，每层只能是 `passed|failed|not_run|blocked` 并带 evidence 指针。`status` 仅取 `in_progress|done|blocked|stopped|cancelled`；`stage` 使用路由中定义的阶段名，交接收尾时记 `handoff`。这两个枚举由 `scripts/check-repo.sh` 与 `check-state.sh` 双向断言，改一处不同步会直接报错。
 
 只有全部 required 验证为 `passed`、required 子任务已结束、没有越界文件、决策门允许交付且每个结论有 evidence，才能写 `status: done`。`failed`、`blocked`、`not_run`、active required 子任务、未解决决策门或无 evidence 时禁止 done。optional 项必须在契约中声明并写明跳过原因。
 

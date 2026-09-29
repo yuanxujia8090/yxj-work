@@ -1,7 +1,7 @@
 task_id: 20260101-01-fixture-threshold
 level: L1
-stage: active
-status: active
+stage: exec
+status: in_progress
 done_when: make progress
 calls_since_progress: 20
 last_progress_at: 2026-09-28T18:00:00Z

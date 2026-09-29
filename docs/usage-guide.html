@@ -289,6 +289,8 @@ blocked ──► active                 （阻塞解除 / 共同前提重新验
 
 <p>熔断后必须：停止同策略重试 → 在 <code>audit/</code> 记录失败动作、错误摘要、策略指纹（<strong>修改文件 + 执行命令 + 错误首行</strong>）和证据 → 状态改为 <code>blocked</code> 并填 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code>、<code>next_action</code> → 写 checkpoint 或交接 → 父任务不得 <code>done</code>。</p>
 
+<p>预算上限按层级取值：L1/L2/L3 分别为 60/150/400 次工具调用，L3 另有 8 小时上限。开工后发现真实范围将超出当前 level 预算（例如复现或实测成本显著高于预估）时，在 <code>contract.md</code> 与 <code>state.md</code> 显式升级 level 并记录原因，预算上限同步调整，不允许静默超支。预算耗尽时按熔断处理：写最终 checkpoint、保持非 <code>done</code>，交用户决定是否追加预算。</p>
+
 <p>恢复时，新策略指纹不能与已有指纹相同。说不出新旧策略差在哪，就停下来交给人。</p>
 
 <h3 id="skillrule">3.6 技能加载边界</h3>

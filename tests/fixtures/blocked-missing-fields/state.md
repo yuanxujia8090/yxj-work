@@ -1,6 +1,6 @@
 task_id: 20260101-01-fixture-blocked-missing
 level: L1
-stage: blocked
+stage: exec
 status: blocked
 done_when: dependency returns
 calls_since_progress: 1

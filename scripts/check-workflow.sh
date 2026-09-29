@@ -19,16 +19,32 @@ fail() { printf 'check-workflow: %s\n' "$1" >&2; exit 1; }
 
 runtime_skills() { grep -vE '^[[:space:]]*(#|$)' "$SOURCE/scripts/runtime-skills.txt"; }
 
+# Each runtime skill must exist in both trees. Symlink deployments must point at this
+# source repository; copied deployments must carry a valid install marker.
 while IFS= read -r skill; do
-  [[ -d "$INSTALLED/$skill" ]] || fail "missing installed $skill"
-  marker="$INSTALLED/$skill/.yxj-work-installed"
+  dst="$INSTALLED/$skill"
+  if [[ -L "$dst" ]]; then
+    target="$(readlink "$dst")"
+    case "$target" in
+      /*) abs="$target" ;;
+      *) abs="$(dirname "$dst")/$target" ;;
+    esac
+    resolved="$(cd "$abs" 2>/dev/null && pwd -P)" || fail "broken install link for $skill"
+    expected="$(cd "$SOURCE/skills/$skill" 2>/dev/null && pwd -P)" || fail "missing source skill $skill"
+    [[ "$resolved" == "$expected" ]] || fail "install link for $skill points to $resolved, expected $expected"
+    continue
+  fi
+  [[ -d "$dst" ]] || fail "missing installed $skill"
+  marker="$dst/.yxj-work-installed"
   [[ -f "$marker" ]] || fail "missing install marker for $skill"
   grep -Fqx "source=$SOURCE" "$marker" || fail "invalid install source for $skill"
 done < <(runtime_skills)
 
 # Compare every runtime skill's source files. The marker is intentionally ignored.
 # Non-runtime material under skills/ (see skills/README.md) is not installed, so it is not compared.
+# Symlinked skills resolve back into the source repository, so there is nothing to compare.
 while IFS= read -r skill; do
+  [[ -L "$INSTALLED/$skill" ]] && continue
   while IFS= read -r -d '' src; do
     rel="${src#"$SOURCE/"}"
     dst="$INSTALLED/${rel#skills/}"
@@ -38,11 +54,14 @@ while IFS= read -r skill; do
 done < <(runtime_skills)
 
 # Installed runtime files must preserve the same boundary checks.
-if grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$INSTALLED/yxj-work" "$INSTALLED/yxj-work-long" "$INSTALLED/yxj-work-handoff"; then
-  fail 'forbidden external route in installed runtime skill'
-fi
-if grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL' "$INSTALLED/yxj-work" "$INSTALLED/yxj-work-long" "$INSTALLED/yxj-work-handoff"; then
-  fail 'old runtime dependency in installed skill'
-fi
+# grep exit code: 0 = violation found, 1 = clean, >=2 = the check itself broke (never a pass).
+rc=0
+grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$INSTALLED/yxj-work" "$INSTALLED/yxj-work-long" "$INSTALLED/yxj-work-handoff" || rc=$?
+[[ "$rc" -le 1 ]] || fail "boundary grep failed (rc=$rc)"
+[[ "$rc" -eq 1 ]] || fail 'forbidden external route in installed runtime skill'
+rc=0
+grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL' "$INSTALLED/yxj-work" "$INSTALLED/yxj-work-long" "$INSTALLED/yxj-work-handoff" || rc=$?
+[[ "$rc" -le 1 ]] || fail "old-name grep failed (rc=$rc)"
+[[ "$rc" -eq 1 ]] || fail 'old runtime dependency in installed skill'
 
 printf 'check-workflow: passed\n'

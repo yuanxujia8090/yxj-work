@@ -22,4 +22,28 @@ after="$(find "$tmp/foreign" -type f -print0 | sort -z | xargs -0 shasum -a 256)
 
 mkdir -p "$tmp/unmarked/yxj-work"
 if bash "$ROOT/scripts/install.sh" --dest "$tmp/unmarked" --update >/dev/null 2>&1; then fail 'unmarked update was accepted'; fi
+
+# Symlink deployments (the real setup in ~/.pi/agent/skills) must pass without markers.
+mkdir "$tmp/linked"
+while IFS= read -r skill; do
+  ln -s "$ROOT/skills/$skill" "$tmp/linked/$skill"
+done < <(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/runtime-skills.txt")
+bash "$ROOT/scripts/check-workflow.sh" --source "$ROOT" --installed "$tmp/linked" >/dev/null
+
+# A link pointing at the wrong skill must be rejected.
+rm "$tmp/linked/yxj-work"
+ln -s "$ROOT/skills/yxj-work-long" "$tmp/linked/yxj-work"
+if bash "$ROOT/scripts/check-workflow.sh" --source "$ROOT" --installed "$tmp/linked" >/dev/null 2>&1; then fail 'wrong-target link was accepted'; fi
+
+# A broken link must be rejected.
+rm "$tmp/linked/yxj-work"
+ln -s "$tmp/does-not-exist" "$tmp/linked/yxj-work"
+if bash "$ROOT/scripts/check-workflow.sh" --source "$ROOT" --installed "$tmp/linked" >/dev/null 2>&1; then fail 'broken link was accepted'; fi
+
+# A copied skill mixed into a linked install still needs its marker.
+rm "$tmp/linked/yxj-work"
+mkdir "$tmp/linked/yxj-work"
+cp "$ROOT/skills/yxj-work/SKILL.md" "$tmp/linked/yxj-work/SKILL.md"
+if bash "$ROOT/scripts/check-workflow.sh" --source "$ROOT" --installed "$tmp/linked" >/dev/null 2>&1; then fail 'markerless copy in linked install was accepted'; fi
+
 printf 'test-install: passed\n'

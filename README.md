@@ -91,7 +91,7 @@ bash scripts/check-workflow.sh \
 
 每个子任务独立计数。任一条件触发即停止当前子任务：连续 3 次 required 验证失败、60 次工具调用无进展、30 分钟无有效进展、第三方 skill 越界写入，或共同前提被证据否定。
 
-熔断必须：停止同策略重试；在 `audit/` 记录策略、错误和证据；写 `status: blocked`、`blocked_by`、`attempted_paths`、`shared_assumption`、`unblock_condition`、`next_action`；写 checkpoint/handoff；禁止父任务标记 done。默认长任务预算为单子任务 60 次工具调用或 30 分钟无进展、全任务 400 次工具调用或 8 小时；预算耗尽写 checkpoint，不标记 done。
+熔断必须：停止同策略重试；在 `audit/` 记录策略、错误和证据；写 `status: blocked`、`blocked_by`、`attempted_paths`、`shared_assumption`、`unblock_condition`、`next_action`；写 checkpoint/handoff；禁止父任务标记 done。L1/L2/L3 的预算分别为 60/150/400 次工具调用，L3 另有 8 小时上限；无进展熔断阈值为 L1/L2 20 次、L3/long 每子任务 60 次或 30 分钟。开工后发现真实范围将超出当前 level 预算时，在 contract 与 state 显式升级 level 并记录原因，不允许静默超支。预算耗尽写 checkpoint，不标记 done，交用户决定是否追加预算。
 
 恢复必须先读状态、最近 checkpoint、失败策略和 evidence，验证阻塞条件已解除或采用有证据的新策略；不得重复相同失败策略。
 

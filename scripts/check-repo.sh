@@ -53,4 +53,21 @@ if grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SK
   fail 'old skill runtime dependency found'
 fi
 
+# Cross-document consistency: a rule value must appear wherever the docs promise it.
+# Budget numbers, the check-state path, and the status enum are asserted against every
+# doc that states them, so editing one side without the other fails the repo check.
+for doc in README.md docs/architecture.md docs/usage-guide.html; do
+  grep -Fq '60/150/400' "$ROOT/$doc" || fail "budget numbers missing in $doc"
+  grep -Fq 'skills/yxj-work/scripts/' "$ROOT/$doc" || fail "check-state path missing in $doc"
+done
+grep -Fq '60/150/400 次工具调用' "$ROOT/skills/yxj-work/SKILL.md" || fail 'budget numbers missing in yxj-work SKILL.md'
+grep -Fq 'in_progress|done|blocked|stopped|cancelled' "$ROOT/skills/yxj-work/SKILL.md" || fail 'status enum missing in SKILL.md'
+grep -Fq 'in_progress|done|blocked|stopped|cancelled' "$ROOT/skills/yxj-work/scripts/check-state.sh" || fail 'status enum missing in check-state.sh'
+
+# The stage enum in check-state.sh must be exactly the route names in SKILL.md plus `handoff`.
+route_stages="$(awk '/^## 路由$/{f=1;next} /^## /{f=0} f' "$ROOT/skills/yxj-work/SKILL.md" | sed -n 's/^- `\([a-z-]*\)`.*/\1/p' | sort | tr '\n' ' ')"
+case_stages="$(sed -n 's/^  \(fast-answer|[a-z|-]*\)) ;;$/\1/p' "$ROOT/skills/yxj-work/scripts/check-state.sh" | tr '|' '\n' | sort | tr '\n' ' ')"
+expected_stages="$(printf '%s\n' $route_stages handoff | sort | tr '\n' ' ')"
+[[ "$case_stages" == "$expected_stages" ]] || fail "stage enum mismatch: check-state.sh has [$case_stages], SKILL.md route + handoff gives [$expected_stages]"
+
 printf 'check-repo: passed\n'

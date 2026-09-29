@@ -1,6 +1,6 @@
 task_id: 20260101-01-fixture-done-not-run
 level: L1
-stage: verify
+stage: review
 status: done
 done_when: required check passes
 calls_since_progress: 0

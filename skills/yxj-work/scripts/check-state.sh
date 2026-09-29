@@ -6,10 +6,22 @@ TASK_DIR="${1:-}"
 fail() { printf 'check-state: %s\n' "$1" >&2; exit 1; }
 value() { sed -n "s/^$1: //p" "$TASK_DIR/state.md" | head -n 1; }
 status="$(value status)"
+stage="$(value stage)"
 level="$(value level)"
 calls="$(value calls_since_progress)"
 budget="$(value budget)"
 [[ -n "$status" ]] || fail 'missing status'
+[[ -n "$stage" ]] || fail 'missing stage'
+# Enum must match the route stage names in skills/yxj-work/SKILL.md (check-repo.sh asserts both).
+case "$status" in
+  in_progress|done|blocked|stopped|cancelled) ;;
+  *) fail "invalid status: $status" ;;
+esac
+# stage: 路由 10 个阶段 + handoff（交接收尾）。done/closed 是 status 误写进 stage，不放行。
+case "$stage" in
+  fast-answer|investigate|research|design|plan|exec|bugfix|review|ops|mixed|handoff) ;;
+  *) fail "invalid stage: $stage" ;;
+esac
 [[ "$calls" =~ ^[0-9]+$ ]] || fail 'invalid calls_since_progress'
 case "$level" in
   L1|L2) threshold=20 ;;
