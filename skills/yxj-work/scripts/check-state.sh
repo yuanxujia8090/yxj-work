@@ -42,18 +42,31 @@ if [[ "$status" == blocked ]]; then
     [[ -n "$(value "$key")" ]] || fail "blocked state missing $key"
   done
 fi
+req_count=0
 while IFS= read -r line; do
   [[ "$line" == required_verification:* ]] || continue
+  req_count=$((req_count + 1))
   req_status="${line##*status=}"; req_status="${req_status%% *}"; req_status="${req_status%%|*}"
   [[ "$req_status" == passed ]] || { [[ "$status" != done ]] || fail "done state has required verification $req_status"; }
 done < "$TASK_DIR/state.md"
-# Reject non-zero-padded timestamps; normalize space/T separators; fixed-width prefix keeps string order correct.
+if [[ "$status" == done && "$req_count" -eq 0 ]]; then
+  fail 'done state has no required_verification'
+fi
+# Reject invalid/zero-padding-deficient timestamps; normalize to a fixed-width prefix
+# (YYYY-MM-DDTHH:MM) so string comparison keeps correct order.
 evidence_ts() {
   local v="$1" field="$2" ev="$3"
   [[ -n "$v" ]] || fail "evidence $ev: missing $field"
   v="${v// /T}"
-  [[ "$v" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2})? ]] || fail "evidence $ev: invalid $field: $v (expected YYYY-MM-DD[THH:MM])"
-  printf '%s' "$v"
+  if [[ "$v" =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})((T[0-9]{2}:[0-9]{2})(:[0-9]{2})?([Zz]|[+-][0-9]{2}(:[0-9]{2})?)?)?$ ]]; then
+    if [[ -n "${BASH_REMATCH[3]}" ]]; then
+      printf '%s%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    else
+      printf '%sT00:00' "${BASH_REMATCH[1]}"
+    fi
+  else
+    fail "evidence $ev: invalid $field: $1 (expected YYYY-MM-DD[THH:MM[:SS][Z|+hh:mm]])"
+  fi
 }
 while IFS= read -r line; do
   [[ "$line" == evidence:* ]] || continue
