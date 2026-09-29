@@ -55,11 +55,16 @@ evidence_ts() {
   [[ "$v" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2})? ]] || fail "evidence $ev: invalid $field: $v (expected YYYY-MM-DD[THH:MM])"
   printf '%s' "$v"
 }
-while IFS='|' read -r label command run_at result last_edit rest; do
-  [[ "$label" == evidence:* ]] || continue
-  ev="${label#evidence:}"
-  run_norm="$(evidence_ts "${run_at#*run_at=}" run_at "$ev")"
-  edit_norm="$(evidence_ts "${last_edit#*last_edit_at=}" last_edit_at "$ev")"
+while IFS= read -r line; do
+  [[ "$line" == evidence:* ]] || continue
+  ev="${line%%|*}"
+  ev="${ev#evidence:}"
+  run_at=''
+  last_edit=''
+  if [[ "$line" =~ \|run_at=([^|]*) ]]; then run_at="${BASH_REMATCH[1]}"; fi
+  if [[ "$line" =~ \|last_edit_at=([^|]*) ]]; then last_edit="${BASH_REMATCH[1]}"; fi
+  run_norm="$(evidence_ts "$run_at" run_at "$ev")"
+  edit_norm="$(evidence_ts "$last_edit" last_edit_at "$ev")"
   [[ "$run_norm" < "$edit_norm" ]] && fail "evidence is stale: $ev"
 done < "$TASK_DIR/state.md"
 printf 'check-state: passed\n'
