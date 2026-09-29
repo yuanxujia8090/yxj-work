@@ -1,6 +1,42 @@
 # Runtime skills: the only directories install.sh copies into ~/.pi/agent/skills.
-# Everything else under skills/ is repository material (see skills/README.md) and is not installed.
+# Every directory listed here is installed together, so an entry skill can read a companion
+# skill by the relative path ../<name>/SKILL.md in both the source repository and the install target.
 # One directory name per line; blank lines and # comments are ignored.
+#
+# Entry skills (user-invoked with /yxj-work, /yxj-work-long, /yxj-work-handoff).
 yxj-work
 yxj-work-long
 yxj-work-handoff
+
+# Companion skills. All set disable-model-invocation: true, so no task content auto-invokes them:
+# an entry skill reads the file it needs on purpose (see the reference-skill table in yxj-work).
+yxj-architect
+yxj-arena
+yxj-blast-radius
+yxj-codebase-design
+yxj-create-verification-skill
+yxj-how
+yxj-interrogate
+yxj-principle-attack-the-premise
+yxj-principle-boundary-discipline
+yxj-principle-build-the-lever
+yxj-principle-encode-lessons-in-structure
+yxj-principle-fix-root-causes
+yxj-principle-foundational-thinking
+yxj-principle-guard-the-context-window
+yxj-principle-laziness-protocol
+yxj-principle-outcome-oriented-execution
+yxj-principle-prove-it-works
+yxj-principle-redesign-from-first-principles
+yxj-principle-separate-before-serializing-shared-state
+yxj-principle-type-system-discipline
+yxj-prototype
+yxj-receiving-code-review
+yxj-requesting-code-review
+yxj-resolving-merge-conflicts
+yxj-teach
+yxj-technical-writing
+yxj-typescript-best-practices
+yxj-unslop
+yxj-why
+yxj-wizard

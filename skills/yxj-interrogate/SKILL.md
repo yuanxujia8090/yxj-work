@@ -22,9 +22,10 @@ generates goes under:
 ```
 
 Reuse the task id already in progress when the scope matches (read `.work-docs/index.md` first), otherwise
-create one. Never place workflow output in a project docs directory, in another skill's directory, in a
-tool-specific hidden directory, or outside the repository. The full rule lives in `docs/file-boundary.md`
-of the yxj-work source repository.
+allocate one: `{YYYYMMDD}-{NN}-{slug}`, where `NN` is a two-digit per-day counter that
+restarts at `01` and never reuses a retired number, then append the new task to `.work-docs/index.md`.
+Never place workflow output in a project docs directory, in another skill's directory, in a
+tool-specific hidden directory, or outside the repository.
 
 Files that are themselves the task target -- project code, project docs, existing config -- may be modified
 in place. Record those paths in the contract and in `evidence/` before changing them, and do not copy them
@@ -33,9 +34,8 @@ write outside `.work-docs` that the contract did not authorize is a boundary vio
 
 ## External dependencies
 
-- `pstack-models.md` (or the Cursor form `~/.cursor/rules/pstack-models.md`) is **not copied and not present**.
-  The source library generates it with the `setup-pstack` skill and ships no template. When it is missing, use the
-  current session's model for every role this skill names, and keep reviewer/runner counts at their defaults.
+No external model-routing file is required. Use the current session's model for every role this skill names,
+and keep reviewer/runner counts at their defaults.
 
 
 
@@ -66,20 +66,14 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the Task tool. Use the `interrogate reviewers` line in `~/.cursor/rules/pstack-models.mdc`, one reviewer per entry, extending or shrinking the Reviewer A/B/C labels below to the configured entry count. If the rule or that line is missing, use the table defaults.
-
-| Subagent | Default model |
-|----------|---------------|
-| Reviewer A | `claude-opus-5-5-max` |
-| Reviewer B | `gpt-5.6-sol-max` |
-| Reviewer C | `grok-4.7-xhigh-fast` |
+Launch all reviewers in a single message using the Task tool, one reviewer per entry, extending or shrinking the Reviewer A/B/C labels below to the entry count. Every reviewer uses the current session's model by default; assign a different model to a seat only when cross-model judgment helps.
 
 For each reviewer:
 - `subagent_type`: `generalPurpose`
-- `model`: the configured `interrogate reviewers` entry, or the table default with no configured line. For an `auto` or `inherit-parent` entry, omit `model` so that reviewer runs on the parent model.
+- `model`: omit to run on the parent (current session) model.
 - `readonly`: `true`
 
-If the Task tool rejects a configured entry, run that reviewer on the table default of its family and say so. Families go by prefix: `claude-*`, `gpt-*`, and `grok-*`. With no family match, use Reviewer A's default. If it rejects a table default, check the valid slugs in the Task tool's error message, pick the closest equivalent (prefer the highest-reasoning tier of the same family), spawn with it, and open a separate PR to update the default table. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply either fallback to it.
+If the Task tool rejects a model you assigned, run that reviewer on the parent (current session) model and say so. Do not block the review on a model-name issue.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent

@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yxj-work 使用说明</title>
+<style>
+  :root {
+    --ink: #191a1c;
+    --ink-2: #4b4f55;
+    --ink-3: #7c828a;
+    --rule: #e2ded7;
+    --bg: #fdfcfa;
+    --bg-2: #f6f4f0;
+    --accent: #8a2f3b;
+    --accent-soft: #f4e9e9;
+    --warn: #8a5a12;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8e6e3;
+      --ink-2: #b5b2ac;
+      --ink-3: #8b8880;
+      --rule: #35332f;
+      --bg: #16161a;
+      --bg-2: #1e1e22;
+      --accent: #e08b95;
+      --accent-soft: #2c2023;
+      --warn: #d6ad63;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.75 ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 48px;
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 16px; padding: 0 18px 80px; }
+  }
+  header.doc-head {
+    grid-column: 1 / -1;
+    padding: 56px 0 28px;
+    border-bottom: 2px solid var(--ink);
+  }
+  header.doc-head h1 { margin: 0 0 10px; font-size: 30px; letter-spacing: -0.01em; font-weight: 700; }
+  header.doc-head .lede { margin: 0; max-width: 780px; color: var(--ink-2); }
+  header.doc-head .meta {
+    margin-top: 16px; font-size: 13px; color: var(--ink-3);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  nav.toc {
+    position: sticky; top: 24px; align-self: start;
+    max-height: calc(100vh - 48px); overflow: auto;
+    padding-top: 28px; font-size: 13.5px; line-height: 1.5;
+  }
+  @media (max-width: 900px) {
+    nav.toc { position: static; max-height: none; padding-top: 12px; border-bottom: 1px solid var(--rule); }
+  }
+  nav.toc .toc-title {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-3); margin-bottom: 12px; font-weight: 600;
+  }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 3px 0; }
+  nav.toc a { color: var(--ink-2); text-decoration: none; display: block; padding: 3px 0 3px 10px; border-left: 2px solid transparent; }
+  nav.toc a:hover { color: var(--accent); border-left-color: var(--rule); }
+  nav.toc .sub { padding-left: 22px; font-size: 12.5px; color: var(--ink-3); }
+  main { padding-top: 28px; max-width: 860px; }
+  h2 { margin: 64px 0 16px; font-size: 23px; letter-spacing: -0.01em; border-top: 1px solid var(--rule); padding-top: 26px; }
+  h2:first-child { margin-top: 22px; border-top: none; padding-top: 0; }
+  h3 { margin: 34px 0 10px; font-size: 17.5px; }
+  p { margin: 10px 0; }
+  ul, ol { margin: 10px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em; background: var(--bg-2); padding: 1px 5px;
+    border-radius: 3px; border: 1px solid var(--rule);
+  }
+  pre {
+    background: var(--bg-2); border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6; margin: 14px 0;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: 13px; }
+  a { color: var(--accent); }
+  strong { font-weight: 650; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+  th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1.5px solid var(--ink-3); white-space: nowrap; }
+  .note { margin: 18px 0; padding: 12px 16px; background: var(--bg-2); border-left: 3px solid var(--ink-3); font-size: 14.5px; color: var(--ink-2); }
+  .note.warn { border-left-color: var(--warn); }
+  .note.rule { border-left-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+  .scenario { margin: 26px 0 40px; border: 1px solid var(--rule); border-top: 3px solid var(--ink); padding: 4px 22px 20px; }
+  .scenario dl { margin: 0; font-size: 14.5px; }
+  .scenario dt { margin-top: 16px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .scenario dd { margin: 4px 0 0; }
+  .skill-group { margin-top: 30px; }
+  .skill-group h3 { border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
+  .skill { padding: 10px 0; border-bottom: 1px dotted var(--rule); }
+  .skill:last-child { border-bottom: none; }
+  .skill .name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; font-weight: 600; color: var(--accent); }
+  .skill .what { margin: 2px 0; }
+  .skill .when { color: var(--ink-2); font-size: 14px; }
+  .tag { display: inline-block; font-size: 11px; letter-spacing: 0.04em; padding: 1px 7px; border: 1px solid var(--rule); border-radius: 10px; color: var(--ink-2); vertical-align: middle; }
+  .tag.native { border-color: var(--accent); color: var(--accent); }
+  .tag.combo { border-color: var(--warn); color: var(--warn); }
+  footer { grid-column: 1 / -1; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<header class="doc-head">
+  <h1>yxj-work 使用说明</h1>
+  <p class="lede">
+    一套把 AI 编程会话变成「有范围、有证据、能中断、能续接」的工作流。本文覆盖七类日常场景
+    （产品调研、需求评估、方案设计、开发执行、问题定位排查、长任务执行、长任务次日状态检查），
+    并逐个说明 <code>skills/</code> 目录下 33 个技能的作用与调用方式。
+  </p>
+  <div class="meta">源仓库 /Users/yuanxj/Documents/github/yxj-work · 入口技能 3 个 · 辅助技能 30 个 · 全部默认不可被模型自动唤起</div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">目录</div>
+  <ol>
+    <li><a href="#what">1. 这是什么</a></li>
+    <li><a href="#install">2. 安装与调用</a></li>
+    <li><a href="#basics">3. 五个必须先懂的机制</a></li>
+    <li class="sub"><a href="#route">3.1 路由：L0 与 L1/L2/L3</a></li>
+    <li class="sub"><a href="#contract">3.2 契约与状态</a></li>
+    <li class="sub"><a href="#evidence">3.3 证据与证据新鲜度</a></li>
+    <li class="sub"><a href="#donegate">3.4 完成判定</a></li>
+    <li class="sub"><a href="#breaker">3.5 预算与熔断</a></li>
+    <li class="sub"><a href="#skillrule">3.6 技能加载边界</a></li>
+    <li><a href="#scenarios">4. 七类日常场景</a></li>
+    <li class="sub"><a href="#s1">4.1 产品调研</a></li>
+    <li class="sub"><a href="#s2">4.2 需求评估</a></li>
+    <li class="sub"><a href="#s3">4.3 方案设计</a></li>
+    <li class="sub"><a href="#s4">4.4 开发执行</a></li>
+    <li class="sub"><a href="#s5">4.5 问题定位排查</a></li>
+    <li class="sub"><a href="#s6">4.6 长任务执行</a></li>
+    <li class="sub"><a href="#s7">4.7 长任务次日状态检查</a></li>
+    <li><a href="#skills">5. skills 目录逐个说明</a></li>
+    <li><a href="#stagetable">6. 阶段 → 参考技能全表</a></li>
+    <li><a href="#files">7. 文件边界与目录结构</a></li>
+    <li><a href="#statefile">8. state.md 字段速查</a></li>
+    <li><a href="#cmd">9. 常用命令</a></li>
+    <li><a href="#faq">10. 常见疑问</a></li>
+    <li><a href="#cheatsheet">11. 一页速查</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<h2 id="what">1. 这是什么</h2>
+
+<p>yxj-work 不是一个替人写代码的「大提示词」，而是一套<strong>会话管理制度</strong>。它管三件事：</p>
+<ul>
+  <li><strong>边界</strong>：这次任务允许改什么、不允许改什么，工作流文件写在哪，代码改到哪为止。</li>
+  <li><strong>证据</strong>：每个结论必须有可复现的命令输出或真实运行结果支撑，「编译过了」「agent 说完成了」都不算。</li>
+  <li><strong>续接</strong>：任务可以中断、过夜、换会话。第二天的新会话只读文件就能接着干，不依赖上一次对话的记忆。</li>
+</ul>
+
+<p>
+  它由三个<strong>入口技能</strong>（你自己敲命令触发）和三十个<strong>辅助技能</strong>（入口按阶段主动读取，或你点名调用）组成。
+  入口负责流程骨架，辅助技能是每个阶段的具体方法，十三条 <code>yxj-principle-*</code> 则是短小的单条工程原则，被其他技能引用。
+</p>
+
+<div class="note">
+  <strong>谁在什么时候读哪份文件，是写死的</strong>：入口 <code>yxj-work</code> 里有一张「阶段 → 参考技能」映射表（见 <a href="#stagetable">第 6 节</a>），
+  进入某阶段就先读该阶段的 playbook，再读表里列出的技能文件。没有第二份清单，也不靠模型临场决定。
+</div>
+
+<h2 id="install">2. 安装与调用</h2>
+
+<p>安装哪些技能由 <code>scripts/runtime-skills.txt</code> 决定：3 个入口 + 30 个辅助技能，一起复制到同一个技能目录。因为同级安装，入口里的相对读取路径 <code>../&lt;技能名&gt;/SKILL.md</code> 在源仓库和安装目标下都成立。</p>
+
+<pre><code>cd /Users/yuanxj/Documents/github/yxj-work
+
+# 1) 先自检仓库
+bash scripts/check-repo.sh
+
+# 2) 安装（默认拒绝覆盖已有目录）
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills"
+
+# 3) 安装后校验：源仓库与安装目标逐项对照
+bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"</code></pre>
+
+<p>若要更新已安装副本，只覆盖带本仓库写入标记 <code>.yxj-work-installed</code> 的目录：</p>
+
+<pre><code>bash scripts/check-repo.sh
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update</code></pre>
+
+<p>安装完成后，日常只敲这三个命令：</p>
+
+<table>
+  <thead><tr><th>命令</th><th>用途</th><th>对应场景</th></tr></thead>
+  <tbody>
+    <tr><td><code>/yxj-work &lt;任务说明&gt;</code></td><td>普通任务入口：调研、设计、计划、执行、修复、审查</td><td>本文 4.1 – 4.5</td></tr>
+    <tr><td><code>/yxj-work-long &lt;长任务说明&gt;</code></td><td>跨阶段、跨会话、过夜或长时间外部运行的任务入口</td><td>本文 4.6 – 4.7</td></tr>
+    <tr><td><code>/yxj-work-handoff &lt;补充说明&gt;</code></td><td>把当前任务写成交接文件，供新会话继续（只能你主动调用）</td><td>本文 4.7</td></tr>
+  </tbody>
+</table>
+
+<div class="note warn">
+  辅助技能全部设置了 <code>disable-model-invocation: true</code>，也就是<strong>模型不会因为任务内容自动唤起它们</strong>。
+  两种加载方式：入口按映射表主动读取，或你主动点名 <code>/yxj-why</code>、<code>/yxj-arena</code>。看不到它们被自动调用是设计如此，不是没生效。
+</div>
+
+<h2 id="basics">3. 五个必须先懂的机制</h2>
+
+<h3 id="route">3.1 路由：L0 与 L1/L2/L3</h3>
+
+<p>每次调用先分流。<code>fast-answer</code>（L0）是快问快答——术语解释、简单命令说明、单一事实确认——直接回答，<strong>不创建任何工作目录</strong>。</p>
+
+<p>除此之外进正式任务，按层级记账：</p>
+
+<table>
+  <thead><tr><th>层级</th><th>典型规模</th><th>工具调用预算</th><th>无进展阈值</th></tr></thead>
+  <tbody>
+    <tr><td>L1</td><td>一次读取 + 一个小改动</td><td>30</td><td>20 次工具调用</td></tr>
+    <tr><td>L2</td><td>多步骤、需要设计和计划</td><td>100</td><td>20 次工具调用</td></tr>
+    <tr><td>L3 / long</td><td>跨阶段、跨会话、过夜</td><td>400，另有 8 小时上限</td><td>每个子任务 60 次工具调用或 30 分钟</td></tr>
+  </tbody>
+</table>
+
+<p>同时按目标路由到阶段：<code>investigate</code>（现状、定位、恢复）、<code>research</code>（外部事实、产品、市场、技术选型）、<code>design</code>（方案设计，不改代码）、<code>plan</code>（逐任务实施规格）、<code>exec</code>（按计划改并验证）、<code>bugfix</code>（复现、根因、最小修复、回归）、<code>review</code>（只读审查）、<code>ops</code>（平台操作手册，不代点网页）、<code>mixed</code>（研究 → 决策门 → 设计/计划 → 执行 → 验证）。</p>
+
+<p>三条常用链路：</p>
+<ul>
+  <li>开发：<code>design → plan → exec → review</code>。需求明确且改动很小可跳过 <code>design</code>，但要在契约里写明原因。</li>
+  <li>排查修复：<code>investigate → bugfix → review</code>。无法稳定复现就停在 <code>investigate</code>，不要假装进入修复。</li>
+  <li>调研：<code>research → decision gate</code>。只有决策门判 <code>proceed</code> 才继续进开发和评审。</li>
+</ul>
+
+<h3 id="contract">3.2 契约与状态</h3>
+
+<p>正式任务先写两份文件，再动真东西：<code>contract.md</code>（这次任务做什么、范围到哪、怎么算做完）和 <code>state.md</code>（现在在哪一步、有哪些证据、被什么挡住）。L1 只写一句 <code>done_when</code>、允许范围、验证方式和未知项；L2 还要写任务类型、禁止改动、验证层级、产物位置、阶段和下一入口；L3 每个检查点再带状态、证据、依赖、阻塞和第一步。</p>
+
+<p>状态只会按下面这条路走：</p>
+
+<pre><code>pending ──► active ──► done        （只能通过完成判定）
+                │
+                ├──► blocked       （工具、证据、依赖、边界问题，可恢复）
+                └──► stopped       （不可逆动作、等你拍板、生产变更、花钱、对外发布、改需求范围）
+
+blocked ──► active                 （阻塞解除 / 共同前提重新验证通过 / 有新证据的新策略）</code></pre>
+
+<h3 id="evidence">3.3 证据与证据新鲜度</h3>
+
+<p>每条证据记录 <code>command</code>、<code>run_at</code>、<code>result</code> 和相关文件的 <code>last_edit_at</code>。<strong>运行时间早于文件最后修改时间的证据作废</strong>——改了代码还引用旧跑出来的结果，等于没验证。</p>
+
+<p>验证分五层，按契约要求从窄到宽跑：<code>syntax/config</code> → <code>static</code> → <code>runtime/local</code> → <code>external</code> → <code>consumer</code>。关键词搜索和 grep 属于 <code>static</code>，只能证明「字符串在那儿」，不能单独证明「行为生效」。</p>
+
+<h3 id="donegate">3.4 完成判定</h3>
+
+<p>下面五条同时成立才能写 <code>status: done</code>：</p>
+<ol>
+  <li>所有 required（必需）验证项为 <code>passed</code>；</li>
+  <li>所有 required 子任务已结束；</li>
+  <li>没有未处理的越界文件；</li>
+  <li>所有决策门允许交付；</li>
+  <li>每个结论都有 evidence 指针。</li>
+</ol>
+<p>出现 <code>failed</code>、<code>blocked</code>、<code>not_run</code>、未解决的决策门、仍在跑的 required 子任务或结论缺证据，一律禁止标 <code>done</code>。可选（optional）项必须在契约里声明，并写明跳过原因。</p>
+
+<h3 id="breaker">3.5 预算与熔断</h3>
+
+<p>熔断的触发条件（每个子任务独立计数）：</p>
+<ul>
+  <li>同一命令 + 同一错误首行出现 2 次；</li>
+  <li>错误各不相同时，required 验证连续失败 3 次；</li>
+  <li>L1/L2 连续 20 次工具调用无进展；L3/long 每子任务 60 次工具调用或 30 分钟无进展；</li>
+  <li>第三方技能越界写入 <code>.work-docs</code> 之外的路径；</li>
+  <li>共同前提被证据否定。</li>
+</ul>
+
+<p>熔断后必须：停止同策略重试 → 在 <code>audit/</code> 记录失败动作、错误摘要、策略指纹（<strong>修改文件 + 执行命令 + 错误首行</strong>）和证据 → 状态改为 <code>blocked</code> 并填 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code>、<code>next_action</code> → 写 checkpoint 或交接 → 父任务不得 <code>done</code>。</p>
+
+<p>恢复时，新策略指纹不能与已有指纹相同。说不出新旧策略差在哪，就停下来交给人。</p>
+
+<h3 id="skillrule">3.6 技能加载边界</h3>
+
+<p>辅助技能加载后仍受当前任务的契约、<code>.work-docs</code> 文件边界、预算、熔断和验证要求约束。如果技能自带规则与当前契约冲突，<strong>以契约为准</strong>，并把差异记到 <code>audit/</code>。</p>
+
+<p>调用第三方技能前先按 <code>playbooks/third-party-skill.md</code> 分类：只读的可以直接跑；能指定输出根的必须传入本次任务目录；固定写入或写入不可知的，只能在隔离的临时目录里试跑，否则任务标 <code>blocked</code>。调用前后都要存目录清单，发现 <code>.work-docs</code> 之外的意外文件立即熔断，且<strong>未经授权不得移动、删除或覆盖</strong>那个文件。</p>
+
+<h2 id="scenarios">4. 七类日常场景</h2>
+
+<p>下面每节按同一模板写：什么情况下用它、怎么敲、内部走什么、你会拿到什么产物、验收看什么、常见坑。标 <span class="tag native">原生阶段</span> 的是工作流本来就有这个阶段；标 <span class="tag combo">组合用法</span> 的是用现有阶段拼出来的用法。</p>
+
+<div class="scenario" id="s1">
+  <h3>4.1 产品调研 <span class="tag native">原生阶段 research</span></h3>
+
+  <dl>
+    <dt>什么时候用</dt>
+    <dd>要摸外部事实：某个产品/竞品/市场情况、技术选型对比、用户反馈、某个方向值不值得做。和「代码里怎么跑的」无关——那属于 <code>investigate</code>。</dd>
+
+    <dt>怎么敲</dt>
+    <dd>
+<pre><code>/yxj-work 调研 &lt;产品/技术&gt;：现在有哪些替代方案，各自的能力边界和真实使用成本，给出是否值得投入的判断</code></pre>
+      想强制收敛到结论，就把停止条件一起写进去：
+<pre><code>/yxj-work 调研 X。要求：隐含假设显式列出，结论必须能落到 proceed / do_not_build，每条附证据出处</code></pre>
+    </dd>
+
+    <dt>内部走什么</dt>
+    <dd>读 <code>playbooks/research.md</code>，并主动读取 <code>yxj-why</code>（查设计缘由类证据）和 <code>yxj-how</code>（看现有实现怎么跑）。要点：先把对象、术语、版本、环境确认清楚（身份不明就阻塞，禁止直接下结论）→ 把请求改写成可证伪的问题，拆成 1–5 条断言 → 证据按优先级取：官方文档/API、官方仓库/发布说明、一手数据或用户原话、可复现测量，最后才是二手来源 → 维护证据台账（<code>claim / source / date / fact_or_inference / confidence / reproducible / contradiction / scope</code>）→ 事实、推断、未知分开写 → 只有当一个测量可能改变决策时，才真去跑它。</dd>
+
+    <dt>产物落在哪</dt>
+    <dd>最终报告写 <code>.work-docs/tasks/&lt;task-id&gt;/outputs/</code>；证据台账和运行记录写 <code>evidence/</code> 或 <code>audit/</code>。报告结尾必须给 <code>decision_gate: proceed | design_only | gather_more | do_not_build</code>，并附开发交接：范围、证据指针、验收方向、仍需人拍板的不可逆决策。</dd>
+
+    <dt>验收看什么</dt>
+    <dd>每条结论有没有来源和日期；事实与推断有没有混在一起；失败路径有没有记（「搜不到」不等于「不存在」）；决策门有没有给，而不是留一句「供参考」。</dd>
+
+    <dt>常见坑</dt>
+    <dd>把「查到了几篇文章」当结论；把不可复现的一次性体验当数据；没确认版本就开始横向对比。以上三种都会被 research playbook 挡回 <code>gather_more</code>。</dd>
+  </dl>
+</div>
+
+<div class="scenario" id="s2">
+  <h3>4.2 需求评估 <span class="tag combo">组合用法</span></h3>
+
+  <dl>
+    <dt>什么时候用</dt>
+    <dd>需求来了，要先判断：这事该不该做、做到哪一层、边界在哪、有没有隐含的不可逆代价。工作流没有单独的「需求评估」阶段，它由三块拼成：<code>research</code> 的决策门 + <code>design</code> 的范围与不可逆决策清单 + <code>yxj-interrogate</code> 的对抗评审。</dd>
+
+    <dt>怎么敲</dt>
+    <dd>
+<pre><code>/yxj-work 评估需求：&lt;需求描述&gt;。产出：（1）该需求解决的真实问题，不做会怎样；
+（2）最小可用范围 vs 完整范围；（3）涉及的不可逆决策；（4）有证据支撑的结论：
+proceed / design_only / do_not_build。不要改代码。</code></pre>
+      需要更强的对抗时点名它：
+<pre><code>/yxj-interrogate 刚才的需求评估结论，找出我漏掉的前提和盲点</code></pre>
+    </dd>
+
+    <dt>内部走什么</dt>
+    <dd>先按 <code>research</code> 建立事实（现状、已有能力、外部约束）并给决策门；<code>design</code> playbook 要求写出当前链路、可复用能力、边界、假设与备选方案，并显式定义 <code>done_when</code>、验证层级、文件边界和<strong>不可逆决策</strong>；证据不足就停在 <code>design_only</code> 或 <code>gather_more</code>，不建执行任务。对抗评审阶段读 <code>yxj-interrogate</code>，用多个独立视角挑战同一批改动或结论。</dd>
+
+    <dt>产物落在哪</dt>
+    <dd><code>outputs/</code> 下的一份评估报告（含范围切分与决策门）；研究证据与台账在 <code>evidence/</code>；决策记录在 <code>audit/</code>。</dd>
+
+    <dt>验收看什么</dt>
+    <dd>「最小范围」是否写清了不做什么；不可逆决策是否单列（例如数据结构定型、对外发布、花钱）；决策门是不是四选一而不是「都可以」；每条判断有没有证据指针。</dd>
+
+    <dt>常见坑</dt>
+    <dd>把需求评估做成方案设计（越界改代码或提前定实现）；结论是「可以做」但没说清做到哪停；漏掉不可逆项，等执行到一半才发现退不回来。</dd>
+  </dl>
+</div>
+
+<div class="scenario" id="s3">
+  <h3>4.3 方案设计 <span class="tag native">原生阶段 design</span></h3>
+
+  <dl>
+    <dt>什么时候用</dt>
+    <dd>需求已经明确，要定结构和接缝：模块怎么切、接口长什么样、数据怎么流、放在哪一层。这个阶段<strong>明确不改项目代码</strong>。</dd>
+
+    <dt>怎么敲</dt>
+    <dd>
+<pre><code>/yxj-work 设计 &lt;要做的东西&gt; 的实现方案：模块边界、接口、数据流、验证方式和不可逆决策</code></pre>
+      想先探形状，再定稿：
+<pre><code>/yxj-prototype 用一次性脚本验证「状态这样设计是否够用」，结论写回设计</code></pre>
+      方案有分叉、想同时看多个答案：
+<pre><code>/yxj-arena 同一个接口设计给我 3 个独立候选，选出底稿，并把其余的优点嫁接进来</code></pre>
+    </dd>
+
+    <dt>内部走什么</dt>
+    <dd>读 <code>playbooks/design.md</code>，并主动读取：<code>yxj-codebase-design</code>（深层模块的共同词汇：接口、接缝、可测试性）、<code>yxj-architect</code>（先画类型、签名、模块骨架）、<code>yxj-arena</code>（并行候选 + 嫁接）、<code>yxj-prototype</code>（一次性原型回答设计问题），以及三条原则 <code>yxj-principle-redesign-from-first-principles</code>、<code>yxj-principle-foundational-thinking</code>、<code>yxj-principle-outcome-oriented-execution</code>。</dd>
+
+    <dt>产物落在哪</dt>
+    <dd>设计写 <code>.work-docs/tasks/&lt;task-id&gt;/outputs/</code>。设计阶段不碰项目代码；如果研究证据不够，就停在 <code>design_only</code> 或 <code>gather_more</code>，不创建执行任务。</dd>
+
+    <dt>验收看什么</dt>
+    <dd>有没有写清当前链路和可复用能力；有没有备选方案与取舍；<code>done_when</code>、验证层级、文件边界、不可逆决策是否齐全；接口是否让下游代码变简单，而不是把复杂度搬了个位置。</dd>
+
+    <dt>常见坑</dt>
+    <dd>把设计写成实现清单（跳过「为什么」直接排任务）；新需求硬塞进旧结构而不重新审视整体形状（<code>redesign-from-first-principles</code> 就是针对这个）；类型和数据结构没定就先写逻辑（<code>foundational-thinking</code> 的适用点）。</dd>
+  </dl>
+</div>
+
+<div class="scenario" id="s4">
+  <h3>4.4 开发执行 <span class="tag native">原生阶段 plan → exec → review</span></h3>
+
+  <dl>
+    <dt>什么时候用</dt>
+    <dd>方案定了，要真正动代码（也可以是文档、配置、脚本）。</dd>
+
+    <dt>怎么敲</dt>
+    <dd>
+<pre><code>/yxj-work 按上面的设计实现 &lt;功能名&gt;。范围：&lt;文件/模块&gt;，其他文件不动</code></pre>
+      需求明确、改动很小，可以一句走完全程：
+<pre><code>/yxj-work 给 &lt;模块&gt; 加上 &lt;行为&gt;，跑通现有测试，给出改动前后的对比输出</code></pre>
+      想在同一任务里连着走完：
+<pre><code>/yxj-work 实现 &lt;功能&gt;：先计划、再执行、最后只读审查一遍</code></pre>
+    </dd>
+
+    <dt>内部走什么</dt>
+    <dd>
+      读 <code>playbooks/plan.md</code>：抄下已批准的 <code>done_when</code> 和边界（<strong>不得扩大范围</strong>），把工作拆成可独立验证的任务，每个任务写清目标文件、允许改动、必需验证、期望证据、被阻塞时的退路；每个验证和子任务都标 <code>required</code> 或 <code>optional</code>，optional 必须写跳过原因。计划写 <code>outputs/</code>，并给出第一个可执行动作。<br>
+      然后读 <code>playbooks/exec.md</code>：先读契约、计划、状态、目标文件、调用方、测试和当前差异 → 动手前先写下「本次逻辑改动 + 它需要什么验证」→ 只改任务边界内的文件（用户项目文件是<strong>目标</strong>，工作流记录留在 <code>.work-docs</code>）→ 由窄到宽跑验证 → 验证失败就记录策略指纹，换一条实质不同的路 → 真实输出存 <code>evidence/</code>，决策和检查点进 <code>audit/</code>。对应的参考技能是 <code>yxj-typescript-best-practices</code>（读写 TS 时）、<code>yxj-principle-type-system-discipline</code>（让非法状态不可表示）、<code>yxj-principle-boundary-discipline</code>（校验集中在系统边界）、<code>yxj-principle-laziness-protocol</code>（偏删除、最小改动）。<br>
+      最后读 <code>playbooks/review.md</code>（只读）：对照契约、改动集、证据和未验证项，检查正确性、安全边界、可维护性、完成条件覆盖、工作流文件边界，把发现分成 must-fix / consider / note / rejected，并说明<strong>哪些没审</strong>。参考技能：<code>yxj-requesting-code-review</code>、<code>yxj-receiving-code-review</code>、<code>yxj-interrogate</code>、<code>yxj-principle-prove-it-works</code>。
+    </dd>
+
+    <dt>产物落在哪</dt>
+    <dd>计划与审查报告进 <code>outputs/</code>；命令真实输出进 <code>evidence/</code>；决策、checkpoint、失败记录进 <code>audit/</code>；可复用的临时夹具进 <code>tmp/</code>。项目代码按契约修改，但不被当成工作流产物。</dd>
+
+    <dt>验收看什么</dt>
+    <dd>required 验证是否全 <code>passed</code> 且证据比代码新；改动是否越出契约范围；计划里的 optional 项是否写了跳过原因；审查是否说清了未覆盖部分。退出码、文件存在、编译通过、agent 自报完成，<strong>都不能单独满足完成条件</strong>。</dd>
+
+    <dt>常见坑</dt>
+    <dd>把「可以顺手改」当授权，范围外顺手改了别的文件；验证只跑关键词 grep 就宣称行为生效（只能算 <code>static</code>）；改了代码还引用改动前的旧结果。</dd>
+  </dl>
+</div>
+<div class="scenario" id="s5">
+  <h3>4.5 问题定位排查 <span class="tag native">原生阶段 investigate → bugfix → review</span></h3>
+
+  <dl>
+    <dt>什么时候用</dt>
+    <dd>出现异常行为、报错、结果不对、线上症状；或者只是想知道「现在到底是什么状态」。分两步：先定位（<code>investigate</code>），能稳定复现才进修复（<code>bugfix</code>）。</dd>
+
+    <dt>怎么敲</dt>
+    <dd>
+<pre><code>/yxj-work 定位：&lt;症状描述&gt;。给出最小复现、受影响范围和证据，先不改代码</code></pre>
+      复现稳定后再修：
+<pre><code>/yxj-work 修复 &lt;症状&gt;：先复现，追根因，最小改动，跑回归，给出修复前后的对比输出</code></pre>
+      想知道「这块代码改动会波及哪里」时点名：
+<pre><code>/yxj-blast-radius 我要改 &lt;函数/模块&gt;，列出可能被影响的其他地方，并用真实运行证明安全前提</code></pre>
+    </dd>
+
+    <dt>内部走什么</dt>
+    <dd>
+      <code>playbooks/investigate.md</code>：先读任务状态、契约和近期证据，再大范围探索 → 说清可观察的问题和 <code>done_when</code>，找出能回答它的最小读取或运行检查 → 先缩小文件、配置、服务、版本范围再跑命令 → 结论分「事实 / 推断 / 未知」并带证据指针 → 说明命中的验证层级 → 契约没要求就不产出正式报告，命令结果进 <code>evidence/</code>、决策进 <code>audit/</code> → 证据不足以回答就设 <code>blocked</code>，填清尝试路径、共同前提、解除条件和下一步。<br>
+      <code>playbooks/bugfix.md</code>：用「期望 vs 实际」复现，优先一条失败命令或行为测试 → 复现失败就记录尝试路径并停止猜测 → 定位根因和那个错误假设（带文件/日志证据）→ 做最小的根因修复，只治症状的缓解措施必须显式标注 → 重跑原复现面和相关既有检查 → 连续三次 required 验证失败就停止修改、记录策略指纹、重新验证共同前提 → 保留「修复前失败、修复后通过」两段证据，可复现的任务缺任一段都不能算完成。<br>
+      参考技能：<code>yxj-principle-fix-root-causes</code>、<code>yxj-principle-attack-the-premise</code>（多个共享同一前提的修复都失败时，先普查失衡方，再质疑前提）；<code>investigate</code> 阶段还会读 <code>yxj-how</code>（这块怎么跑的）和 <code>yxj-blast-radius</code>（改动波及面）。
+    </dd>
+
+    <dt>产物落在哪</dt>
+    <dd>复现命令与前后输出进 <code>evidence/</code>；根因结论、绕过方案、失败策略指纹进 <code>audit/</code>；需要交付的分析写 <code>outputs/</code>。</dd>
+
+    <dt>验收看什么</dt>
+    <dd>「修复前失败 / 修复后通过」是否都有真实输出；根因是否指到具体文件和日志；缓解措施有没有被标成「只治症状」；回归是否跑了原来那条复现命令，而不是换了条更容易过的命令。</dd>
+
+    <dt>常见坑</dt>
+    <dd>复现不了就开始猜着改；用空值判断把崩溃盖住（<code>fix-root-causes</code> 明确反对「让崩溃闭嘴的空值保护」）；同一命令同一错误重复试（第二次就熔断，必须换方法）；把「搜不到相关代码」当成「问题不存在」。</dd>
+  </dl>
+</div>
+
+<div class="scenario" id="s6">
+  <h3>4.6 长任务执行 <span class="tag native">入口 yxj-work-long</span></h3>
+
+  <dl>
+    <dt>什么时候用</dt>
+    <dd>满足以下任一条就进长任务（否则用普通 <code>/yxj-work</code>）：跨两个以上阶段、跨会话或过夜、多个子任务、长时间外部运行（等训练、等构建、等第三方批处理）、研究→决策→开发的交接、证据量明显超出普通阈值。</dd>
+
+    <dt>怎么敲</dt>
+    <dd>
+<pre><code>/yxj-work-long &lt;长任务说明&gt;。预算：400 次工具调用或 8 小时；每个阶段结束写 checkpoint</code></pre>
+      建议把「分几个阶段、每阶段验证什么」写清楚，后面的 checkpoint 就按这个切。
+    </dd>
+
+    <dt>内部走什么</dt>
+    <dd>
+      在当前命令执行目录初始化唯一的 <code>.work-docs</code>，建 L3 契约和状态；父任务和每个子任务都用唯一 task id，格式 <code>{YYYYMMDD}-{NN}-{slug}</code>（当天日期 + 当日两位自增序号，从 01 起、不回收空号）。取号前先读 <code>.work-docs/index.md</code>：同范围且进行中的任务续用原 id，否则取当天最大序号 +1 并追加索引行。<br>
+      <strong>每个阶段结束</strong>追加一个 <code>audit/checkpoint-&lt;序号&gt;.md</code>，写明状态、本阶段 <code>done_when</code>、真实验证输出、证据路径、下一阶段依赖、阻塞和下一步第一动作；同时更新 <code>state.md</code> 的 <code>stage</code>、<code>status</code>、<code>next_action</code>、<code>calls_since_progress</code>、<code>last_progress_at</code>、<code>updated_at</code>。阶段结束<strong>不等于</strong>任务完成。<br>
+      <strong>准备暂停、过夜、等外部运行或结束会话前</strong>，必须更新 <code>state.md</code> 和 <code>handoff.md</code>。<code>handoff.md</code> 是第二天的入口，标准是「新会话只读它就能执行第一步」。<br>
+      长任务熔断阈值：每子任务 60 次工具调用或 30 分钟无进展；同一命令同一错误首行 2 次；required 验证连续失败 3 次；越界写入；共同前提被否定。总预算默认 400 次工具调用或 8 小时，耗尽写最终 checkpoint，<strong>不标 done</strong>。
+    </dd>
+
+    <dt>产物落在哪</dt>
+    <dd>除常规的 <code>outputs/ evidence/ audit/ tmp/</code> 外，长任务多了两个关键文件：阶段记录 <code>audit/checkpoint-&lt;序号&gt;.md</code>（只追加，不覆盖旧记录）和恢复入口 <code>handoff.md</code>（只保留当前恢复所需内容）。</dd>
+
+    <dt>验收看什么</dt>
+    <dd>每个阶段是否有对应 checkpoint 且带真实验证输出；<code>state.md</code> 的阶段与状态是否和最新 checkpoint 一致；父任务是否在 required 子任务还 active/blocked/stopped 时被标了 done（应当禁止）。</dd>
+
+    <dt>常见坑</dt>
+    <dd>把「阶段做完了」写成任务完成；过夜前忘了写 handoff，第二天只能靠聊天记录回忆；checkpoint 覆盖旧文件导致历史丢失；预算耗尽后强行标 done。</dd>
+  </dl>
+</div>
+
+<div class="scenario" id="s7">
+  <h3>4.7 长任务次日状态检查（恢复） <span class="tag native">恢复流程 + yxj-work-handoff</span></h3>
+
+  <dl>
+    <dt>什么时候用</dt>
+    <dd>过夜、换会话、外部运行等完了，或者你只是想确认昨天那件事现在到哪了、下一步第一动作是什么。</dd>
+
+    <dt>怎么敲</dt>
+    <dd>
+<pre><code>/yxj-work-long 继续 &lt;task-id&gt;：先给恢复摘要（当前状态、已完成、下一步第一动作、阻塞、证据位置），再执行下一步</code></pre>
+      不确定 task-id 时直接问：
+<pre><code>/yxj-work-long 检查 &lt;项目目录&gt;/.work-docs 下有哪些未完成任务，每个给一行状态摘要</code></pre>
+    </dd>
+
+    <dt>内部走什么</dt>
+    <dd>
+      新会话<strong>不依赖上一次对话记忆</strong>。启动已有任务时先依次读取：<code>.work-docs/index.md</code> → 任务 <code>state.md</code> → <code>audit/</code> 下最近的 <code>checkpoint-*.md</code> → <code>handoff.md</code> → <code>evidence/</code>；然后在回复开头给出恢复摘要，至少包含：当前状态、已完成、下一步第一动作、阻塞、证据位置；之后才动任务。<br>
+      <strong>恢复时重新读一次 checkpoint 和证据</strong>。如果状态与证据不一致，<strong>以证据为准</strong>，并先把状态退回 <code>active</code> 或 <code>blocked</code>，不得直接宣称完成。恢复只能来自三种理由：阻塞解除、共同前提重新验证通过、有新证据的新策略；且新策略指纹不能与已有指纹相同。
+    </dd>
+
+    <dt>想主动补一份交接时</dt>
+    <dd>
+      你点名 <code>/yxj-work-handoff</code>（入口不会自动触发它）。它只写当前任务的 <code>.work-docs/tasks/&lt;task-id&gt;/handoff.md</code>，不得写到工作区外。步骤：读 <code>state.md</code>、<code>contract.md</code>、最近 checkpoint 和 evidence → 检查每条证据的 <code>run_at</code> 是否不早于相关文件的 <code>last_edit_at</code>，新鲜的就直接引用，过期的重跑并记真实结果 → 更新 <code>handoff.md</code>，内容含背景、<code>done_when</code>、当前阶段与状态、验证输出、已完成、下一步第一动作、卡点与已尝试策略、约束、待拍板、关键文件和证据路径 → 熔断过的任务还要写 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code> 和禁止重复的策略指纹 → 自检「新会话只读这份文件能否直接执行下一步」。
+    </dd>
+
+    <dt>产物落在哪</dt>
+    <dd><code>handoff.md</code>（恢复入口）、<code>state.md</code>（当前状态）、<code>audit/checkpoint-*.md</code>（阶段记录，只追加）。</dd>
+
+    <dt>验收看什么</dt>
+    <dd>恢复摘要里有没有「下一步第一动作」和「证据位置」两项；引用的证据是否仍然新鲜；有没有出现「状态说 done、证据却不支持」的情况（出现就该退回 active/blocked）。</dd>
+
+    <dt>常见坑</dt>
+    <dd>拿上一会话的记忆当事实；把 handoff 当完成证明（它只是状态入口）；状态与证据冲突时顺着状态走。</dd>
+  </dl>
+</div>
+<h2 id="skills">5. skills 目录逐个说明</h2>
+
+<p>33 个技能全部设置 <code>disable-model-invocation: true</code>：不会被任务内容自动唤起。加载方式只有两种——入口按<a href="#stagetable">第 6 节映射表</a>主动读取，或你主动点名 <code>/yxj-&lt;名字&gt;</code>。</p>
+
+<div class="skill-group" id="sk-entry">
+  <h3>5.1 三个入口技能</h3>
+
+  <div class="skill">
+    <div class="name">yxj-work</div>
+    <div class="what">普通任务入口。支持 fast-answer、investigate、research、design、plan、exec、bugfix、review、ops、mixed 十种路由。契约格式、状态字段、熔断规则、完成判定和文件边界都由它定义。</div>
+    <div class="when">用：<code>/yxj-work &lt;任务说明&gt;</code>。绝大多数日常任务从这里进。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-work-long</div>
+    <div class="what">跨阶段、跨会话、过夜或长时间外部运行的任务入口。在普通规则之外增加 L3 契约、阶段 checkpoint、次日恢复摘要、400 次 / 8 小时总预算。</div>
+    <div class="when">用：<code>/yxj-work-long &lt;长任务说明&gt;</code>。进入判据见 4.6。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-work-handoff</div>
+    <div class="what">把当前任务写成 <code>handoff.md</code>，作为下一个会话的恢复入口，并保证里面的「下一会话第一步」与 <code>next_action</code> 第一条一致。</div>
+    <div class="when">用：<code>/yxj-work-handoff &lt;补充说明&gt;</code>。要收工、过夜、或把任务交给下一个会话接着干时。入口不得自动触发它，只能你点名。</div>
+  </div>
+</div>
+
+<div class="skill-group" id="sk-understand">
+  <h3>5.2 理解代码（investigate / research 阶段读取）</h3>
+
+  <div class="skill">
+    <div class="name">yxj-how</div>
+    <div class="what">回答「这段是怎么跑起来的」。覆盖子系统架构、运行时流程、上手心智模型，以及「这块该放哪、哪个包拥有它、是不是这层」的归属与分层问题。</div>
+    <div class="when">用：动一个不熟的模块之前；<code>/yxj-how &lt;模块&gt; 的调用链</code>。问「为什么这么设计」要用 <code>yxj-why</code>。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-why</div>
+    <div class="what">回答「当初为什么这么定」。覆盖设计缘由、回归原因、事后复盘、有数据支撑的阈值。它会自己发现可用的 MCP 数据源，<strong>并行</strong>查询各类证据：源码版本库、issue 跟踪、长文档、实时聊天、基础设施可观测、错误跟踪、产品分析数仓，最后给出带引用的决策与取舍读解。</div>
+    <div class="when">用：<code>/yxj-why 为什么当初选了 X</code>；复盘「这次回归是谁引入的」。问运行时行为用 <code>yxj-how</code>。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-blast-radius</div>
+    <div class="what">找出一次改动在 diff 之外可能波及的地方，并<strong>用真实运行</strong>证明「它之所以安全的那个关键事实」，而不是写一篇分析交差。</div>
+    <div class="when">用：<code>/yxj-blast-radius 改 &lt;函数&gt; 会影响谁</code>；或审查一个你不太放心的小 diff。</div>
+  </div>
+</div>
+
+<div class="skill-group" id="sk-design">
+  <h3>5.3 设计与对抗评审（design / review 阶段读取）</h3>
+
+  <div class="skill">
+    <div class="name">yxj-codebase-design</div>
+    <div class="what">设计「深层模块」的共同词汇：接口怎么定、接缝放哪、怎么让代码更好测试、更好被检索和阅读，以及在哪找「加深」的机会。</div>
+    <div class="when">用：改模块接口、决定分层切分时；也是其他技能需要这套词汇时的共同参照。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-architect</div>
+    <div class="what">先勾出类型、函数签名和模块结构，再让实现把内容填进去；设计定稿后仍保持在场，避免实现走形。</div>
+    <div class="when">用：<code>/yxj-architect 设计 &lt;模块&gt;</code>，或任何「直接写代码会锁死错误形状」的非平凡工作。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-arena</div>
+    <div class="what">同一任务并行生成 N 个候选方案，选一个当底稿，再把落选者里更强的部分嫁接到它上面。</div>
+    <div class="when">用：<code>/yxj-arena &lt;任务&gt;</code>。一次尝试就会锁死形状、而你不确定该选哪种形状时。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-prototype</div>
+    <div class="what">造一个用完就扔的原型来回答设计问题——状态模型或逻辑合不合手、界面大概该什么样。产物是结论，不是要留下的代码。</div>
+    <div class="when">用：<code>/yxj-prototype 验证 &lt;设计假设&gt;</code>。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-interrogate</div>
+    <div class="what">让多个 LLM 评审者从互相独立的角度挑战同一批改动，找盲点。对应「对抗评审」「多模型评审」「压力测试这段代码」「把它撕开看看」。</div>
+    <div class="when">用：<code>/yxj-interrogate &lt;改动或结论&gt;</code>。需求评估、方案定稿、重要改动合入前的第二双眼睛。</div>
+  </div>
+</div>
+<div class="skill-group" id="sk-review">
+  <h3>5.4 代码审查与冲突处理（review 阶段读取）</h3>
+
+  <div class="skill">
+    <div class="name">yxj-requesting-code-review</div>
+    <div class="what">主动请求代码审查的规范流程，用来确认「做出来的东西是否符合要求」。</div>
+    <div class="when">用：完成任务、实现主要功能后，或合并前。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-receiving-code-review</div>
+    <div class="what">收到评审意见后该怎么处理：先核实、再实现，禁止表演式附和，也禁止不看技术依据就照做。对不清楚或技术上可疑的意见，要求技术上的严谨与验证。</div>
+    <div class="when">用：别人（或另一个模型）给了你 review 意见，正准备动手改之前。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-resolving-merge-conflicts</div>
+    <div class="what">解决正在进行的 git 合并 / 变基冲突的标准做法。</div>
+    <div class="when">用：<code>/yxj-resolving-merge-conflicts</code>，仓库正处于 merge 或 rebase 冲突中时。</div>
+  </div>
+</div>
+
+<div class="skill-group" id="sk-writing">
+  <h3>5.5 写作与语言规范</h3>
+
+  <div class="skill">
+    <div class="name">yxj-unslop</div>
+    <div class="what">去掉任何文本里的 AI 味。设计要求是「始终适用」——只要在产出给人看的文字就该带上。</div>
+    <div class="when">用：写报告、文档、需求说明、对外文字时。入口把它列在「按需读取」里。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-technical-writing</div>
+    <div class="what">分层技术写作标准：Diátaxis 结构（教程 / 操作 / 参考 / 解释四类文档各司其职）、Google 开发者写作风格的句子、STE 指令写法、Global English 语法。</div>
+    <div class="when">用：<code>/yxj-technical-writing</code>；写或审文档、RFC、README、PR 描述、提交信息时。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-teach</div>
+    <div class="what">把一摊工作讲清楚到人真的懂。它会调用 <code>yxj-how</code> 和 <code>yxj-why</code>，再把两边查到的东西编成一段解释。</div>
+    <div class="when">用：<code>/yxj-teach &lt;模块或改动&gt;</code>；「帮我真正搞懂 X」「给我讲讲这次改动」。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-typescript-best-practices</div>
+    <div class="what">TypeScript 最佳实践，声明了文件匹配范围 <code>**/*.ts</code>、<code>**/*.tsx</code>。</div>
+    <div class="when">用：读或改任何 .ts / .tsx 时（exec 阶段的参考技能）。</div>
+  </div>
+</div>
+
+<div class="skill-group" id="sk-ops">
+  <h3>5.6 人工步骤与验证（ops 阶段读取）</h3>
+
+  <div class="skill">
+    <div class="name">yxj-wizard</div>
+    <div class="what">生成一个交互式 bash 向导，一步步带人做那些只有人能做的事：开基础设施、配密钥或 CI secrets、走一个陌生的第三方后台、跑一次性迁移或切换。</div>
+    <div class="when">用：<code>/yxj-wizard &lt;目标&gt;</code>。agent 自己能做的步骤不要用它。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-create-verification-skill</div>
+    <div class="what">生成一个项目本地验证技能，让它像用户那样驱动你的应用——不挑语言、框架或平台。适合「这个项目没有脚本化手段证明 UI / CLI / 服务行为」。它属于 ops 阶段的参考技能。</div>
+    <div class="when">用：<code>/yxj-create-verification-skill</code>，或「给这个仓库做一个控制技能」。</div>
+  </div>
+</div>
+
+<div class="skill-group" id="sk-principle">
+  <h3>5.7 十三条工程原则（yxj-principle-*）</h3>
+
+  <p>这些是短小的单条原则，多数由其他技能引用，也可以在你自己卡住时点名。格式统一为：一句话是什么 → 什么时候用。</p>
+
+  <div class="skill">
+    <div class="name">yxj-principle-fix-root-causes</div>
+    <div class="what">调试时把每个症状追到根因并在根因处修：先复现，一路问「为什么」直到追上，拒绝用空值判断让崩溃闭嘴。</div>
+    <div class="when">用在：<code>bugfix</code> 阶段。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-attack-the-premise</div>
+    <div class="what">当两个以上共享同一前提的修复都在同一个关口失败时，先普查「哪些角色持有这个失衡」，然后质疑前提，而不是再写一个假设前提成立的修复。</div>
+    <div class="when">用在：连续修复失败、<code>bugfix</code> 阶段触发熔断前后。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-prove-it-works</div>
+    <div class="what">完成之后、宣布完成之前，对着真实产物验证：跑功能、读实际值、看 diff。不接受代理指标、自述或「编译通过」。</div>
+    <div class="when">用在：<code>review</code> 阶段，以及你自己的完成判定时刻。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-foundational-thinking</div>
+    <div class="what">写逻辑之前先定核心类型和数据结构，安排「搭骨架」与「做功能」的先后，先问清并发各方共享什么。数据结构对了，下游代码就变得显然。</div>
+    <div class="when">用在：<code>design</code> 阶段。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-type-system-discipline</div>
+    <div class="what">让非法状态无法被表示、给语义化的基础类型打标记、在边界解析外部数据、不向编译器撒谎、穷尽所有变体、从权威 schema 派生类型。</div>
+    <div class="when">用在：<code>exec</code> 阶段，任何静态类型语言的类型设计或签名评审。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-boundary-discipline</div>
+    <div class="what">把校验、错误处理、框架适配集中在系统边界（命令行、配置、网络、外部 API）；内部信任类型，业务逻辑留在纯函数里。</div>
+    <div class="when">用在：<code>exec</code> 阶段接线校验、错误处理或框架适配时。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-laziness-protocol</div>
+    <div class="what">重构或评估 diff 大小时，偏向删除和「能解决问题的最小改动」；对新增抽象、分层、信号透传保持警惕。</div>
+    <div class="when">用在：<code>exec</code> 阶段。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-redesign-from-first-principles</div>
+    <div class="what">把新需求融进既有设计时，按「这个需求从第一天就是基础假设」重新设计，而不是把它当外挂焊上去。</div>
+    <div class="when">用在：<code>design</code> 阶段。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-outcome-oriented-execution</div>
+    <div class="what">有计划的重写或迁移（阶段边界明确）中，朝目标架构收敛；不要用一次性的兼容代码去维持顺滑的中间态。</div>
+    <div class="when">用在：<code>design</code> 阶段，以及多阶段迁移任务。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-build-the-lever</div>
+    <div class="what">任何非平凡工作（不只是批量工作：编辑、迁移、分析、检查），优先造出「做它或证明它」的工具——codemod、脚本、生成器，或子代理照着走的技能。工具才是审阅者能重跑的产物。</div>
+    <div class="when">用在：<code>plan</code> 阶段。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-guard-the-context-window</div>
+    <div class="what">上下文快满时（大输出、长文件、反复读取、扇出规划），把批量活路由给子代理，主线程只留摘要，不留原始负载。</div>
+    <div class="when">用在：按需读取——长任务、大范围扫描时。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-encode-lessons-in-structure</div>
+    <div class="what">当你第二次写同一条指令，或发现同一个纠正反复出现时，把规则编码成 lint、元数据标记、运行时检查或脚本，而不是再写一段文字。</div>
+    <div class="when">用在：按需读取——发现重复纠正、想固化流程时。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">yxj-principle-separate-before-serializing-shared-state</div>
+    <div class="what">并发各方可能写同一份文件、分支、键或状态对象时，先消除共享；只有「一个共享写入方」是真实不变量时，才从结构上串行化。</div>
+    <div class="when">用在：按需读取——并行任务、共享文件或共享状态设计时。</div>
+  </div>
+</div>
+<h2 id="stagetable">6. 阶段 → 参考技能全表</h2>
+
+<p>这是入口 <code>yxj-work</code> 里那张映射表的完整复制，也是「哪个阶段读哪些文件」的唯一事实源。每进入一个阶段：先读 playbook，再读表里的技能文件，最后按 playbook 写产物和验证证据。同一技能在多行出现时只读一次。</p>
+
+<table>
+  <thead><tr><th>阶段</th><th>playbook</th><th>主动读取的参考技能</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>investigate</code><br>现状 / 定位 / 恢复</td>
+      <td><code>playbooks/investigate.md</code></td>
+      <td><code>yxj-how</code>、<code>yxj-blast-radius</code></td>
+    </tr>
+    <tr>
+      <td><code>research</code><br>外部事实 / 选型</td>
+      <td><code>playbooks/research.md</code></td>
+      <td><code>yxj-why</code>、<code>yxj-how</code></td>
+    </tr>
+    <tr>
+      <td><code>design</code><br>方案设计，不改代码</td>
+      <td><code>playbooks/design.md</code></td>
+      <td><code>yxj-codebase-design</code>、<code>yxj-architect</code>、<code>yxj-arena</code>、<code>yxj-prototype</code>、<code>yxj-principle-redesign-from-first-principles</code>、<code>yxj-principle-foundational-thinking</code>、<code>yxj-principle-outcome-oriented-execution</code></td>
+    </tr>
+    <tr>
+      <td><code>plan</code><br>逐任务实施规格</td>
+      <td><code>playbooks/plan.md</code></td>
+      <td><code>yxj-principle-build-the-lever</code></td>
+    </tr>
+    <tr>
+      <td><code>exec</code><br>按计划改并验证</td>
+      <td><code>playbooks/exec.md</code></td>
+      <td><code>yxj-typescript-best-practices</code>、<code>yxj-principle-type-system-discipline</code>、<code>yxj-principle-boundary-discipline</code>、<code>yxj-principle-laziness-protocol</code></td>
+    </tr>
+    <tr>
+      <td><code>bugfix</code><br>复现 / 根因 / 回归</td>
+      <td><code>playbooks/bugfix.md</code></td>
+      <td><code>yxj-principle-fix-root-causes</code>、<code>yxj-principle-attack-the-premise</code></td>
+    </tr>
+    <tr>
+      <td><code>review</code><br>只读审查</td>
+      <td><code>playbooks/review.md</code></td>
+      <td><code>yxj-requesting-code-review</code>、<code>yxj-receiving-code-review</code>、<code>yxj-interrogate</code>、<code>yxj-principle-prove-it-works</code></td>
+    </tr>
+    <tr>
+      <td><code>ops</code><br>平台操作手册</td>
+      <td><code>playbooks/ops.md</code></td>
+      <td><code>yxj-wizard</code>、<code>yxj-create-verification-skill</code></td>
+    </tr>
+    <tr>
+      <td><code>mixed</code><br>研究 → 门 → 开发</td>
+      <td><code>playbooks/mixed.md</code></td>
+      <td>按实际阶段读取上表，不新增第二套清单</td>
+    </tr>
+    <tr>
+      <td><code>fast-answer</code><br>快问快答</td>
+      <td>不读 playbook</td>
+      <td>不读取任何技能</td>
+    </tr>
+    <tr>
+      <td>按需</td>
+      <td>无固定 playbook</td>
+      <td><code>yxj-unslop</code>、<code>yxj-principle-guard-the-context-window</code>、<code>yxj-principle-encode-lessons-in-structure</code>、<code>yxj-principle-separate-before-serializing-shared-state</code>、<code>yxj-resolving-merge-conflicts</code>、<code>yxj-technical-writing</code>、<code>yxj-teach</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>第三方技能按 <code>playbooks/third-party-skill.md</code> 处理，不因为它被列在仓库里就自动调用。技能自带规则与当前契约冲突时，以契约为准，并把差异记录到 <code>audit/</code>。</p>
+
+<h2 id="files">7. 文件边界与目录结构</h2>
+
+<p>以命令实际执行的目录为工作根，创建或复用一个 <code>.work-docs/</code>：</p>
+
+<pre><code>&lt;执行目录&gt;/.work-docs/
+├── index.md                     任务索引（task-id / scope / status / updated_at）
+└── tasks/&lt;task-id&gt;/
+    ├── contract.md              这次做什么、范围、done_when
+    ├── state.md                 当前阶段、状态、证据、阻塞、预算
+    ├── handoff.md               恢复入口（新会话只读它就能开工）
+    ├── evidence/                命令真实输出、来源指针、可复现测量、失败证据
+    ├── outputs/                 最终报告、设计、计划、操作手册
+    ├── audit/                   决策、checkpoint、进行中记录、失败记录、策略指纹
+    └── tmp/                     可复用夹具、一次性验证材料</code></pre>
+
+<p><code>&lt;task-id&gt;</code> 就是任务目录名，格式 <code>{YYYYMMDD}-{NN}-{slug}</code>，例如 <code>20260928-01-yxj-work-independent-workflow</code>。日期是任务首次创建当天的本地日期；<code>{NN}</code> 是当日两位自增序号，从 <code>01</code> 起、不回收空号；<code>{slug}</code> 是小写短名。</p>
+
+<p>取号规则（按顺序执行）：</p>
+<ol>
+  <li>读 <code>.work-docs/index.md</code>。若有覆盖同一范围且仍在进行中的任务，<strong>续用原 id</strong>，不新建。</li>
+  <li>否则列出 <code>.work-docs/tasks/</code>，取当天日期目录中最大的 <code>{NN}</code>，加 1。</li>
+  <li>已完成或已删除的任务号<strong>不得重用或重编</strong>。</li>
+  <li>把新任务追加到 <code>.work-docs/index.md</code>。</li>
+</ol>
+
+<p>契约与状态里的 <code>task_id</code> 字段等于完整目录名，这样从任务自己的记录就能定位回目录。<code>docs/file-boundary.md</code> 只存在于源仓库、不随安装复制，所以运行时技能把需要的规则内联在自己文件里——不要指向那个路径。</p>
+
+<div class="note rule">
+  工作流生成的持久文件只能落在上面这个目录树里。禁止写到 <code>.audit/</code>、<code>docs/handoff/</code>、<code>00-Inbox/</code>、项目的 docs 目录、外部 <code>local://</code> 或外部 <code>.audit/</code>。用户指定的项目代码是<strong>任务目标</strong>，不是工作流产物：在契约和证据里记录它的路径，但不要把它复制进 <code>.work-docs</code>（除非你要求）。
+</div>
+
+<h2 id="statefile">8. state.md 字段速查</h2>
+
+<p><code>state.md</code> 用「每行一个 <code>key: value</code>」的简单格式，方便脚本校验。固定字段：</p>
+
+<table>
+  <thead><tr><th>字段</th><th>含义</th></tr></thead>
+  <tbody>
+    <tr><td><code>task_id</code></td><td>等于任务目录名</td></tr>
+    <tr><td><code>level</code></td><td><code>L1</code> / <code>L2</code> / <code>L3</code>（long 模式按 L3/long 计阈值）</td></tr>
+    <tr><td><code>stage</code></td><td>当前阶段（investigate / research / design / plan / exec / bugfix / review / ops / mixed）</td></tr>
+    <tr><td><code>status</code></td><td><code>pending</code> / <code>active</code> / <code>done</code> / <code>blocked</code> / <code>stopped</code></td></tr>
+    <tr><td><code>done_when</code></td><td>什么算做完（可逐条）</td></tr>
+    <tr><td><code>evidence</code></td><td>一行一条：<code>evidence:名称|command=...|run_at=...|result=...|last_edit_at=...</code></td></tr>
+    <tr><td><code>unknowns</code></td><td>还没搞清的事</td></tr>
+    <tr><td><code>blocked_by</code></td><td>被什么挡住（status 为 blocked 时必需）</td></tr>
+    <tr><td><code>unblock_condition</code></td><td>满足什么才能解除阻塞（blocked 时必需）</td></tr>
+    <tr><td><code>next_action</code></td><td>下一步第一动作（blocked 时必需）</td></tr>
+    <tr><td><code>calls_since_progress</code></td><td>距上次有效进展的工具调用次数，有进展就归零</td></tr>
+    <tr><td><code>last_progress_at</code></td><td>上次有效进展的时间</td></tr>
+    <tr><td><code>budget</code></td><td><code>used/limit</code></td></tr>
+    <tr><td><code>strategy_fingerprints</code></td><td>已用过的策略指纹（修改文件 + 执行命令 + 错误首行）</td></tr>
+    <tr><td><code>updated_at</code></td><td>最后更新时间</td></tr>
+  </tbody>
+</table>
+
+<p>必需验证项单独一行：<code>required_verification: 名称 status=passed evidence=路径</code>，状态只能是 <code>passed | failed | not_run | blocked</code>。</p>
+
+<p><strong>有效进展</strong>只有两种：某个 <code>done_when</code> 条目拿到新 evidence，或某个 required 验证从 <code>failed|not_run</code> 变为 <code>passed</code>。每次有效进展都更新 <code>calls_since_progress</code>（归零）、<code>last_progress_at</code>、<code>budget</code> 和 <code>strategy_fingerprints</code>。</p>
+
+<h2 id="cmd">9. 常用命令</h2>
+
+<h3>日常入口</h3>
+<pre><code>/yxj-work &lt;任务说明&gt;                      # 普通任务
+/yxj-work-long &lt;长任务说明&gt;                 # 长任务
+/yxj-work-handoff &lt;补充说明&gt;                # 主动写交接
+/yxj-work 调研 &lt;对象&gt;：&lt;要回答的问题&gt;        # 产品调研
+/yxj-work 定位：&lt;症状&gt;                      # 问题定位（先不改代码）
+/yxj-work 修复 &lt;症状&gt;：复现 → 根因 → 最小修复 → 回归
+/yxj-work-long 继续 &lt;task-id&gt;：先给恢复摘要，再执行下一步</code></pre>
+
+<h3>点名辅助技能</h3>
+<pre><code>/yxj-how &lt;模块&gt;            # 这块怎么跑起来的
+/yxj-why &lt;决策/回归&gt;        # 当初为什么这么定，带引用
+/yxj-blast-radius &lt;改动&gt;    # 改动会波及哪里，并用真实运行证明
+/yxj-architect &lt;模块&gt;       # 先定类型/签名/结构
+/yxj-arena &lt;任务&gt;           # 多个候选方案，选优嫁接
+/yxj-prototype &lt;设计假设&gt;   # 一次性原型回答设计问题
+/yxj-interrogate &lt;改动&gt;     # 多视角对抗评审
+/yxj-teach &lt;模块/改动&gt;      # 讲到人真的懂
+/yxj-wizard &lt;目标&gt;          # 生成交互式 bash 向导
+/yxj-unslop                 # 去 AI 味
+/yxj-technical-writing      # 技术写作标准</code></pre>
+
+<h3>脚本（在源仓库根目录运行）</h3>
+<pre><code>bash scripts/check-repo.sh                                     # 仓库自检（含技能边界、marker、预算）
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills"        # 安装
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update   # 更新已安装副本
+bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"   # 源与安装目标对照
+bash scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;         # 校验状态文件
+bash scripts/test-fixtures.sh                                  # 夹具回归
+bash scripts/test-install.sh                                   # 安装回归
+bash scripts/test-flow.sh                                      # 流程回归</code></pre>
+
+<p><code>check-state.sh</code> 会拒绝这些情况：标记 <code>done</code> 但存在 failed / not_run / blocked 的必需验证，或证据已过期；非 blocked 状态却已达到无进展阈值；blocked 却缺 <code>blocked_by</code>、<code>unblock_condition</code>、<code>next_action</code>。</p>
+
+<h2 id="faq">10. 常见疑问</h2>
+
+<h3>为什么辅助技能没有被自动唤起？</h3>
+<p>因为全部设了 <code>disable-model-invocation: true</code>。这是刻意设计：避免模型因为「看到 .ts 文件」或「看到报错」就自行塞进一段技能指令，让任务范围失控。要用就两条路——入口按阶段读，或你点名。</p>
+
+<h3>装完看不到它们，是不是没装成功？</h3>
+<p>用 <code>check-workflow.sh</code> 对照源仓库和安装目标，它会逐项检查目录、安装标记和文件。这比「在列表里看到」可靠。</p>
+
+<h3>任务卡住了怎么办？</h3>
+<p>看 <code>state.md</code> 的 <code>status</code>。是 <code>blocked</code> 就看 <code>blocked_by</code> 和 <code>unblock_condition</code>，那两条就是你需要提供的输入；是 <code>stopped</code> 通常意味着等你拍板（不可逆动作、花钱、对外发布、改需求范围）。恢复必须换一条实质不同的策略，同一策略重试会被熔断规则挡住。</p>
+
+<h3>证据过期是什么意思？</h3>
+<p>证据的 <code>run_at</code> 早于相关文件的 <code>last_edit_at</code>。等于「跑完之后又改了代码」，那条证据不再代表当前状态，必须重跑。</p>
+
+<h3>为什么 grep 通过不算验证过？</h3>
+<p>grep 属于 <code>static</code> 层，只能证明文本里出现了某个字符串。如果契约要求 <code>runtime/local</code> 或 <code>consumer</code> 层，就必须真的运行并观察行为。</p>
+
+<h3>一个任务里能顺手改点别的吗？</h3>
+<p>不能。<code>plan</code> 阶段明确「不得扩大范围」。确实需要改范围，就得回到需求评估、重新定义契约，而不是在执行中悄悄扩大。</p>
+
+<h3>第三方技能把文件写到 <code>.work-docs</code> 外面了？</h3>
+<p>立即熔断（<code>blocked_by: external_skill_write_outside_work_docs</code>），保留现场，<strong>不要移动、删除或覆盖</strong>那个文件，等确认后再处置。</p>
+
+<h3>长任务预算用完了但活还没干完？</h3>
+<p>写最终 checkpoint、更新 <code>state.md</code>、保持 <code>active</code> 或 <code>blocked</code>，<strong>不许标 done</strong>。第二天恢复时按新预算继续，且必须换策略。</p>
+
+<h2 id="cheatsheet">11. 一页速查</h2>
+
+<table>
+  <thead><tr><th>我想做的事</th><th>敲什么</th><th>产物在哪</th></tr></thead>
+  <tbody>
+    <tr><td>问一个简单事实</td><td><code>/yxj-work &lt;问题&gt;</code>（走 L0 快问快答）</td><td>不建目录，直接回答</td></tr>
+    <tr><td>调研产品 / 技术选型</td><td><code>/yxj-work 调研 …</code></td><td><code>outputs/</code> 报告 + 决策门；台账在 <code>evidence/</code></td></tr>
+    <tr><td>评估一个需求该不该做</td><td><code>/yxj-work 评估需求：…</code> + <code>/yxj-interrogate</code></td><td><code>outputs/</code> 评估报告；决策在 <code>audit/</code></td></tr>
+    <tr><td>设计方案（不改代码）</td><td><code>/yxj-work 设计 …</code></td><td><code>outputs/</code> 设计文档</td></tr>
+    <tr><td>实现功能</td><td><code>/yxj-work 实现 …</code></td><td>计划与审查进 <code>outputs/</code>，验证输出进 <code>evidence/</code></td></tr>
+    <tr><td>查一个问题</td><td><code>/yxj-work 定位：…</code></td><td>证据在 <code>evidence/</code>，结论在 <code>audit/</code></td></tr>
+    <tr><td>修一个 bug</td><td><code>/yxj-work 修复 …：复现 → 根因 → 最小修复 → 回归</code></td><td>修复前后对比输出在 <code>evidence/</code></td></tr>
+    <tr><td>跑长任务 / 过夜</td><td><code>/yxj-work-long …</code></td><td>多出 <code>audit/checkpoint-*.md</code> 与 <code>handoff.md</code></td></tr>
+    <tr><td>第二天接着干</td><td><code>/yxj-work-long 继续 &lt;task-id&gt;</code></td><td>先读 index → state → checkpoint → handoff → evidence</td></tr>
+    <tr><td>只想知道任务到哪了</td><td><code>/yxj-work-long 检查 &lt;目录&gt;/.work-docs</code></td><td>每个任务一行状态摘要</td></tr>
+    <tr><td>把任务交出去</td><td><code>/yxj-work-handoff</code></td><td><code>handoff.md</code></td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>三条最容易被忽略的硬规则</strong>：① 完成只能靠证据，不能靠自述、退出码或编译通过；② 证据必须比代码新；③ 同一策略失败两次就换方法，不许原样重试。
+</div>
+
+<footer>
+  由 yxj-work 源仓库的 <code>skills/</code>、<code>scripts/</code>、<code>docs/</code> 现状生成。文件位置：<code>/Users/yuanxj/Documents/github/yxj-work/docs/usage-guide.html</code>。
+  规则若与仓库文件不一致，以 <code>skills/yxj-work/SKILL.md</code>、<code>skills/yxj-work-long/SKILL.md</code> 和 <code>docs/architecture.md</code> 为准。
+</footer>
+
+</main>
+</div>
+</body>
+</html>

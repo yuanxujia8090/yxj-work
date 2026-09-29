@@ -46,6 +46,8 @@ L1 可以只创建 `tasks/<task-id>/state.md`，`evidence/`、`outputs/`、`audi
 
 No workflow-generated durable file may go to `.audit/`, `docs/handoff/`, `00-Inbox/`, a project docs directory, external `local://`, or an external `.audit/`.
 
+This file lives in the source repository and is not copied by `install.sh`. Runtime skills therefore inline the rules they need: the entry skills and the companion skill boundary sections carry the task-id format and allocation steps verbatim. Do not point a runtime skill at this path.
+
 ## Third-party skills
 
 A third-party skill is either read-only, output-root configurable, or fixed/unknown-write. Only the first two can run in the real execution directory. Fixed/unknown-write skills run only in an isolated fixture after their write set is observed; otherwise the task is blocked.

@@ -4,13 +4,13 @@
 
 `/Users/yuanxj/Documents/github/yxj-work` is the source of truth. The Pi skill directory contains installed copies only. Runtime skills never import or read `yxj-mode`, `yxj-mode-long`, or `yxj-handoff`.
 
-The repository owns three namespaced skills:
+The repository owns three entry skills:
 
 - `yxj-work`
 - `yxj-work-long`
 - `yxj-work-handoff`
 
-Generic Pi skills remain external dependencies. They are not copied or renamed merely because a workflow invokes them.
+It also carries 30 companion skills under `skills/yxj-*`, listed in `scripts/runtime-skills.txt` and installed alongside the entry skills. All of them set `disable-model-invocation: true`, so no task content auto-invokes them: an entry skill reads the file it needs on purpose (the stage → file table in `yxj-work/SKILL.md`), and the user may invoke one by name. Because entry and companion skills install into the same directory, the relative read path `../<name>/SKILL.md` holds in both the source repository and the install target.
 
 ## Runtime flow
 
@@ -18,9 +18,10 @@ Generic Pi skills remain external dependencies. They are not copied or renamed m
 2. For L1/L2/L3, resolve the current execution directory and initialize one `.work-docs` root.
 3. Create or reuse a task directory named `{YYYYMMDD}-{NN}-{slug}` (format and number-allocation rule: `docs/file-boundary.md`); the `task_id` field equals that directory name.
 4. Write contract/state before durable work.
-5. Run the selected playbook and record evidence.
+5. Read the stage's playbook first, then the companion skills in the stage table in `yxj-work/SKILL.md`; record the resulting files and evidence.
 6. Verify required layers and apply the done gate.
 7. On failure or no progress, trip the child-task circuit breaker and persist a checkpoint.
+8. For long work, update `state.md` and append a checkpoint at every stage boundary; before pausing or crossing a day, update `handoff.md` so the next session can print a recovery summary and execute `next_action` without chat memory.
 
 ## State model
 

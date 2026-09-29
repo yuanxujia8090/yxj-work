@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 ## 技能调用边界
 
-`skills/` 下的项目技能只能由用户主动点名或主动调用。长任务不得根据阶段、文件类型或任务内容自动扫描、推荐、注入用户提示词或替用户触发技能；用户未主动调用时，按本 skill 和阶段契约执行。用户主动调用后，技能仍受当前 contract、`.work-docs` 边界、checkpoint、熔断和验证规则约束。辅助技能不随本仓库默认提供，需要时由用户另行添加。
+`skills/` 下的技能都设了 `disable-model-invocation`，不会因阶段、文件类型或任务内容被自动唤起；长任务不得自动扫描、推荐、注入用户提示词或替用户触发技能。需要时由父任务按阶段主动读取 `yxj-work` 的“参考技能”表所列文件（路径 `../<技能名>/SKILL.md`，与 `yxj-work` 同目录安装），用户也可主动点名调用。加载后仍受当前 contract、`.work-docs` 边界、checkpoint、熔断和验证规则约束。
 
 ## 进入判据
 
@@ -18,7 +18,15 @@ disable-model-invocation: true
 
 ## 开工
 
-在当前命令执行目录初始化唯一 `.work-docs`，创建 L3 任务契约和状态。每个阶段写文件范围、done_when、验证命令、依赖和产物位置。父任务及子任务都必须使用唯一 task id（目录名格式 `{YYYYMMDD}-{NN}-{slug}`，取号规则见 `docs/file-boundary.md`）。
+在当前命令执行目录初始化唯一 `.work-docs`，创建 L3 任务契约和状态。每个阶段写文件范围、done_when、验证命令、依赖和产物位置。父任务及子任务都必须使用唯一 task id（目录名格式 `{YYYYMMDD}-{NN}-{slug}`；`{NN}` 为当日两位自增序号，从 `01` 起、不回收空号；取号前先读 `.work-docs/index.md`，范围相同的进行中任务续用原 id，否则取当日最大序号 +1 并追加索引行）。
+
+启动已有任务时，不创建新任务目录。先依次读取 `.work-docs/index.md`、任务 `state.md`、最近的 `audit/checkpoint-*.md`、`handoff.md` 和 `evidence/`；然后在回复开头给出恢复摘要，至少包含当前状态、已完成、下一步第一动作、阻塞和证据位置。
+
+## 阶段结束与跨天恢复
+
+每个阶段结束都要追加一个 `audit/checkpoint-<序号>.md`，写明 `status`、本阶段 `done_when`、真实验证输出、证据路径、下一阶段依赖、阻塞和下一步第一动作，并同步更新 `state.md` 的 `stage`、`status`、`next_action`、`calls_since_progress`、`last_progress_at`、`updated_at`。阶段结束不等于任务完成，只有 done gate 允许时才写 `status: done`。
+
+准备暂停、过夜、等待外部运行或结束当前会话时，必须先更新 `state.md` 和 `handoff.md`。`handoff.md` 是第二天的入口，必须能让新会话只读它就执行第一步；它至少写当前状态、已完成、未完成、证据、阻塞、约束、待拍板和 `next_action`。第二天恢复时再次读取最近 checkpoint 和 evidence，不依赖上一会话记忆；如果状态与证据不一致，以证据为准并先回到 `active` 或 `blocked`，不得直接宣称完成。
 
 ## 进展、预算和熔断
 
@@ -40,7 +48,7 @@ disable-model-invocation: true
 
 ## Checkpoint
 
-每个阶段结束追加 checkpoint：状态、done_when、真实验证输出、证据指针、下一阶段依赖、阻塞、解除条件和下一步第一动作。跨会话入口读取 state、handoff、目标/进度文件和最近产物，不依赖会话记忆。
+checkpoint 是阶段记录，不是完成证明。每个阶段结束追加一次；暂停、过夜或等待外部运行前再追加一次，文件名使用 `audit/checkpoint-<序号>.md`，不覆盖旧记录。`handoff.md` 只保留当前恢复入口，新的会话读取它和最近 checkpoint 后继续。
 
 ## 交付
 

@@ -8,6 +8,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 bash "$ROOT/scripts/install.sh" --dest "$tmp/fresh" >/dev/null
 bash "$ROOT/scripts/check-workflow.sh" --source "$ROOT" --installed "$tmp/fresh" >/dev/null
+[[ -x "$ROOT/scripts/test-flow.sh" ]] || fail 'flow test is not executable'
 if bash "$ROOT/scripts/install.sh" --dest "$tmp/fresh" >/dev/null 2>&1; then fail 'no-update overwrite was accepted'; fi
 bash "$ROOT/scripts/install.sh" --dest "$tmp/fresh" --update >/dev/null
 

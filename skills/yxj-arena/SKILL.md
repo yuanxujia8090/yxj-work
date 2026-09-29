@@ -22,9 +22,10 @@ generates goes under:
 ```
 
 Reuse the task id already in progress when the scope matches (read `.work-docs/index.md` first), otherwise
-create one. Never place workflow output in a project docs directory, in another skill's directory, in a
-tool-specific hidden directory, or outside the repository. The full rule lives in `docs/file-boundary.md`
-of the yxj-work source repository.
+allocate one: `{YYYYMMDD}-{NN}-{slug}`, where `NN` is a two-digit per-day counter that
+restarts at `01` and never reuses a retired number, then append the new task to `.work-docs/index.md`.
+Never place workflow output in a project docs directory, in another skill's directory, in a
+tool-specific hidden directory, or outside the repository.
 
 Files that are themselves the task target -- project code, project docs, existing config -- may be modified
 in place. Record those paths in the contract and in `evidence/` before changing them, and do not copy them
@@ -33,9 +34,8 @@ write outside `.work-docs` that the contract did not authorize is a boundary vio
 
 ## External dependencies
 
-- `pstack-models.md` (or the Cursor form `~/.cursor/rules/pstack-models.md`) is **not copied and not present**.
-  The source library generates it with the `setup-pstack` skill and ships no template. When it is missing, use the
-  current session's model for every role this skill names, and keep reviewer/runner counts at their defaults.
+No external model-routing file is required. Use the current session's model for every role this skill names,
+and keep reviewer/runner counts at their defaults.
 
 
 Fan out N parallel attempts at the same task. Read every candidate end to end. Pick the strongest as the base. Graft the best ideas from the others into it. Verify the synthesized result.
@@ -57,8 +57,8 @@ The N candidates will receive the same prompt, so the prompt is the contract.
 
 1. State the artifact each candidate is producing.
 2. Derive the rubric. State what success looks like for *this* task, then turn it into 3-6 concrete gradeable criteria. The rubric is the picker's tool in Phase D. Candidates only see the task.
-3. Pick the runners. Use the `arena runners` line in `~/.cursor/rules/pstack-models.mdc`. If the rule or that line is missing, default to one each on `claude-opus-5-5-max`, `gpt-5.6-sol-max`, `grok-4.7-xhigh-fast`. An `auto` or `inherit-parent` entry in this line or the cross-judge line means the parent model, so omit `model` for it. If the Task tool rejects a configured entry, run that seat on its family's default and say so. Families go by prefix: `claude-*`, `gpt-*`, and `grok-*`. With no family match, use `claude-opus-5-5-max`. If it rejects a default, use the closest valid slug of the same family from its error message. Spawn more when the arena covers multiple design directions. Same model N times when the work is generation-bound rather than judgment-sensitive.
-4. Assign output paths. Each candidate writes to its own location (a git worktree where possible, otherwise `/tmp/arena-<slug>/candidate-<n>/`), per the **separate-before-serializing-shared-state** principle skill.
+3. Pick the runners. Use the current session's model for every seat; an `auto` or `inherit-parent` entry means the parent model, so omit `model` for it. If the Task tool rejects a configured model, run that seat on the family's default and say so. Spawn more when the arena covers multiple design directions. Same model N times when the work is generation-bound rather than judgment-sensitive.
+4. Assign output paths. Each candidate writes to its own location (a git worktree where possible, otherwise `/tmp/arena-<slug>/candidate-<n>/`), per the **yxj-principle-separate-before-serializing-shared-state** principle skill.
 
 ## Phase B: Fan out
 
@@ -70,7 +70,7 @@ If a candidate fails to produce output, proceed with N-1 and note the dropout in
 
 ## Phase C: Cross-judge
 
-After all Phase B candidates complete, choose one model from the `arena cross-judge pool` line in `~/.cursor/rules/pstack-models.mdc`. If the rule or that line is missing, choose from `claude-opus-5-5-max`, `gpt-5.6-sol-max`, `grok-4.7-xhigh-fast`. Prefer a different model family from the parent's. Spawn one readonly judge subagent on that model. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Don't spawn the judge while candidates are still writing.
+After all Phase B candidates complete, choose one model for the cross-judge. Prefer a model different from the parent's when one is available. Spawn one readonly judge subagent on that model. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Don't spawn the judge while candidates are still writing.
 
 ## Phase D: Pick a base
 

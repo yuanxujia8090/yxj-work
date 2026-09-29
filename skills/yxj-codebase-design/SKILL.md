@@ -22,9 +22,10 @@ generates goes under:
 ```
 
 Reuse the task id already in progress when the scope matches (read `.work-docs/index.md` first), otherwise
-create one. Never place workflow output in a project docs directory, in another skill's directory, in a
-tool-specific hidden directory, or outside the repository. The full rule lives in `docs/file-boundary.md`
-of the yxj-work source repository.
+allocate one: `{YYYYMMDD}-{NN}-{slug}`, where `NN` is a two-digit per-day counter that
+restarts at `01` and never reuses a retired number, then append the new task to `.work-docs/index.md`.
+Never place workflow output in a project docs directory, in another skill's directory, in a
+tool-specific hidden directory, or outside the repository.
 
 Files that are themselves the task target -- project code, project docs, existing config -- may be modified
 in place. Record those paths in the contract and in `evidence/` before changing them, and do not copy them

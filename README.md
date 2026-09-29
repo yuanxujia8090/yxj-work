@@ -2,19 +2,23 @@
 
 独立的 Pi 工作流 skill 仓库。源仓库是唯一事实源；安装到 `~/.pi/agent/skills/` 的目录只是运行副本。
 
+完整使用说明（七类日常场景 + 33 个技能逐个简介）：`docs/usage-guide.html`，浏览器直接打开即可。
+
 ## 包含内容
 
 - `yxj-work`：普通任务入口，支持 fast-answer、investigate、research、design、plan、exec、bugfix、review、ops、mixed。
 - `yxj-work-long`：跨阶段、跨会话和长时间任务入口。
 - `yxj-work-handoff`：在 `.work-docs/tasks/<task-id>/handoff.md` 写入可恢复交接。
 
-`scripts/runtime-skills.txt` 是运行时清单：`install.sh` 与 `check-workflow.sh` 都只认它列出的目录。`skills/` 下其余目录（27 个外部 skill，见 `skills/README.md`）是仓库素材，不参与安装与一致性校验。
+`scripts/runtime-skills.txt` 是运行时清单：`install.sh` 与 `check-workflow.sh` 都认它列出的目录。清单包含 3 个入口技能与 30 个辅助技能（清单与用途见 `skills/README.md`），全部随安装一起复制到同一个技能目录。
+
+辅助技能全部设置 `disable-model-invocation: true`，不会被任务内容自动唤起；入口技能按“参考技能”表主动读取对应文件，用户也可以主动点名调用。因为入口与辅助技能同级安装，入口里的相对读取路径 `../<技能名>/SKILL.md` 在源仓库与安装目标下都成立。
 
 本仓库不修改、覆盖、删除或运行时依赖已有的同类旧 skill。
 
 ## 安装
 
-安装哪些 skill 由 `scripts/runtime-skills.txt` 决定（默认三个自研入口）。在本仓库根目录运行：
+安装哪些 skill 由 `scripts/runtime-skills.txt` 决定（3 个入口 + 30 个辅助技能）。在本仓库根目录运行：
 
 ```bash
 bash scripts/check-repo.sh
@@ -44,6 +48,8 @@ bash scripts/check-workflow.sh \
 /yxj-work-long <长任务说明>
 /yxj-work-handoff <交接补充说明>
 ```
+
+辅助技能不能由模型自动唤起，两种用法：入口技能在对应阶段主动读取（映射见 `skills/yxj-work/SKILL.md` 的阶段表），或用户主动点名，例如 `/yxj-why`、`/yxj-arena`。普通任务按开发、排查修复或调研链路进入阶段；长任务跨会话前必须更新 checkpoint 和 handoff，下一会话先读记录再继续。
 
 `fast-answer` 不创建工作目录。L1/L2/L3 任务以命令实际执行目录为根，创建唯一：
 
@@ -91,14 +97,15 @@ bash scripts/check-workflow.sh \
 
 ## 更新与卸载
 
-更新前从源仓库运行 `check-repo.sh`，再用 `install.sh --update`。卸载只删除本仓库安装并且仍带有 `.yxj-work-installed` 标记的三个目录；不要删除任务目录或用户文件。
+更新前从源仓库运行 `check-repo.sh`，再用 `install.sh --update`。卸载只删除本仓库安装、且仍带有 `.yxj-work-installed` 标记的目录（`scripts/runtime-skills.txt` 列出的全部目录）；不要删除任务目录或用户文件。
 
 ## 验收
 
 ```bash
 bash scripts/check-repo.sh
-bash scripts/install.sh --dest "$(mktemp -d)"
-bash scripts/check-workflow.sh --source "$PWD" --installed <临时目录>
+tmp="$(mktemp -d)"
+bash scripts/install.sh --dest "$tmp"
+bash scripts/check-workflow.sh --source "$PWD" --installed "$tmp"
 ```
 
 详细边界见 `docs/architecture.md` 和 `docs/file-boundary.md`。

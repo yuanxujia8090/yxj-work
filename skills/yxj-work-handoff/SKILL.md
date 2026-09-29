@@ -17,5 +17,8 @@ disable-model-invocation: true
 3. 更新 `handoff.md`，包含背景、done_when、当前阶段和 status、验证输出、已完成、下一步第一动作、卡点与已尝试策略、约束、待拍板、关键文件和 evidence 路径。
 4. 如果任务熔断，记录 `blocked_by`、`attempted_paths`、`shared_assumption`、`unblock_condition` 和禁止重复的策略指纹。
 5. 自检：新会话只读 handoff 后能直接执行 next_action 第一条。
+6. 在 handoff 末尾写“下一会话第一步”，内容必须与 `next_action` 第一条一致，并列出最近 checkpoint 和 evidence 路径。
 
-handoff 是状态入口，不是完成证明；没有 required evidence 时不得写 `status: done`。
+## 下一会话第一步
+
+新会话先读本文件，再读 `state.md`、最近 checkpoint 和 evidence；输出当前状态、已完成、下一步第一动作、阻塞和证据位置，然后才执行任务。handoff 是状态入口，不是完成证明；没有 required evidence 时不得写 `status: done`。

@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 ## 技能调用边界
 
-`skills/` 下除本入口外的项目技能只能由用户主动点名或主动调用。即使任务内容明显符合某个技能，也不得自动扫描、推荐、注入用户提示词或替用户触发；用户未主动调用时，按本 skill 和对应 playbook 的基础流程执行。用户主动调用技能后，仍需遵守当前任务的 contract、`.work-docs` 文件边界、熔断规则和验证要求。辅助技能不随本仓库默认提供，需要时由用户另行添加。
+`skills/` 下的技能都设了 `disable-model-invocation`，不会因任务内容被模型自动唤起；不得自动扫描、推荐、注入用户提示词或替用户触发任何技能。流程自带的参考技能由本入口按阶段主动读取（见“参考技能”），用户也可主动点名调用。无论哪种方式，加载后仍须遵守当前任务的 contract、`.work-docs` 文件边界、熔断规则和验证要求。
 
 ## 路由
 
@@ -25,7 +25,35 @@ disable-model-invocation: true
 - `ops`：平台操作手册；不代点网页。
 - `mixed`：研究 → decision gate → design/plan → exec → verify。
 
-按目标和允许改动范围路由，不按关键词机械触发。技能调用不属于本路由的一部分：只有用户主动点名时才加载对应技能。预计一个简单事实回答即可完成的请求走 L0；需要真实读取、持久证据、修改或多阶段推进时至少走 L1。
+按目标和允许改动范围路由，不按关键词机械触发。技能唤起不属于本路由的一部分：技能只在用户主动点名，或本入口按“参考技能”表主动读取时加载。预计一个简单事实回答即可完成的请求走 L0；需要真实读取、持久证据、修改或多阶段推进时至少走 L1。
+
+常见任务链先按下面的完整路径判断，再进入单个阶段：
+
+- 开发：`design → plan → exec → review`。需求明确且改动很小，可跳过 `design`，但要在 contract 记录原因。
+- 问题排查与修复：`investigate → bugfix → review`。无法稳定复现时停在 `investigate`，不要假装进入修复。
+- 调研：`research → decision gate`；只有 `proceed` 才进入 `design/plan → exec → review`，`design_only`、`gather_more`、`do_not_build` 在当前任务收口。
+
+每进入一个阶段，先读对应 playbook，再读表中的参考技能，最后按 playbook 写产物和验证证据。阶段与文件的唯一映射如下：
+
+| 阶段 | playbook | 主动读取 |
+|---|---|---|
+| investigate | `playbooks/investigate.md` | `../yxj-how/SKILL.md`、`../yxj-blast-radius/SKILL.md` |
+| research | `playbooks/research.md` | `../yxj-why/SKILL.md`、`../yxj-how/SKILL.md` |
+| design | `playbooks/design.md` | `../yxj-codebase-design/SKILL.md`、`../yxj-architect/SKILL.md`、`../yxj-arena/SKILL.md`、`../yxj-principle-redesign-from-first-principles/SKILL.md`、`../yxj-principle-foundational-thinking/SKILL.md`、`../yxj-principle-outcome-oriented-execution/SKILL.md`、`../yxj-prototype/SKILL.md` |
+| plan | `playbooks/plan.md` | `../yxj-principle-build-the-lever/SKILL.md` |
+| exec | `playbooks/exec.md` | `../yxj-typescript-best-practices/SKILL.md`、`../yxj-principle-type-system-discipline/SKILL.md`、`../yxj-principle-boundary-discipline/SKILL.md`、`../yxj-principle-laziness-protocol/SKILL.md` |
+| bugfix | `playbooks/bugfix.md` | `../yxj-principle-fix-root-causes/SKILL.md`、`../yxj-principle-attack-the-premise/SKILL.md` |
+| review | `playbooks/review.md` | `../yxj-requesting-code-review/SKILL.md`、`../yxj-receiving-code-review/SKILL.md`、`../yxj-interrogate/SKILL.md`、`../yxj-principle-prove-it-works/SKILL.md` |
+| ops | `playbooks/ops.md` | `../yxj-wizard/SKILL.md`、`../yxj-create-verification-skill/SKILL.md` |
+| mixed | `playbooks/mixed.md` | 按实际阶段读取上表，不新增一套技能清单 |
+| fast-answer | 不读 playbook | 不读取任何技能 |
+| 按需 | 无固定 playbook | `../yxj-unslop/SKILL.md`、`../yxj-principle-guard-the-context-window/SKILL.md`、`../yxj-principle-encode-lessons-in-structure/SKILL.md`、`../yxj-principle-separate-before-serializing-shared-state/SKILL.md`、`../yxj-resolving-merge-conflicts/SKILL.md`、`../yxj-technical-writing/SKILL.md`、`../yxj-teach/SKILL.md` |
+
+第三方技能按 `playbooks/third-party-skill.md` 处理，不因它被列在仓库里就自动调用。同一技能在多行出现时只读一次。读取后若其规则与当前契约冲突，以契约为准并在 `audit/` 记录差异。
+
+## 阶段执行表
+
+上表同时是阶段、playbook 和参考技能的唯一映射；不要再为同一阶段建立第二份清单。
 
 ## 工作根和任务目录
 
@@ -33,7 +61,6 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 
 ```text
 .work-docs/
-├── README.md
 ├── index.md
 └── tasks/<task-id>/
     ├── contract.md
@@ -61,9 +88,9 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 
 ## 进展、预算和熔断
 
-有效进展只有两种：某个 `done_when` 条目拿到新 evidence，或某个 required 验证从 `failed|not_run` 变为 `passed`。每次有效进展都更新 `state.md` 的 `calls_since_progress`（归零）、`last_progress_at`、`budget`（`used/limit`）和 `strategy_fingerprints`。`evidence freshness`（证据新鲜度）按 `run_at` 不早于相关文件 `last_edit_at` 判断；交付时关键词或 grep 检查只标为 `static`。安装标记使用独立的 `source=` 行。
+有效进展只有两种：某个 `done_when` 条目拿到新 evidence，或某个 required 验证从 `failed|not_run` 变为 `passed`。每次有效进展都更新 `state.md` 的 `calls_since_progress`（归零）、`last_progress_at`、`budget`（`used/limit`）和 `strategy_fingerprints`。`evidence freshness`（证据新鲜度）按 `run_at` 不早于相关文件 `last_edit_at` 判断；交付时关键词或 grep 检查只标为 `static`。
 
-每个子任务单独计数。L1/L2 在 20 次工具调用无进展时熔断；L3 和 long 模式每个子任务在 60 次工具调用或 30 分钟无进展时熔断。无论层级，同一命令与同一错误首行出现 2 次就熔断；错误不同但 required 验证连续失败 3 次也熔断；同一类工具或命令报错 2 次必须换方法，不能原样重试；错误各不相同时，required 验证连续 3 次失败也必须熔断。L1/L2/L3 的预算分别为 30/100/400 次工具调用（L1 为 30 次工具调用）；L3 另有 8 小时上限。任务说明另行指定时，以任务说明为准。
+每个子任务单独计数。L1/L2 在 20 次工具调用无进展时熔断；L3 和 long 模式每个子任务在 60 次工具调用或 30 分钟无进展时熔断。无论层级，同一命令与同一错误首行出现 2 次就熔断；错误不同但 required 验证连续失败 3 次也熔断；同一类工具或命令报错 2 次必须换方法，不能原样重试。L1/L2/L3 的预算分别为 30/100/400 次工具调用；L3 另有 8 小时上限。任务说明另行指定时，以任务说明为准。
 
 策略指纹固定为 `修改文件 + 执行命令 + 错误首行`，记录在 `audit/`。恢复时，新指纹不能与已有指纹相同；说不出新旧策略差异就停下交给用户。
 
@@ -71,7 +98,7 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 
 ## 第三方 skill
 
-第三方 skill 不会自动继承本规则。调用前分类为只读、可指定输出根、固定/未知写入。可指定输出根时传入 `.work-docs/tasks/<task-id>/outputs|evidence|tmp`；固定/未知写入只能隔离验证，否则 `blocked`。调用前后保存目录清单。发现越界文件时停止，记录：
+第三方 skill 不会自动继承本规则。调用前先读 `playbooks/third-party-skill.md`，再分类为只读、可指定输出根、固定/未知写入。可指定输出根时传入 `.work-docs/tasks/<task-id>/outputs|evidence|tmp`；固定/未知写入只能隔离验证，否则 `blocked`。调用前后保存目录清单。发现越界文件时停止，记录：
 
 ```text
 blocked_by: external_skill_write_outside_work_docs

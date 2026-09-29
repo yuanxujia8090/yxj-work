@@ -22,9 +22,10 @@ generates goes under:
 ```
 
 Reuse the task id already in progress when the scope matches (read `.work-docs/index.md` first), otherwise
-create one. Never place workflow output in a project docs directory, in another skill's directory, in a
-tool-specific hidden directory, or outside the repository. The full rule lives in `docs/file-boundary.md`
-of the yxj-work source repository.
+allocate one: `{YYYYMMDD}-{NN}-{slug}`, where `NN` is a two-digit per-day counter that
+restarts at `01` and never reuses a retired number, then append the new task to `.work-docs/index.md`.
+Never place workflow output in a project docs directory, in another skill's directory, in a
+tool-specific hidden directory, or outside the repository.
 
 Files that are themselves the task target -- project code, project docs, existing config -- may be modified
 in place. Record those paths in the contract and in `evidence/` before changing them, and do not copy them
@@ -33,17 +34,16 @@ write outside `.work-docs` that the contract did not authorize is a boundary vio
 
 ## External dependencies
 
-- `pstack-models.md` (or the Cursor form `~/.cursor/rules/pstack-models.md`) is **not copied and not present**.
-  The source library generates it with the `setup-pstack` skill and ships no template. When it is missing, use the
-  current session's model for every role this skill names, and keep reviewer/runner counts at their defaults.
+No external model-routing file is required. Use the current session's model for every role this skill names,
+and keep reviewer/runner counts at their defaults.
 
 
 
 Investigate the motivation and intent behind code.
 
-Companion to the `how` skill. `how` answers what the code does and how it works. `why` answers what forces led to its shape.
+Companion to the `yxj-how` skill. `yxj-how` answers what the code does and how it works. `yxj-why` answers what forces led to its shape.
 
-Each spawn below names a role line in the `pstack-models.mdc` rule and a default. Set `model` to that line's value, or to the default if the rule or the line is missing. Leave `model` unset when the value is `auto` or `inherit-parent`. If the Task tool rejects a slug, use the default and say so. If it rejects the default, use the closest valid slug of the same family from its error message.
+Each spawn below names a role. Use the current session's model for it. Leave `model` unset when the role says `inherit-parent`. If the Task tool rejects a slug, use the closest valid slug of the same family from its error message and say so.
 
 ## Operating Posture
 
@@ -114,7 +114,7 @@ Launch all matching investigators in a single message so they run concurrently. 
 
 Subagent config (each):
 - `subagent_type`: `generalPurpose`
-- `model`: the `why investigators` line, default `grok-4.7-xhigh-fast`
+- `model`: omit to run on the parent (current session) model
 - `readonly`: `false` (agent mode). **Do not use readonly/Ask mode.** It strips MCP access, which disables MCP-backed investigators entirely. Investigators still shouldn't write anything.
 
 Each investigator gets:
@@ -158,7 +158,7 @@ If your scope assessment suggests a single-commit trivial target where the PR de
 Spawn one synthesizer subagent:
 
 - `subagent_type`: `generalPurpose`
-- `model`: the `why synthesizer` line, default `claude-opus-5-5-max`
+- `model`: omit to run on the parent (current session) model
 - `readonly`: `false` (agent mode). The synthesizer's quality check spot-verifies citations, which can require MCP access. Readonly/Ask mode strips MCPs and defeats that.
 
 The synthesizer gets:
@@ -176,7 +176,7 @@ Take the synthesizer's output and present it to the user. You may lightly edit f
 
 The output structure is the one in `references/synthesizer-prompt.md`: The Question, The Code in Question, What We Found, What We Can Reasonably Infer, Competing Hypotheses, What We Don't Know, Sources Consulted, Confidence Summary. Adapt as needed, but keep the confidence separation intact, and keep Sources Consulted as one line per investigator, including the ones that returned nothing or were skipped, with the reason.
 
-After the Sources Consulted block, if the user's `why` question is a precursor to actually changing this code, convert the lineage findings into a Preserve / Change / Avoid / Risk constraint set suitable for planning the change.
+After the Sources Consulted block, if the user's `yxj-why` question is a precursor to actually changing this code, convert the lineage findings into a Preserve / Change / Avoid / Risk constraint set suitable for planning the change.
 
 ## Common Failure Modes to Avoid
 

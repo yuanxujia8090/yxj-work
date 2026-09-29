@@ -22,9 +22,10 @@ generates goes under:
 ```
 
 Reuse the task id already in progress when the scope matches (read `.work-docs/index.md` first), otherwise
-create one. Never place workflow output in a project docs directory, in another skill's directory, in a
-tool-specific hidden directory, or outside the repository. The full rule lives in `docs/file-boundary.md`
-of the yxj-work source repository.
+allocate one: `{YYYYMMDD}-{NN}-{slug}`, where `NN` is a two-digit per-day counter that
+restarts at `01` and never reuses a retired number, then append the new task to `.work-docs/index.md`.
+Never place workflow output in a project docs directory, in another skill's directory, in a
+tool-specific hidden directory, or outside the repository.
 
 Files that are themselves the task target -- project code, project docs, existing config -- may be modified
 in place. Record those paths in the contract and in `evidence/` before changing them, and do not copy them
@@ -42,7 +43,7 @@ Three rules sit above the layers:
 
 The codebase is the word list. Write the real symbol, file, flag, or command name, not a synonym or a description of it.
 
-Don't invent jargon. Use the words a developer would say out loud: "move", "delete", "a budget that only decreases", not "evacuate", "ratchet", or "endgame". A named pattern is fine when the doc says what it means the first time. Propose a new offender and its replacement as an addition to `unslop`'s abstract-metaphor rule in your reply, with the diff. Don't edit that skill.
+Don't invent jargon. Use the words a developer would say out loud: "move", "delete", "a budget that only decreases", not "evacuate", "ratchet", or "endgame". A named pattern is fine when the doc says what it means the first time. Propose a new offender and its replacement as an addition to `yxj-unslop`'s abstract-metaphor rule in your reply, with the diff. Don't edit that skill.
 
 ## Vary the rhythm
 
@@ -124,7 +125,7 @@ Source: Kohl, The Global English Style Guide (SAS Press). Guideline text fetched
 
 ## Voice and repo specifics
 
-- Apply the **unslop** skill to every doc this skill touches. That skill owns the slop-pattern catalog: AI vocabulary, filler, hedging, formatting tells.
+- Apply the **yxj-unslop** skill to every doc this skill touches. That skill owns the slop-pattern catalog: AI vocabulary, filler, hedging, formatting tells.
 - PR descriptions and commit messages are writing too. Every layer except Diátaxis applies to them. A PR body is a briefing that a reviewer can read in under a minute. Do not paste swarm logs, SHA lists, or metric tables. Link them.
 - Product UI strings are not documentation. Use your product's copy guidelines for those.
 - Indent code snippets with tabs. Write real paths and real symbols. Make every count or tree claim true at the commit that lands it, and include the command that regenerates it.
