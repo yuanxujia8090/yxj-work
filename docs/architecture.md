@@ -2,7 +2,7 @@
 
 ## Source and installation
 
-`/Users/yuanxj/Documents/github/yxj-work` is the source of truth. The Pi skill directory contains installed copies only. Runtime skills never import or read `yxj-mode`, `yxj-mode-long`, or `yxj-handoff`.
+`/Users/yuanxj/Documents/github/yxj-work` is the source of truth. Installed skills are copies or symlinks; the source repository remains the single source of truth. Runtime skills never import or read `yxj-mode`, `yxj-mode-long`, or `yxj-handoff`.
 
 The repository owns three entry skills:
 

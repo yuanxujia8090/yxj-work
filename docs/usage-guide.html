@@ -918,12 +918,12 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update   # 更新已�
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link     # 软链安装/重建（开发模式）
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 软链卸载（只删本仓库链接）
 bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"   # 源与安装目标对照
-bash skills/yxj-work/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 校验状态文件
+bash skills/yxj-work/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 校验状态文件（写 status: done 前必须运行并通过）
 bash scripts/test-fixtures.sh                                  # 夹具回归
 bash scripts/test-install.sh                                   # 安装回归
 bash scripts/test-flow.sh                                      # 流程回归</code></pre>
 
-<p><code>check-state.sh</code> 会拒绝这些情况：标记 <code>done</code> 但存在 failed / not_run / blocked 的必需验证，或证据已过期；非 blocked 状态却已达到无进展阈值；blocked 却缺 <code>blocked_by</code>、<code>unblock_condition</code>、<code>next_action</code>。</p>
+<p><code>check-state.sh</code> 会拒绝这些情况：标记 <code>done</code> 但存在 failed / not_run / blocked 的必需验证，或证据已过期；非 blocked 状态却已达到无进展阈值；blocked 却缺 <code>blocked_by</code>、<code>unblock_condition</code>、<code>next_action</code>；<code>status: done</code> 但 <code>budget</code> 已耗尽（<code>used &gt;= limit</code>）；<code>status: done</code> 但没有任何 <code>required_verification</code>。</p>
 
 <h2 id="faq">10. 常见疑问</h2>
 

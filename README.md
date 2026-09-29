@@ -1,6 +1,6 @@
 # yxj-work
 
-独立的 Pi 工作流 skill 仓库。源仓库是唯一事实源；安装到 `~/.pi/agent/skills/` 的目录只是运行副本。
+独立的工作流 skill 仓库。源仓库是唯一事实源；安装到各客户端技能目录（如 `~/.pi/agent/skills/`、`~/.config/opencode/skills/`）的形态是副本或直达源仓库的软链。
 
 完整使用说明（七类日常场景 + 33 个技能逐个简介）：`docs/usage-guide.html`，浏览器直接打开即可。
 
@@ -96,7 +96,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 - 所有决策门允许交付；
 - 每个结论都有 evidence 指针。
 
-`failed`、`blocked`、`not_run`、未解决决策门、active required 子任务或缺少 evidence 时禁止标记 `done`。optional 项必须在契约中声明并写明跳过原因。
+`failed`、`blocked`、`not_run`、未解决决策门、in_progress required 子任务或缺少 evidence 时禁止标记 `done`。optional 项必须在契约中声明并写明跳过原因。
 
 ## 熔断
 
