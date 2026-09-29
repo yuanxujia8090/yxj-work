@@ -29,6 +29,6 @@ It also carries 30 companion skills under `skills/yxj-*`, listed in `scripts/run
 
 有效进展只包括新 evidence 或 required 验证变为 passed。L1/L2 无进展阈值为 20 次工具调用；L3/long 每个子任务为 60 次工具调用或 30 分钟。预算为 L1/L2/L3 分别 60/150/400 次工具调用；恢复时必须使用不同的策略指纹。关键词和 grep 检查只能作为 `static` 证据。
 
-`pending -> active -> done` is allowed only through the done gate. `active -> blocked` is used for recoverable tool, evidence, dependency, or boundary failures. `active -> stopped` is reserved for irreversible actions, user decisions, production changes, spending, publishing, or scope changes. `blocked -> active` requires an unblocked dependency, a revalidated shared assumption, or an evidence-backed new strategy.
+`in_progress -> done` is allowed only through the done gate. `in_progress -> blocked` is used for recoverable tool, evidence, dependency, or boundary failures. `in_progress -> stopped` is reserved for irreversible actions, user decisions, production changes, spending, publishing, or scope changes. `blocked -> in_progress` requires an unblocked dependency, a revalidated shared assumption, or an evidence-backed new strategy.
 
-Parent tasks cannot be `done` while a required child is active, blocked, stopped, or has failed/blocked/not_run required verification.
+Parent tasks cannot be `done` while a required child is in_progress, blocked, stopped, or has failed/blocked/not_run required verification.

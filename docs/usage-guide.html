@@ -251,12 +251,12 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update</code></pre>
 
 <p>状态只会按下面这条路走：</p>
 
-<pre><code>pending ──► active ──► done        （只能通过完成判定）
+<pre><code>in_progress ──► done        （只能通过完成判定）
                 │
                 ├──► blocked       （工具、证据、依赖、边界问题，可恢复）
                 └──► stopped       （不可逆动作、等你拍板、生产变更、花钱、对外发布、改需求范围）
 
-blocked ──► active                 （阻塞解除 / 共同前提重新验证通过 / 有新证据的新策略）</code></pre>
+blocked ──► in_progress           （阻塞解除 / 共同前提重新验证通过 / 有新证据的新策略）</code></pre>
 
 <h3 id="evidence">3.3 证据与证据新鲜度</h3>
 
@@ -483,7 +483,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <dd>除常规的 <code>outputs/ evidence/ audit/ tmp/</code> 外，长任务多了两个关键文件：阶段记录 <code>audit/checkpoint-&lt;序号&gt;.md</code>（只追加，不覆盖旧记录）和恢复入口 <code>handoff.md</code>（只保留当前恢复所需内容）。</dd>
 
     <dt>验收看什么</dt>
-    <dd>每个阶段是否有对应 checkpoint 且带真实验证输出；<code>state.md</code> 的阶段与状态是否和最新 checkpoint 一致；父任务是否在 required 子任务还 active/blocked/stopped 时被标了 done（应当禁止）。</dd>
+    <dd>每个阶段是否有对应 checkpoint 且带真实验证输出；<code>state.md</code> 的阶段与状态是否和最新 checkpoint 一致；父任务是否在 required 子任务还 in_progress/blocked/stopped 时被标了 done（应当禁止）。</dd>
 
     <dt>常见坑</dt>
     <dd>把「阶段做完了」写成任务完成；过夜前忘了写 handoff，第二天只能靠聊天记录回忆；checkpoint 覆盖旧文件导致历史丢失；预算耗尽后强行标 done。</dd>
@@ -507,7 +507,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <dt>内部走什么</dt>
     <dd>
       新会话<strong>不依赖上一次对话记忆</strong>。启动已有任务时先依次读取：<code>.work-docs/index.md</code> → 任务 <code>state.md</code> → <code>audit/</code> 下最近的 <code>checkpoint-*.md</code> → <code>handoff.md</code> → <code>evidence/</code>；然后在回复开头给出恢复摘要，至少包含：当前状态、已完成、下一步第一动作、阻塞、证据位置；之后才动任务。<br>
-      <strong>恢复时重新读一次 checkpoint 和证据</strong>。如果状态与证据不一致，<strong>以证据为准</strong>，并先把状态退回 <code>active</code> 或 <code>blocked</code>，不得直接宣称完成。恢复只能来自三种理由：阻塞解除、共同前提重新验证通过、有新证据的新策略；且新策略指纹不能与已有指纹相同。
+      <strong>恢复时重新读一次 checkpoint 和证据</strong>。如果状态与证据不一致，<strong>以证据为准</strong>，并先把状态退回 <code>in_progress</code> 或 <code>blocked</code>，不得直接宣称完成。恢复只能来自三种理由：阻塞解除、共同前提重新验证通过、有新证据的新策略；且新策略指纹不能与已有指纹相同。
     </dd>
 
     <dt>想主动补一份交接时</dt>
@@ -519,7 +519,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <dd><code>handoff.md</code>（恢复入口）、<code>state.md</code>（当前状态）、<code>audit/checkpoint-*.md</code>（阶段记录，只追加）。</dd>
 
     <dt>验收看什么</dt>
-    <dd>恢复摘要里有没有「下一步第一动作」和「证据位置」两项；引用的证据是否仍然新鲜；有没有出现「状态说 done、证据却不支持」的情况（出现就该退回 active/blocked）。</dd>
+    <dd>恢复摘要里有没有「下一步第一动作」和「证据位置」两项；引用的证据是否仍然新鲜；有没有出现「状态说 done、证据却不支持」的情况（出现就该退回 in_progress/blocked）。</dd>
 
     <dt>常见坑</dt>
     <dd>拿上一会话的记忆当事实；把 handoff 当完成证明（它只是状态入口）；状态与证据冲突时顺着状态走。</dd>
@@ -863,7 +863,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <tr><td><code>task_id</code></td><td>等于任务目录名</td></tr>
     <tr><td><code>level</code></td><td><code>L1</code> / <code>L2</code> / <code>L3</code>（long 模式按 L3/long 计阈值）</td></tr>
     <tr><td><code>stage</code></td><td>当前阶段（investigate / research / design / plan / exec / bugfix / review / ops / mixed）</td></tr>
-    <tr><td><code>status</code></td><td><code>pending</code> / <code>active</code> / <code>done</code> / <code>blocked</code> / <code>stopped</code></td></tr>
+    <tr><td><code>status</code></td><td><code>in_progress</code> / <code>done</code> / <code>blocked</code> / <code>stopped</code> / <code>cancelled</code></td></tr>
     <tr><td><code>done_when</code></td><td>什么算做完（可逐条）</td></tr>
     <tr><td><code>evidence</code></td><td>一行一条：<code>evidence:名称|command=...|run_at=...|result=...|last_edit_at=...</code></td></tr>
     <tr><td><code>unknowns</code></td><td>还没搞清的事</td></tr>
@@ -942,7 +942,7 @@ bash scripts/test-flow.sh                                      # 流程回归</c
 <p>立即熔断（<code>blocked_by: external_skill_write_outside_work_docs</code>），保留现场，<strong>不要移动、删除或覆盖</strong>那个文件，等确认后再处置。</p>
 
 <h3>长任务预算用完了但活还没干完？</h3>
-<p>写最终 checkpoint、更新 <code>state.md</code>、保持 <code>active</code> 或 <code>blocked</code>，<strong>不许标 done</strong>。第二天恢复时按新预算继续，且必须换策略。</p>
+<p>写最终 checkpoint、更新 <code>state.md</code>、保持 <code>in_progress</code> 或 <code>blocked</code>，<strong>不许标 done</strong>。第二天恢复时按新预算继续，且必须换策略。</p>
 
 <h2 id="cheatsheet">11. 一页速查</h2>
 

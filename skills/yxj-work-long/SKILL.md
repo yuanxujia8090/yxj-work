@@ -26,7 +26,7 @@ disable-model-invocation: true
 
 每个阶段结束都要追加一个 `audit/checkpoint-<序号>.md`，写明 `status`、本阶段 `done_when`、真实验证输出、证据路径、下一阶段依赖、阻塞和下一步第一动作，并同步更新 `state.md` 的 `stage`、`status`、`next_action`、`calls_since_progress`、`last_progress_at`、`updated_at`。阶段结束不等于任务完成，只有 done gate 允许时才写 `status: done`。
 
-准备暂停、过夜、等待外部运行或结束当前会话时，必须先更新 `state.md` 和 `handoff.md`。`handoff.md` 是第二天的入口，必须能让新会话只读它就执行第一步；它至少写当前状态、已完成、未完成、证据、阻塞、约束、待拍板和 `next_action`。第二天恢复时再次读取最近 checkpoint 和 evidence，不依赖上一会话记忆；如果状态与证据不一致，以证据为准并先回到 `active` 或 `blocked`，不得直接宣称完成。
+准备暂停、过夜、等待外部运行或结束当前会话时，必须先更新 `state.md` 和 `handoff.md`。`handoff.md` 是第二天的入口，必须能让新会话只读它就执行第一步；它至少写当前状态、已完成、未完成、证据、阻塞、约束、待拍板和 `next_action`。第二天恢复时再次读取最近 checkpoint 和 evidence，不依赖上一会话记忆；如果状态与证据不一致，以证据为准并先回到 `in_progress` 或 `blocked`，不得直接宣称完成。
 
 ## 进展、预算和熔断
 
@@ -44,7 +44,7 @@ disable-model-invocation: true
 4. 写 checkpoint 或 handoff；
 5. 父任务不得 `done`；只有不依赖阻塞项的独立子任务可继续。
 
-恢复只能来自阻塞解除、共同前提重新验证通过或有 evidence 的新策略。恢复前先读 state、checkpoint、失败策略和 evidence，不重复相同策略。required 子任务 active、blocked、stopped 或 required 验证为 failed/blocked/not_run 时，父任务不得 done；optional 子任务必须在契约中显式声明。
+恢复只能来自阻塞解除、共同前提重新验证通过或有 evidence 的新策略。恢复前先读 state、checkpoint、失败策略和 evidence，不重复相同策略。required 子任务 in_progress、blocked、stopped 或 required 验证为 failed/blocked/not_run 时，父任务不得 done；optional 子任务必须在契约中显式声明。
 
 ## Checkpoint
 
