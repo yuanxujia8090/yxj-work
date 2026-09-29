@@ -203,6 +203,11 @@ bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skil
 <pre><code>bash scripts/check-repo.sh
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update</code></pre>
 
+<p>软链安装（开发模式）：技能目录直连源仓库，改动即时生效，与复制模式互斥；<code>--link</code> 拒绝接管目录、他处软链和断链，<code>--unlink</code> 只删除指向本仓库的链接：</p>
+
+<pre><code>bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
+
 <p>安装完成后，日常只敲这三个命令：</p>
 
 <table>
@@ -910,6 +915,8 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 <pre><code>bash scripts/check-repo.sh                                     # 仓库自检（含技能边界、marker、预算）
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills"        # 安装
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update   # 更新已安装副本
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link     # 软链安装/重建（开发模式）
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 软链卸载（只删本仓库链接）
 bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"   # 源与安装目标对照
 bash skills/yxj-work/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 校验状态文件
 bash scripts/test-fixtures.sh                                  # 夹具回归

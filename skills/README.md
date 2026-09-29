@@ -39,5 +39,6 @@ disable-model-invocation: true
 `scripts/runtime-skills.txt` 是安装清单，包含 3 个入口与全部辅助技能。它们都安装到同一个技能目录下，因此入口里的相对读取路径 `../<技能名>/SKILL.md` 在源仓库与安装目标下都成立。
 
 安装：`bash scripts/install.sh --dest "$HOME/.pi/agent/skills"`。`--update` 只覆盖带本仓库 `.yxj-work-installed` 标记的目录。
+软链安装（开发模式，直连源仓库）：`bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link`；卸载用 `--unlink`（只删指向本仓库的链接）。软链与复制模式互斥。
 
 如果确认某个技能长期不需要，从 `scripts/runtime-skills.txt` 移除对应行再删除该目录即可；门禁只校验清单里列出的目录。

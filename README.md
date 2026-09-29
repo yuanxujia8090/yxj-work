@@ -39,6 +39,17 @@ bash scripts/check-workflow.sh \
   --installed "$HOME/.pi/agent/skills"
 ```
 
+### 软链安装（开发模式）
+
+技能目录直连源仓库，改动或 `git pull` 立即生效，不需要更新副本：
+
+```bash
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link     # 安装/重建软链
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（只删指向本仓库的链接）
+```
+
+`--link` 拒绝接管目录、他处软链和断链（不会覆盖）；软链与复制模式互斥，切换前先手工清理旧形态。`check-workflow.sh` 对两种模式都校验。
+
 ## 使用
 
 安装后调用：
