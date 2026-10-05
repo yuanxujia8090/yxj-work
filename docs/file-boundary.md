@@ -55,6 +55,10 @@ A third-party skill is either read-only, output-root configurable, or fixed/unkn
 
 Before and after invocation, record a file inventory. An unexpected path outside `.work-docs` is a boundary violation. Do not move or delete it without authorization.
 
-## Project code
+## Contract validation and project code
+
+新任务的 `contract.md` 必须在执行前通过 `skills/yxj-work/scripts/check-contract.sh <task-dir>`。检查器只读任务目录中的契约，不写入契约、不自动改验收标准；历史契约没有 `Acceptance` 时只走兼容路径。
+
+契约中的 `Acceptance`、`Decision Gates` 和 `Contract Changes` 属于工作流记录，必须留在 `.work-docs/tasks/<task-id>/`。契约实质变化要提升 `contract_revision`，记录旧值、新值、原因、批准人和受影响证据。
 
 User-specified project code is a task target, not a workflow artifact. Record its paths in the task contract and evidence, but do not copy it into `.work-docs` unless requested.

@@ -80,11 +80,23 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 
 所有工作流持久文件必须位于 `.work-docs/`。用户明确指定的项目代码是任务目标，不伪装成工作流文档；第三方 skill 的报告、日志、缓存、下载和中间文件必须能指定到任务目录，否则隔离或阻塞。
 
-## 状态、进展和证据新鲜度
+## 契约、状态和证据
 
-`state.md` 是按行记录的状态文件：除了基本字段，还要记录 `calls_since_progress`、`last_progress_at`、`budget: used/limit`、`strategy_fingerprints`。有效进展只指新增 done_when 证据，或 required 验证从失败/未运行变为通过。每条 evidence 都记录 `command`、`run_at`、`result` 和相关文件的 `last_edit_at`；运行时间早于文件修改时间的证据不能支撑交付。新任务先读 `.work-docs/index.md`，相同范围的进行中任务直接续接。
+新任务的 `contract.md` 保留 `done_when` 摘要，并增加带编号的 `Acceptance` 验收条件。每条条件必须写 `outcome`、`verification`、`verification_type`、`layer` 和 `required`。同时写 `risk`、`risk_reason`、`review_policy`、`contract_revision`、`Decision Gates` 和 `Contract Changes`。
 
-`check-state.sh`（随技能安装到 `skills/yxj-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；`tests/fixtures/` 和 `test-fixtures.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值和阻塞字段缺失。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
+任务规模 `L1/L2/L3/long` 与影响风险 `low/medium/high` 分开：低风险可自动进入执行；中风险默认需要确认和只读审查；高风险需要确认和完整审查。不可逆操作、花钱、对外发布、生产变更和需求范围变化不能自动豁免。
+
+执行前运行：
+
+```bash
+bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
+```
+
+`check-contract.sh` 只检查契约结构、枚举、验收条件和风险策略关系，不判断自然语言质量。历史契约没有 `Acceptance` 时保持兼容，不强制迁移。
+
+`state.md` 是按行记录的状态文件：除了基本字段，还要记录 `calls_since_progress`、`last_progress_at`、`budget: used/limit`、`strategy_fingerprints`。新格式任务的 `contract_revision` 和 `contract_fingerprint` 必须与契约一致，`required_verification` 必须引用 `A1` 等验收条件编号；标记 done 时必须覆盖并通过所有 `required: yes` 条件。每条 evidence 都记录 `command`、`run_at`、`result` 和相关文件的 `last_edit_at`；运行时间早于文件修改时间的证据不能支撑交付。
+
+`check-state.sh`（随技能安装到 `skills/yxj-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；`tests/fixtures/` 和 `test-fixtures.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值、阻塞字段缺失和新契约关联。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
 
 ## 完成判定
 

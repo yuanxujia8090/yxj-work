@@ -80,11 +80,19 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 
 ## 契约和状态
 
+新任务的 `contract.md` 在保留 `done_when` 摘要的同时，增加 `Acceptance`（验收条件）章节。每条验收条件使用唯一编号（如 `A1`），并写明 `outcome`（可观察结果）、`verification`（验证方式）、`verification_type`（验证类别）、`layer`（验证层级）和 `required`（是否必过）。`verification_type` 允许 `automatic|manual|consumer|external`；脚本只校验结构，不给自然语言打分。
+
+新任务还必须写 `risk: low|medium|high`、`risk_reason`、`review_policy: auto|user-confirm|full-review`、`contract_revision`、`Decision Gates` 和 `Contract Changes`。任务规模 `L1/L2/L3/long` 与影响风险分开判断：低风险可自动进入执行；中风险默认需要用户确认和只读审查；高风险必须用户确认和完整审查。涉及不可逆操作、花钱、对外发布、生产或需求范围变化时，决策门不能被自动豁免。
+
+开始执行前运行 `skills/yxj-work/scripts/check-contract.sh <task-dir>`。它检查字段、枚举、验收条件、风险策略和版本结构；不判断文字是否“足够聪明”。`check-state.sh` 继续检查状态和证据，并对新格式任务检查 `contract_revision`、`contract_fingerprint` 与 `required_verification` 的验收编号引用。历史契约没有 `Acceptance` 时保持 v1.x 兼容，不强制迁移。
+
+契约实质变化必须提升 `contract_revision`，在 `Contract Changes` 中记录旧值、新值、原因、批准人和受影响证据；删除、放宽或降低 required 验收条件必须重新经过对应决策门。
+
 - L1：一句 `done_when`、允许范围、验证方式和 unknowns。
 - L2：任务类型、done_when、允许/禁止改动、验证层级、产物位置、阶段和下一入口。
 - L3：L2 加每个 checkpoint 的状态、证据、依赖、阻塞和第一步。
 
-`state.md` 使用简单的按行格式：每个字段一行 `key: value`；required 验证一行 `required_verification: name status=passed evidence=path`；证据一行 `evidence:name|command=...|run_at=...|result=...|last_edit_at=...`。固定记录 `task_id`、`level`、`stage`、`status`、`done_when`、`evidence`、`unknowns`、`blocked_by`、`unblock_condition`、`next_action`、`calls_since_progress`、`last_progress_at`、`budget`（`used/limit`）、`strategy_fingerprints`、`updated_at`。验证层级为 `syntax/config`、`static`、`runtime/local`、`external`、`consumer`，每层只能是 `passed|failed|not_run|blocked` 并带 evidence 指针。`status` 仅取 `in_progress|done|blocked|stopped|cancelled`；`stage` 使用路由中定义的阶段名，交接收尾时记 `handoff`。这两个枚举由 `scripts/check-repo.sh` 与 `check-state.sh` 双向断言，改一处不同步会直接报错。
+`state.md` 使用简单的按行格式：每个字段一行 `key: value`；新格式任务还记录 `contract_fingerprint`（契约指纹，即契约文件内容摘要）；required 验证一行 `required_verification: name status=passed evidence=path`；证据一行 `evidence:name|command=...|run_at=...|result=...|last_edit_at=...`。固定记录 `task_id`、`level`、`stage`、`status`、`done_when`、`evidence`、`unknowns`、`blocked_by`、`unblock_condition`、`next_action`、`calls_since_progress`、`last_progress_at`、`budget`（`used/limit`）、`strategy_fingerprints`、`updated_at`。验证层级为 `syntax/config`、`static`、`runtime/local`、`external`、`consumer`，每层只能是 `passed|failed|not_run|blocked` 并带 evidence 指针。`status` 仅取 `in_progress|done|blocked|stopped|cancelled`；`stage` 使用路由中定义的阶段名，交接收尾时记 `handoff`。这两个枚举由 `scripts/check-repo.sh` 与 `check-state.sh` 双向断言，改一处不同步会直接报错。
 
 只有全部 required 验证为 `passed`、required 子任务已结束、没有越界文件、决策门允许交付且每个结论有 evidence，才能写 `status: done`。`failed`、`blocked`、`not_run`、in_progress required 子任务、未解决决策门或无 evidence 时禁止 done。optional 项必须在契约中声明并写明跳过原因。
 

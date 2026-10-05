@@ -62,6 +62,9 @@ while IFS= read -r skill; do
   done < <(find "$INSTALLED/$skill" -type f ! -name '.yxj-work-installed' -print0)
 done < <(runtime_skills)
 
+# The contract checker is part of the installed yxj-work runtime.
+[[ -f "$INSTALLED/yxj-work/scripts/check-contract.sh" ]] || fail 'missing installed contract checker'
+
 # Installed runtime files must preserve the same boundary checks.
 # grep exit code: 0 = violation found, 1 = clean, >=2 = the check itself broke (never a pass).
 rc=0

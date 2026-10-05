@@ -17,7 +17,11 @@ need_text skills/yxj-work/SKILL.md '| bugfix | `playbooks/bugfix.md` |'
 need_text skills/yxj-work/SKILL.md '| research | `playbooks/research.md` |'
 
 # Development keeps design, plan, execution and review as separate verifiable units.
-need_text skills/yxj-work/playbooks/design.md 'Define done_when, verification layers, file boundaries'
+need_text skills/yxj-work/playbooks/design.md 'Acceptance'
+need_text skills/yxj-work/playbooks/design.md 'check-contract.sh'
+need_text skills/yxj-work/playbooks/plan.md 'Acceptance'
+need_text skills/yxj-work/playbooks/exec.md 'contract_revision'
+need_text skills/yxj-work/playbooks/review.md 'review_policy'
 need_text skills/yxj-work/playbooks/plan.md 'Split work into independently verifiable tasks'
 need_text skills/yxj-work/playbooks/exec.md 'Verify from narrow to broad'
 need_text skills/yxj-work/playbooks/review.md 'Review correctness, security boundaries'

@@ -1,0 +1,11 @@
+task_id: fixture-missing-acceptance
+level: L1
+task_type: design
+objective: 缺少验收章节
+scope: plans/
+forbidden: code/
+risk: low
+risk_reason: 文档任务
+review_policy: auto
+contract_revision: 1
+done_when: 目标完成

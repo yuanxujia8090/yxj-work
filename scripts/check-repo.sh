@@ -16,6 +16,7 @@ need scripts/check-repo.sh
 need scripts/install.sh
 need scripts/check-workflow.sh
 need skills/yxj-work/scripts/check-state.sh
+need skills/yxj-work/scripts/check-contract.sh
 need scripts/test-install.sh
 need scripts/test-fixtures.sh
 need scripts/test-flow.sh
@@ -36,7 +37,7 @@ while IFS= read -r skill; do
 done < <(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/runtime-skills.txt")
 
 # The English marker is checked separately below; the Chinese/English skills use the numeric marker.
-for marker in 'name: yxj-work' 'name: yxj-work-long' 'name: yxj-work-handoff' '.work-docs' 'status: done' 'blocked_by' 'attempted_paths' 'unblock_condition' 'next_action' 'external_skill_write_outside_work_docs' '20 次工具调用' '60 次工具调用' '30 分钟' 'calls_since_progress' 'last_progress_at' 'budget' 'strategy_fingerprints' 'evidence freshness' 'static' '只能由用户主动调用' '自动扫描、推荐、注入' '替用户触发' 'disable-model-invocation' '参考技能'; do
+for marker in 'name: yxj-work' 'name: yxj-work-long' 'name: yxj-work-handoff' '.work-docs' 'status: done' 'blocked_by' 'attempted_paths' 'unblock_condition' 'next_action' 'external_skill_write_outside_work_docs' '20 次工具调用' '60 次工具调用' '30 分钟' 'calls_since_progress' 'last_progress_at' 'budget' 'strategy_fingerprints' 'evidence freshness' 'static' '只能由用户主动调用' '自动扫描、推荐、注入' '替用户触发' 'disable-model-invocation' '参考技能' 'Acceptance' 'risk_reason' 'review_policy' 'contract_revision' 'verification_type' 'check-contract.sh'; do
   grep -R -F -- "$marker" "$ROOT/skills" >/dev/null || fail "missing marker: $marker"
 done
 

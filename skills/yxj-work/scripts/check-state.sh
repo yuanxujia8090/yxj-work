@@ -42,6 +42,30 @@ if [[ "$status" == blocked ]]; then
     [[ -n "$(value "$key")" ]] || fail "blocked state missing $key"
   done
 fi
+# New contracts bind verification names and state to an explicit contract revision.
+# Legacy tasks without Acceptance keep the v1 checks below.
+if [[ -f "$TASK_DIR/contract.md" ]] && grep -Fqx '## Acceptance' "$TASK_DIR/contract.md"; then
+  contract_revision="$(sed -n 's/^contract_revision: //p' "$TASK_DIR/contract.md" | head -n 1)"
+  state_revision="$(value contract_revision)"
+  [[ -n "$state_revision" && "$state_revision" == "$contract_revision" ]] || fail 'contract_revision mismatch or missing in state'
+  contract_fingerprint="$(shasum -a 256 "$TASK_DIR/contract.md" | awk '{print $1}')"
+  state_fingerprint="$(value contract_fingerprint)"
+  [[ -n "$state_fingerprint" && "$state_fingerprint" == "$contract_fingerprint" ]] || fail 'contract_fingerprint mismatch or missing in state'
+  required_acceptance_ids="$(awk '/^## / { a=($0 == "## Acceptance") } a && /^### A[1-9][0-9]*$/ { id=$0; sub(/^### /, "", id); next } a && id == "" { next } a && /^required: yes$/ { print id; id="" }' "$TASK_DIR/contract.md")"
+  while IFS= read -r line; do
+    [[ "$line" == required_verification:* ]] || continue
+    acceptance_id="${line#required_verification: }"; acceptance_id="${acceptance_id%% *}"
+    grep -Fqx "### $acceptance_id" "$TASK_DIR/contract.md" || fail "unknown acceptance reference: $acceptance_id"
+  done < "$TASK_DIR/state.md"
+  if [[ "$status" == done ]]; then
+    while IFS= read -r acceptance_id; do
+      [[ -n "$acceptance_id" ]] || continue
+      grep -Eq "^required_verification: ${acceptance_id} status=passed( |$)" "$TASK_DIR/state.md" || fail "required acceptance not passed: $acceptance_id"
+    done <<EOF
+$required_acceptance_ids
+EOF
+  fi
+fi
 req_count=0
 while IFS= read -r line; do
   [[ "$line" == required_verification:* ]] || continue

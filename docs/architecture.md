@@ -14,12 +14,14 @@ It also carries 30 companion skills under `skills/yxj-*`, listed in `scripts/run
 
 ## Runtime flow
 
+新任务契约在执行前经过 `skills/yxj-work/scripts/check-contract.sh` 结构校验；它检查 `Acceptance`、`risk`、`review_policy`、`contract_revision` 等字段关系，不做自然语言评分。历史契约没有 `Acceptance` 时保持 v1.x 兼容。
+
 1. Classify the request as L0 fast-answer or L1/L2/L3 work.
 2. For L1/L2/L3, resolve the current execution directory and initialize one `.work-docs` root.
 3. Create or reuse a task directory named `{YYYYMMDD}-{NN}-{slug}` (format and number-allocation rule: `docs/file-boundary.md`); the `task_id` field equals that directory name.
-4. Write contract/state before durable work.
-5. Read the stage's playbook first, then the companion skills in the stage table in `yxj-work/SKILL.md`; record the resulting files and evidence.
-6. Verify required layers and apply the done gate.
+4. Write contract/state before durable work. New contracts use numbered `Acceptance` conditions, risk, review policy, decision gates and contract revision; `done_when` remains a compatibility summary.
+5. Before execution, run `skills/yxj-work/scripts/check-contract.sh <task-dir>`; then read the stage's playbook and companion skills in the table in `yxj-work/SKILL.md`, recording the resulting files and evidence.
+6. Apply risk policy: medium-risk tasks need target/boundary confirmation and read-only review; high-risk tasks need user confirmation and full review. Verify required layers and apply the done gate; new state files bind `contract_revision`、`contract_fingerprint` and `required_verification` to the contract and Acceptance IDs. A done state must cover every required Acceptance condition.
 7. On failure or no progress, trip the child-task circuit breaker and persist a checkpoint.
 8. For long work, update `state.md` and append a checkpoint at every stage boundary; before pausing or crossing a day, update `handoff.md` so the next session can print a recovery summary and execute `next_action` without chat memory.
 
