@@ -80,7 +80,7 @@ while IFS= read -r line; do
     evidence_ref="${line##*evidence=}"; evidence_ref="${evidence_ref%% *}"; evidence_ref="${evidence_ref%%|*}"
     [[ -n "$evidence_ref" ]] || fail "required verification missing evidence: ${line#required_verification: }"
     [[ -f "$TASK_DIR/$evidence_ref" ]] || fail "evidence file not found: $evidence_ref"
-    evidence_id="${evidence_ref##*/}"; evidence_id="${evidence_id%.txt}"
+    evidence_id="${evidence_ref##*/}"; evidence_id="${evidence_id%.*}"
     evidence_line="$(grep -E "^evidence:${evidence_id}(\\||$)" "$TASK_DIR/state.md" | head -n 1 || true)"
     [[ -n "$evidence_line" ]] || fail "evidence not found: $evidence_id"
     acceptance_id="${line#required_verification: }"; acceptance_id="${acceptance_id%% *}"
