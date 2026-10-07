@@ -60,7 +60,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 /yxj-work-handoff <交接补充说明>
 ```
 
-辅助技能不能由模型自动唤起，两种用法：入口技能在对应阶段主动读取（映射见 `skills/yxj-work/SKILL.md` 的阶段表），或用户主动点名，例如 `/yxj-why`、`/yxj-arena`。普通任务按开发、排查修复或调研链路进入阶段；长任务跨会话前必须更新 checkpoint 和 handoff，下一会话先读记录再继续。
+辅助技能不能由模型自动唤起，两种用法：入口技能在对应阶段主动读取（映射见 `skills/yxj-work/SKILL.md` 的阶段表），或用户主动点名，例如 `/yxj-why`、`/yxj-arena`。普通任务按开发、排查修复或调研链路进入阶段；正式阶段先创建任务骨架和最小契约，并通过 `check-contract.sh` 后再广泛读取；长任务跨会话前必须更新 checkpoint 和 handoff，下一会话先读记录再继续。
 
 `fast-answer` 不创建工作目录。L1/L2/L3 任务以命令实际执行目录为根，创建唯一：
 
@@ -92,11 +92,13 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 ```
 
-`check-contract.sh` 只检查契约结构、枚举、验收条件和风险策略关系，不判断自然语言质量。默认模式为 `--ready`；中/高风险契约的确认门未完成时只允许 `--draft`；`--seal` 把契约快照固化到 `audit/contract-r<N>.md`，`--locked` 用于交付前复核历史快照与变更记录齐全。历史契约没有 `Acceptance` 时保持兼容，不强制迁移。
+`check-contract.sh` 只检查契约结构、枚举、验收条件和风险策略关系，不判断自然语言质量。字段必须从第 1 列写成 `key: value`，写成 Markdown 列表项 `- key: value` 会被直接拦下（提示 `fields must use key: value at column 1`）。默认模式为 `--ready`；中/高风险契约的确认门未完成时只允许 `--draft`；`--seal` 把契约快照固化到 `audit/contract-r<N>.md`，`--locked` 用于交付前复核历史快照与变更记录齐全。历史契约没有 `Acceptance` 时保持兼容，不强制迁移。
 
 `state.md` 是按行记录的状态文件：除了基本字段，还要记录 `calls_since_progress`、`last_progress_at`、`budget: used/limit`、`strategy_fingerprints`。新格式任务的 `contract_revision` 和 `contract_fingerprint` 必须与契约一致，启用新版完成门时增加 `evidence_schema: 2`；`required_verification` 必须引用 `A1` 等验收条件编号；标记 done 时必须覆盖并通过所有 `required: yes` 条件。每条 evidence 都记录 `acceptance`、`command`、`run_at`、`result` 和相关文件的 `last_edit_at`，且对应证据文件必须存在；运行时间早于文件修改时间的证据不能支撑交付。历史已完成的 v2 state 不带 `evidence_schema: 2` 时保持兼容读取。
 
 `check-state.sh`（随技能安装到 `skills/yxj-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；新契约的每条 required 验收必须绑定完整 evidence（包含 `acceptance`、`command`、`run_at`、`result`、`last_edit_at`），中/高风险完成还必须有匹配 `review_policy` 的 `review_evidence`。`tests/fixtures/`、`test-fixtures.sh` 和 `test-v2-lifecycle.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值、阻塞字段缺失、新契约关联和完成门失败场景。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
+
+为避免长会话拖慢，正式阶段采用三条效率规则：按断言驱动读取（先列断言，再定位实现符号和局部代码）；模型请求首次超时后先写 `audit/` 恢复摘要，不原样重试，并在宿主允许时降低思考级别或切换更快模型；低风险、只读、`review_policy: auto` 的审查使用轻量 review，只保留验收所需的 contract、evidence、state 和校验脚本。
 
 ## 完成判定
 
@@ -116,7 +118,7 @@ bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 
 熔断必须：停止同策略重试；在 `audit/` 记录策略、错误和证据；写 `status: blocked`、`blocked_by`、`attempted_paths`、`shared_assumption`、`unblock_condition`、`next_action`；写 checkpoint/handoff；禁止父任务标记 done。L1/L2/L3 的预算分别为 60/150/400 次工具调用，L3 另有 8 小时上限；无进展熔断阈值为 L1/L2 20 次、L3/long 每子任务 60 次或 30 分钟。开工后发现真实范围将超出当前 level 预算时，在 contract 与 state 显式升级 level 并记录原因，不允许静默超支。预算耗尽写 checkpoint，不标记 done，交用户决定是否追加预算。
 
-恢复必须先读状态、最近 checkpoint、失败策略和 evidence，验证阻塞条件已解除或采用有证据的新策略；不得重复相同失败策略。
+恢复必须先读状态、最近 checkpoint、失败策略和 evidence，验证阻塞条件已解除或采用有证据的新策略；不得重复相同失败策略。固定收尾顺序为：写 contract → 写 evidence → 写报告 → 写 state → `check-contract.sh` → `check-state.sh` → 更新 `.work-docs/index.md`。契约最后一次修改后才计算 fingerprint；校验失败必须换策略修复，不能原样重跑。
 
 ## 更新与卸载
 

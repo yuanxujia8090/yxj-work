@@ -34,6 +34,13 @@ section_field() {
     in_section && index($0, key ": ") == 1 { print substr($0, length(key) + 3); exit }
   ' "$CONTRACT"
 }
+# Contract fields are line-oriented and must start at column 1. Catch the common
+# Markdown-list mistake early so the error points to the format instead of a
+# misleading "missing field" message.
+if grep -Eq '^- [a-z_]+:' "$CONTRACT"; then
+  fail 'fields must use key: value at column 1; remove list markers'
+fi
+
 # Reject duplicates and fields outside their declared sections; otherwise a later
 # conflicting value could be invisible to the first-value parser above.
 awk '

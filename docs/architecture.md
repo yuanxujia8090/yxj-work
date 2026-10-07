@@ -14,16 +14,17 @@ It also carries 30 companion skills under `skills/yxj-*`, listed in `scripts/run
 
 ## Runtime flow
 
-新任务契约在执行前经过 `skills/yxj-work/scripts/check-contract.sh` 结构校验；它检查 `Acceptance`、`risk`、`review_policy`、`contract_revision` 等字段关系，不做自然语言评分。历史契约没有 `Acceptance` 时保持 v1.x 兼容。
+新任务契约在执行前经过 `skills/yxj-work/scripts/check-contract.sh` 结构校验；它检查 `Acceptance`、`risk`、`review_policy`、`contract_revision` 等字段关系，要求字段从第 1 列写成 `key: value`（拒绝 `- key: value` 列表项），不做自然语言评分。历史契约没有 `Acceptance` 时保持 v1.x 兼容。
 
 1. Classify the request as L0 fast-answer or L1/L2/L3 work.
 2. For L1/L2/L3, resolve the current execution directory and initialize one `.work-docs` root.
 3. Create or reuse a task directory named `{YYYYMMDD}-{NN}-{slug}` (format and number-allocation rule: `docs/file-boundary.md`); the `task_id` field equals that directory name.
-4. Write contract/state before durable work. New contracts use numbered `Acceptance` conditions, risk, review policy, decision gates and contract revision; `done_when` remains a compatibility summary.
-5. Before execution, run `skills/yxj-work/scripts/check-contract.sh <task-dir>`; then read the stage's playbook and companion skills in the table in `yxj-work/SKILL.md`, recording the resulting files and evidence.
-6. Apply risk policy: medium-risk tasks need target/boundary confirmation and read-only review; high-risk tasks need user confirmation and full review. Verify required layers and apply the done gate; new state files bind `contract_revision`、`contract_fingerprint` and `required_verification` to the contract and Acceptance IDs. A done state must cover every required Acceptance condition; under `evidence_schema: 2` each one binds an evidence record, and medium/high-risk tasks also need a `review_evidence` line matching the contract's `review_policy`.
-7. On failure or no progress, trip the child-task circuit breaker and persist a checkpoint.
-8. For long work, update `state.md` and append a checkpoint at every stage boundary; before pausing or crossing a day, update `handoff.md` so the next session can print a recovery summary and execute `next_action` without chat memory.
+4. Write the minimal contract before broad exploration; then run `skills/yxj-work/scripts/check-contract.sh <task-dir>`. Do not investigate for most of the task and add the contract at the end. New contracts use numbered `Acceptance` conditions, risk, review policy, decision gates and contract revision; `done_when` remains a compatibility summary.
+5. After the contract passes, read the stage's playbook and companion skills in the table in `yxj-work/SKILL.md`, then use assertion-driven local reads and record evidence as it is produced.
+6. If a model request times out, write a recovery summary to `audit/` before continuing; do not repeat the same request with the full history. When the host permits it, lower the thinking level or switch to a faster model without changing global Pi configuration.
+7. Apply risk policy: medium-risk tasks need target/boundary confirmation and read-only review; high-risk tasks need user confirmation and full review. For low-risk, read-only, `review_policy: auto` reviews, use the lightweight path: retain contract, evidence, state and both check scripts, and skip unrelated builds/tests/reference reads. Verify required layers and apply the done gate; new state files bind `contract_revision`、`contract_fingerprint` and `required_verification` to the contract and Acceptance IDs. A done state must cover every required Acceptance condition; under `evidence_schema: 2` each one binds an evidence record, and medium/high-risk tasks also need a `review_evidence` line matching the contract's `review_policy`.
+8. On failure or no progress, trip the child-task circuit breaker and persist a checkpoint.
+9. For long work, update `state.md` and append a checkpoint at every stage boundary; before pausing or crossing a day, update `handoff.md` so the next session can print a recovery summary and execute `next_action` without chat memory.
 
 ## State model
 

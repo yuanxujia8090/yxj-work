@@ -1,6 +1,6 @@
 # Design Playbook
 
-1. Read the relevant code, task contract and research evidence.
+1. For a new formal task, create the task skeleton and minimal contract before broad exploration, then run `skills/yxj-work/scripts/check-contract.sh <task-dir>`. For an existing task, read the relevant code, task contract and research evidence first. Use assertion-driven local reads rather than dumping complete source files.
 2. Describe the current chain, reusable capability, boundaries, assumptions and alternatives.
 3. Define `objective`、`scope`、`forbidden`、`risk`、`risk_reason`、`review_policy` and numbered `Acceptance` conditions; each condition must include `outcome`、`verification`、`verification_type`、`layer` and `required`.
 4. Keep `done_when` as a human-readable summary, then run `skills/yxj-work/scripts/check-contract.sh <task-dir>` before moving to plan or exec.

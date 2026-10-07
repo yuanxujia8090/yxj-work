@@ -18,9 +18,10 @@ expect_pass valid-low
 expect_pass valid-medium
 expect_pass valid-high
 expect_pass legacy
-for name in missing-acceptance missing-verification invalid-enum duplicate-acceptance risk-policy-conflict high-risk-exempted; do
+for name in missing-acceptance missing-verification invalid-enum duplicate-acceptance risk-policy-conflict high-risk-exempted invalid-field-format; do
   expect_fail "$name"
 done
+expect_fail_message invalid-field-format 'fields must use key: value at column 1; remove list markers'
 expect_fail_message medium-confirmation-pending 'confirmation is pending; only --draft is allowed'
 "$CHECK" "$ROOT/tests/contract-fixtures/medium-confirmation-pending" --draft >/dev/null || fail 'pending contract should pass in draft mode'
 
