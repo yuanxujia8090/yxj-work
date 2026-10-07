@@ -92,11 +92,11 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 ```
 
-`check-contract.sh` 只检查契约结构、枚举、验收条件和风险策略关系，不判断自然语言质量。历史契约没有 `Acceptance` 时保持兼容，不强制迁移。
+`check-contract.sh` 只检查契约结构、枚举、验收条件和风险策略关系，不判断自然语言质量。默认模式为 `--ready`；中/高风险契约的确认门未完成时只允许 `--draft`；`--seal` 把契约快照固化到 `audit/contract-r<N>.md`，`--locked` 用于交付前复核历史快照与变更记录齐全。历史契约没有 `Acceptance` 时保持兼容，不强制迁移。
 
-`state.md` 是按行记录的状态文件：除了基本字段，还要记录 `calls_since_progress`、`last_progress_at`、`budget: used/limit`、`strategy_fingerprints`。新格式任务的 `contract_revision` 和 `contract_fingerprint` 必须与契约一致，`required_verification` 必须引用 `A1` 等验收条件编号；标记 done 时必须覆盖并通过所有 `required: yes` 条件。每条 evidence 都记录 `command`、`run_at`、`result` 和相关文件的 `last_edit_at`；运行时间早于文件修改时间的证据不能支撑交付。
+`state.md` 是按行记录的状态文件：除了基本字段，还要记录 `calls_since_progress`、`last_progress_at`、`budget: used/limit`、`strategy_fingerprints`。新格式任务的 `contract_revision` 和 `contract_fingerprint` 必须与契约一致，启用新版完成门时增加 `evidence_schema: 2`；`required_verification` 必须引用 `A1` 等验收条件编号；标记 done 时必须覆盖并通过所有 `required: yes` 条件。每条 evidence 都记录 `acceptance`、`command`、`run_at`、`result` 和相关文件的 `last_edit_at`，且对应证据文件必须存在；运行时间早于文件修改时间的证据不能支撑交付。历史已完成的 v2 state 不带 `evidence_schema: 2` 时保持兼容读取。
 
-`check-state.sh`（随技能安装到 `skills/yxj-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；`tests/fixtures/` 和 `test-fixtures.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值、阻塞字段缺失和新契约关联。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
+`check-state.sh`（随技能安装到 `skills/yxj-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；新契约的每条 required 验收必须绑定完整 evidence（包含 `acceptance`、`command`、`run_at`、`result`、`last_edit_at`），中/高风险完成还必须有匹配 `review_policy` 的 `review_evidence`。`tests/fixtures/`、`test-fixtures.sh` 和 `test-v2-lifecycle.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值、阻塞字段缺失、新契约关联和完成门失败场景。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
 
 ## 完成判定
 
@@ -108,7 +108,7 @@ bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 - 所有决策门允许交付；
 - 每个结论都有 evidence 指针。
 
-`failed`、`blocked`、`not_run`、未解决决策门、in_progress required 子任务或缺少 evidence 时禁止标记 `done`。optional 项必须在契约中声明并写明跳过原因。
+`failed`、`blocked`、`not_run`、未解决决策门、in_progress required 子任务或缺少 evidence 时禁止标记 `done`。optional 项必须在契约中声明并写明跳过原因。启用 `evidence_schema: 2` 的新任务还有两道完成门：每条 required 验收都必须绑定一条完整 evidence（含 `acceptance`、`command`、`run_at`、`result`、`last_edit_at`，且证据文件真实存在）；中/高风险任务还必须有一条与契约 `review_policy` 匹配的 `review_evidence`（审查文件存在且 `status=passed`）。
 
 ## 熔断
 
@@ -126,6 +126,11 @@ bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 
 ```bash
 bash scripts/check-repo.sh
+bash scripts/test-contract.sh
+bash scripts/test-fixtures.sh
+bash scripts/test-v2-lifecycle.sh
+bash scripts/test-flow.sh
+bash scripts/test-install.sh
 tmp="$(mktemp -d)"
 bash scripts/install.sh --dest "$tmp"
 bash scripts/check-workflow.sh --source "$PWD" --installed "$tmp"
