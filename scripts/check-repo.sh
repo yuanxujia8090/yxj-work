@@ -19,6 +19,9 @@ need skills/yxj-work/scripts/check-state.sh
 need skills/yxj-work/scripts/check-contract.sh
 need scripts/test-install.sh
 need scripts/test-fixtures.sh
+need scripts/test-v2-lifecycle.sh
+need tests/fixtures/v2-review-valid/contract.md
+need tests/fixtures/v2-review-valid/state.md
 need scripts/test-flow.sh
 need .work-docs/index.md
 

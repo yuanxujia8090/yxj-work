@@ -1,11 +1,10 @@
-task_id: 20260101-01-fixture-contract-linked-valid
-level: L1
+task_id: 20260101-01-fixture-v2-review-missing
+level: L2
 stage: review
 status: done
 contract_revision: 1
-contract_fingerprint: aa2a238e9a5328c271799149df7dbc7fb6429f0f9ee79a71a22f8586e3ced3fa
+contract_fingerprint: 6840d78afc88b4b94b54033cabfad00976d73a4839bf84795c003785ee4bd706
 evidence_schema: 2
-done_when: A1 通过
 calls_since_progress: 0
 last_progress_at: 2026-09-28T20:00:00Z
 budget: 2/60

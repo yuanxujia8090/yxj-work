@@ -46,6 +46,10 @@ fi
 # Legacy tasks without Acceptance keep the v1 checks below.
 if [[ -f "$TASK_DIR/contract.md" ]] && grep -Fqx '## Acceptance' "$TASK_DIR/contract.md"; then
   contract_revision="$(sed -n 's/^contract_revision: //p' "$TASK_DIR/contract.md" | head -n 1)"
+  evidence_schema="$(value evidence_schema)"
+  if [[ -n "$evidence_schema" && "$evidence_schema" != 2 ]]; then
+    fail "invalid evidence_schema: $evidence_schema"
+  fi
   state_revision="$(value contract_revision)"
   [[ -n "$state_revision" && "$state_revision" == "$contract_revision" ]] || fail 'contract_revision mismatch or missing in state'
   contract_fingerprint="$(shasum -a 256 "$TASK_DIR/contract.md" | awk '{print $1}')"
@@ -72,9 +76,40 @@ while IFS= read -r line; do
   req_count=$((req_count + 1))
   req_status="${line##*status=}"; req_status="${req_status%% *}"; req_status="${req_status%%|*}"
   [[ "$req_status" == passed ]] || { [[ "$status" != done ]] || fail "done state has required verification $req_status"; }
+  if [[ "${evidence_schema:-}" == 2 ]]; then
+    evidence_ref="${line##*evidence=}"; evidence_ref="${evidence_ref%% *}"; evidence_ref="${evidence_ref%%|*}"
+    [[ -n "$evidence_ref" ]] || fail "required verification missing evidence: ${line#required_verification: }"
+    [[ -f "$TASK_DIR/$evidence_ref" ]] || fail "evidence file not found: $evidence_ref"
+    evidence_id="${evidence_ref##*/}"; evidence_id="${evidence_id%.txt}"
+    evidence_line="$(grep -E "^evidence:${evidence_id}(\\||$)" "$TASK_DIR/state.md" | head -n 1 || true)"
+    [[ -n "$evidence_line" ]] || fail "evidence not found: $evidence_id"
+    acceptance_id="${line#required_verification: }"; acceptance_id="${acceptance_id%% *}"
+    evidence_acceptance="$(printf '%s\n' "$evidence_line" | sed -n 's/.*|acceptance=\([^|]*\).*/\1/p')"
+    [[ "$evidence_acceptance" == "$acceptance_id" ]] || fail "evidence $evidence_id is not bound to $acceptance_id"
+    for evidence_key in command run_at result last_edit_at; do
+      evidence_value="$(printf '%s\n' "$evidence_line" | sed -n "s/.*|${evidence_key}=\([^|]*\).*/\1/p")"
+      [[ -n "$evidence_value" ]] || fail "evidence $evidence_id missing $evidence_key"
+    done
+    evidence_result="$(printf '%s\n' "$evidence_line" | sed -n 's/.*|result=\([^|]*\).*/\1/p')"
+    [[ "$req_status" != passed || "$evidence_result" == passed ]] || fail "evidence $evidence_id is not passed"
+  fi
 done < "$TASK_DIR/state.md"
 if [[ "$status" == done && "$req_count" -eq 0 ]]; then
   fail 'done state has no required_verification'
+fi
+if [[ "${evidence_schema:-}" == 2 && "$status" == done ]]; then
+  review_policy="$(sed -n 's/^review_policy: //p' "$TASK_DIR/contract.md" | head -n 1)"
+  if [[ "$review_policy" != auto ]]; then
+    review_line="$(grep '^review_evidence:' "$TASK_DIR/state.md" | head -n 1 || true)"
+    [[ -n "$review_line" ]] || fail "review evidence required for $review_policy"
+    review_policy_record="$(printf '%s\n' "$review_line" | sed -n 's/.*|policy=\([^|]*\).*/\1/p')"
+    review_status="$(printf '%s\n' "$review_line" | sed -n 's/.*|status=\([^|]*\).*/\1/p')"
+    review_path="$(printf '%s\n' "$review_line" | sed -n 's/.*|path=\([^|]*\).*/\1/p')"
+    [[ "$review_policy_record" == "$review_policy" ]] || fail 'review evidence policy mismatch'
+    [[ "$review_status" == passed ]] || fail 'review evidence is not passed'
+    [[ -n "$review_path" ]] || fail 'review evidence missing path'
+    [[ -f "$TASK_DIR/$review_path" ]] || fail "review evidence file not found: $review_path"
+  fi
 fi
 # Reject invalid/zero-padding-deficient timestamps; normalize to a fixed-width prefix
 # (YYYY-MM-DDTHH:MM) so string comparison keeps correct order.

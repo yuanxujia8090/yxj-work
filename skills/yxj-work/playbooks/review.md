@@ -7,4 +7,5 @@
 5. Confirm each numbered `Acceptance` condition has the declared evidence type and layer; do not treat a manual, consumer or external condition as passed from a local command alone.
 6. Classify findings as must-fix, consider, note or rejected; cite files and evidence.
 7. State what was not reviewed.
-8. This playbook is read-only. Put the review in `.work-docs/tasks/<task-id>/outputs/` only when requested by the contract.
+8. Write the review result to the contract's `review_evidence` path under `.work-docs/tasks/<task-id>/`; the state must record matching `policy` and `status=passed` before `done`.
+9. This playbook is read-only. Put the review in `.work-docs/tasks/<task-id>/outputs/` only when requested by the contract.
