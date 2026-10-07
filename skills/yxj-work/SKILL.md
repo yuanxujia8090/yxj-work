@@ -33,7 +33,7 @@ disable-model-invocation: true
 - 问题排查与修复：`investigate → bugfix → review`。无法稳定复现时停在 `investigate`，不要假装进入修复。
 - 调研：`research → decision gate`；只有 `proceed` 才进入 `design/plan → exec → review`，`design_only`、`gather_more`、`do_not_build` 在当前任务收口。
 
-每进入一个阶段，先读对应 playbook，再读表中的参考技能，最后按 playbook 写产物和验证证据。阶段与文件的唯一映射如下：
+每进入一个阶段，先读对应 playbook，再读表中的参考技能，最后按 playbook 写产物和验证证据。正式阶段先建任务骨架：先分配或复用 task-id，创建 `.work-docs/tasks/<task-id>/` 及其子目录，写入最小 `contract.md`，运行 `check-contract.sh` 通过后再开始广泛读取；不要先调查到后半程才补契约。阶段与文件的唯一映射如下：
 
 | 阶段 | playbook | 主动读取 |
 |---|---|---|
@@ -80,13 +80,39 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 
 ## 契约和状态
 
+新任务的 `contract.md` 在保留 `done_when` 摘要的同时，增加 `Acceptance`（验收条件）章节。每条验收条件使用唯一编号（如 `A1`），并写明 `outcome`（可观察结果）、`verification`（验证方式）、`verification_type`（验证类别）、`layer`（验证层级）和 `required`（是否必过）。`verification_type` 允许 `automatic|manual|consumer|external`；脚本只校验结构，不给自然语言打分。
+
+新任务还必须写 `risk: low|medium|high`、`risk_reason`、`review_policy: auto|user-confirm|full-review`、`contract_revision`、`Decision Gates` 和 `Contract Changes`。任务规模 `L1/L2/L3/long` 与影响风险分开判断：低风险可自动进入执行；中风险默认需要用户确认和只读审查；高风险必须用户确认和完整审查。涉及不可逆操作、花钱、对外发布、生产或需求范围变化时，决策门不能被自动豁免。
+
+开始执行前运行 `skills/yxj-work/scripts/check-contract.sh <task-dir>`。它检查字段、枚举、验收条件、风险策略和版本结构；不判断文字是否“足够聪明”。`check-state.sh` 继续检查状态和证据，并对新格式任务检查 `contract_revision`、`contract_fingerprint` 与 `required_verification` 的验收编号引用。历史契约没有 `Acceptance` 时保持 v1.x 兼容，不强制迁移。
+
+契约实质变化必须提升 `contract_revision`，在 `Contract Changes` 中记录旧值、新值、原因、批准人和受影响证据；删除、放宽或降低 required 验收条件必须重新经过对应决策门。
+
 - L1：一句 `done_when`、允许范围、验证方式和 unknowns。
 - L2：任务类型、done_when、允许/禁止改动、验证层级、产物位置、阶段和下一入口。
 - L3：L2 加每个 checkpoint 的状态、证据、依赖、阻塞和第一步。
 
-`state.md` 使用简单的按行格式：每个字段一行 `key: value`；required 验证一行 `required_verification: name status=passed evidence=path`；证据一行 `evidence:name|command=...|run_at=...|result=...|last_edit_at=...`。固定记录 `task_id`、`level`、`stage`、`status`、`done_when`、`evidence`、`unknowns`、`blocked_by`、`unblock_condition`、`next_action`、`calls_since_progress`、`last_progress_at`、`budget`（`used/limit`）、`strategy_fingerprints`、`updated_at`。验证层级为 `syntax/config`、`static`、`runtime/local`、`external`、`consumer`，每层只能是 `passed|failed|not_run|blocked` 并带 evidence 指针。`status` 仅取 `in_progress|done|blocked|stopped|cancelled`；`stage` 使用路由中定义的阶段名，交接收尾时记 `handoff`。这两个枚举由 `scripts/check-repo.sh` 与 `check-state.sh` 双向断言，改一处不同步会直接报错。
+`state.md` 使用简单的按行格式：每个字段一行 `key: value`；新格式任务还记录 `contract_fingerprint`（契约指纹，即契约文件内容摘要）和 `evidence_schema: 2`；required 验证一行 `required_verification: A1 status=passed evidence=evidence/check.txt`；证据一行 `evidence:check|acceptance=A1|command=...|run_at=...|result=passed|last_edit_at=...`，且对应证据文件必须存在。`review_policy` 不是 `auto` 时，done 状态还要有 `review_evidence: review|policy=...|status=passed|path=outputs/review.md`，并且审查证据文件必须存在。历史已完成的 v2 state 不带 `evidence_schema: 2` 时保持兼容读取。固定记录 `task_id`、`level`、`stage`、`status`、`done_when`、`evidence`、`unknowns`、`blocked_by`、`unblock_condition`、`next_action`、`calls_since_progress`、`last_progress_at`、`budget`（`used/limit`）、`strategy_fingerprints`、`updated_at`。验证层级为 `syntax/config`、`static`、`runtime/local`、`external`、`consumer`，每层只能是 `passed|failed|not_run|blocked` 并带 evidence 指针。`status` 仅取 `in_progress|done|blocked|stopped|cancelled`；`stage` 使用路由中定义的阶段名，交接收尾时记 `handoff`。这两个枚举由 `scripts/check-repo.sh` 与 `check-state.sh` 双向断言，改一处不同步会直接报错。
 
 只有全部 required 验证为 `passed`、required 子任务已结束、没有越界文件、决策门允许交付且每个结论有 evidence，才能写 `status: done`。`failed`、`blocked`、`not_run`、in_progress required 子任务、未解决决策门或无 evidence 时禁止 done。optional 项必须在契约中声明并写明跳过原因。
+
+## 执行效率规则
+
+### 断言驱动读取
+
+`review`、`investigate`、`research`、`plan` 和 `exec` 先把问题拆成可验证断言或验收条件，再按断言定位实现符号；优先读取符号附近的局部代码并立即写入 `evidence/`，不要为了“先了解全貌”连续输出多个完整源文件。每轮读取都应回答一个断言、缩小一个 unknown 或产生一条可复用证据。
+
+### 超时恢复
+
+模型请求首次超时后，不原样重试同一请求：先在任务 `audit/` 写入超时摘要和当前阶段，再压缩为“已确认事实、未决断言、下一步”三段恢复摘要；后续请求只携带恢复摘要和必要证据。若宿主允许切换模型或降低思考级别，恢复时可使用更快配置；本技能不修改 Pi 全局模型配置。连续第二次同类超时按熔断规则处理。发生超时或长时间无响应时，若当前宿主不能切换模型，必须先交付恢复摘要并把状态标为 `blocked` 或 `stopped`，不能继续携带完整历史上下文等待。
+
+### 轻量 review
+
+`review_policy: auto` 且任务为只读、低风险、无代码变更时，保留 contract、evidence、state 和两个校验脚本，跳过与验收条件无关的构建、测试和全量参考材料读取；报告仍必须写明审查范围、未覆盖项和证据位置。
+
+### 固定收尾顺序
+
+按以下顺序收尾，避免最后才发现格式或指纹错误：写 `contract.md` → 写 evidence → 写报告 → 写 `state.md` → 运行 `check-contract.sh` → 运行 `check-state.sh` → 更新 `.work-docs/index.md`。契约最后一次修改后才计算 fingerprint；校验失败必须换策略修复，不原样重跑。
 
 ## 进展、预算和熔断
 
