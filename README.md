@@ -139,3 +139,5 @@ bash scripts/check-workflow.sh --source "$PWD" --installed "$tmp"
 ```
 
 详细边界见 `docs/architecture.md` 和 `docs/file-boundary.md`。
+
+真实会话中观察到的待处置行为场景（含会话 ID 与证据）记在 `docs/session-scenarios.md`，后续新场景直接追加到该文件。
