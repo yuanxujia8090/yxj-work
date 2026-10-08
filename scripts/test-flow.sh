@@ -36,6 +36,22 @@ need_text skills/yxj-work/playbooks/plan.md 'Split work into independently verif
 need_text skills/yxj-work/playbooks/exec.md 'Verify from narrow to broad'
 need_text skills/yxj-work/playbooks/review.md 'Review correctness, security boundaries'
 
+# Lightweight document work remains a plan branch, not a new runtime stage.
+need_text skills/yxj-work/SKILL.md '轻量文档整理'
+need_text skills/yxj-work/SKILL.md '单纯读取新文件、获取环境状态不算有效进展'
+need_text skills/yxj-work/SKILL.md '实施计划读取'
+need_text skills/yxj-work/playbooks/plan.md '## 轻量文档分支'
+need_text skills/yxj-work/playbooks/plan.md 'templates/document-task.md'
+need_text skills/yxj-work/playbooks/plan.md '6 次资料工具调用'
+need_text skills/yxj-work/playbooks/plan.md '20 次总工具调用'
+need_text skills/yxj-work/playbooks/plan.md '初稿中的哪条预期结果或事实缺口'
+need_text skills/yxj-work/playbooks/plan.md '不是宿主自动拦截'
+need_text skills/yxj-work/playbooks/plan.md '必过项不能降为可选项'
+need_text skills/yxj-work/playbooks/plan.md '固定提交'
+need_text README.md 'templates/document-task.md'
+need_text docs/architecture.md '轻量文档'
+need_text docs/usage-guide.html 'id="light-document"'
+
 # Bug fixing cannot skip reproduction or lose the before/after proof.
 need_text skills/yxj-work/playbooks/bugfix.md 'Reproduce with expected versus actual behavior'
 need_text skills/yxj-work/playbooks/bugfix.md 'Preserve failing-before and passing-after evidence'

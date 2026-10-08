@@ -18,7 +18,7 @@ disable-model-invocation: true
 - `investigate`：现状、定位、恢复。
 - `research`：外部事实、产品、市场、用户或技术选型研究。
 - `design`：方案设计，不改代码。
-- `plan`：逐任务实施规格。
+- `plan`：逐任务实施规格；既有材料的轻量文档整理。
 - `exec`：按计划修改并验证。
 - `bugfix`：复现、根因、最小修复、回归。
 - `review`：只读审查。
@@ -33,14 +33,16 @@ disable-model-invocation: true
 - 问题排查与修复：`investigate → bugfix → review`。无法稳定复现时停在 `investigate`，不要假装进入修复。
 - 调研：`research → decision gate`；只有 `proceed` 才进入 `design/plan → exec → review`，`design_only`、`gather_more`、`do_not_build` 在当前任务收口。
 
-每进入一个阶段，先读对应 playbook，再读表中的参考技能，最后按 playbook 写产物和验证证据。正式阶段先建任务骨架：先分配或复用 task-id，创建 `.work-docs/tasks/<task-id>/` 及其子目录，写入最小 `contract.md`，运行 `check-contract.sh` 通过后再开始广泛读取；不要先调查到后半程才补契约。阶段与文件的唯一映射如下：
+**轻量文档整理**：用户基于既有材料整理测试用例、检查清单或变更说明时，默认 L1、走 `plan` 的轻量文档分支。验收对象是文档覆盖、事实准确和可理解性，不是证明所有操作已经运行成功。默认不搭建环境、不执行测试、不做全量代码审查或发布检查；「我要测试下」不等于要求代跑。未确定的功能仍走 design，实施规格仍走原计划分支，实际执行仍走 exec，问题定位仍走 investigate。风险按实际影响判断，不因文档分支自动降级。
+
+每进入一个阶段，先读对应 playbook，再按表中的分支条件读参考文件，最后按 playbook 写产物和验证证据。正式阶段先建任务骨架：先分配或复用 task-id，创建 `.work-docs/tasks/<task-id>/` 及其子目录，写入最小 `contract.md`，运行 `check-contract.sh` 通过后再开始广泛读取；不要先调查到后半程才补契约。阶段与文件的唯一映射如下：
 
 | 阶段 | playbook | 主动读取 |
 |---|---|---|
 | investigate | `playbooks/investigate.md` | `../yxj-how/SKILL.md`、`../yxj-blast-radius/SKILL.md` |
 | research | `playbooks/research.md` | `../yxj-why/SKILL.md`、`../yxj-how/SKILL.md` |
 | design | `playbooks/design.md` | `../yxj-codebase-design/SKILL.md`、`../yxj-architect/SKILL.md`、`../yxj-arena/SKILL.md`、`../yxj-principle-redesign-from-first-principles/SKILL.md`、`../yxj-principle-foundational-thinking/SKILL.md`、`../yxj-principle-outcome-oriented-execution/SKILL.md`、`../yxj-prototype/SKILL.md` |
-| plan | `playbooks/plan.md` | `../yxj-principle-build-the-lever/SKILL.md` |
+| plan | `playbooks/plan.md` | 实施计划读取 `../yxj-principle-build-the-lever/SKILL.md`；轻量文档读取 `templates/document-task.md`，不默认加载该参考技能 |
 | exec | `playbooks/exec.md` | `../yxj-typescript-best-practices/SKILL.md`、`../yxj-principle-type-system-discipline/SKILL.md`、`../yxj-principle-boundary-discipline/SKILL.md`、`../yxj-principle-laziness-protocol/SKILL.md` |
 | bugfix | `playbooks/bugfix.md` | `../yxj-principle-fix-root-causes/SKILL.md`、`../yxj-principle-attack-the-premise/SKILL.md` |
 | review | `playbooks/review.md` | `../yxj-requesting-code-review/SKILL.md`、`../yxj-receiving-code-review/SKILL.md`、`../yxj-interrogate/SKILL.md`、`../yxj-principle-prove-it-works/SKILL.md` |
@@ -102,6 +104,10 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 
 `review`、`investigate`、`research`、`plan` 和 `exec` 先把问题拆成可验证断言或验收条件，再按断言定位实现符号；优先读取符号附近的局部代码并立即写入 `evidence/`，不要为了“先了解全貌”连续输出多个完整源文件。每轮读取都应回答一个断言、缩小一个 unknown 或产生一条可复用证据。
 
+### 轻量文档收口
+
+先按 `templates/document-task.md` 建立 contract 和 state，通过校验后读取主材料、写初稿，再补具体缺口；不要默认研究校验脚本源码。固定用户指定的方案版本和代码依据；当前工作区合并状态只作为执行前提，不自动转为合并排查。`plan` playbook 定义 6 次资料工具调用与 20 次总工具调用的收口检查点；批量读取按实际读取动作计数，不能靠合并命令绕过。检查点是技能约束，不是宿主自动拦截，也不替代原预算、熔断和完成门。
+
 ### 超时恢复
 
 模型请求首次超时后，不原样重试同一请求：先在任务 `audit/` 写入超时摘要和当前阶段，再压缩为“已确认事实、未决断言、下一步”三段恢复摘要；后续请求只携带恢复摘要和必要证据。若宿主允许切换模型或降低思考级别，恢复时可使用更快配置；本技能不修改 Pi 全局模型配置。连续第二次同类超时按熔断规则处理。发生超时或长时间无响应时，若当前宿主不能切换模型，必须先交付恢复摘要并把状态标为 `blocked` 或 `stopped`，不能继续携带完整历史上下文等待。
@@ -116,7 +122,7 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 
 ## 进展、预算和熔断
 
-有效进展只有两种：某个 `done_when` 条目拿到新 evidence，或某个 required 验证从 `failed|not_run` 变为 `passed`。每次有效进展都更新 `state.md` 的 `calls_since_progress`（归零）、`last_progress_at`、`budget`（`used/limit`）和 `strategy_fingerprints`。`evidence freshness`（证据新鲜度）按 `run_at` 不早于相关文件 `last_edit_at` 判断；交付时关键词或 grep 检查只标为 `static`。
+有效进展只有两种：某个 `done_when` 条目拿到新 evidence，或某个 required 验证从 `failed|not_run` 变为 `passed`。对轻量文档，新 evidence 必须对应补齐交付条目、确认其预期或解决初稿中的具体缺口；单纯读取新文件、获取环境状态不算有效进展，不重置无进展计数。每次有效进展都更新 `state.md` 的 `calls_since_progress`（归零）、`last_progress_at`、`budget`（`used/limit`）和 `strategy_fingerprints`。`evidence freshness`（证据新鲜度）按 `run_at` 不早于相关文件 `last_edit_at` 判断；交付时关键词或 grep 检查只标为 `static`。
 
 每个子任务单独计数。L1/L2 在 20 次工具调用无进展时熔断；L3 和 long 模式每个子任务在 60 次工具调用或 30 分钟无进展时熔断。无论层级，同一命令与同一错误首行出现 2 次就熔断；错误不同但 required 验证连续失败 3 次也熔断；同一类工具或命令报错 2 次必须换方法，不能原样重试。L1/L2/L3 的预算分别为 60/150/400 次工具调用；L3 另有 8 小时上限。开工后发现真实范围将超出当前 level 预算（例如复现或实测成本显著高于预估）时，在 contract 与 state 显式升级 level 并记录原因，预算上限同步调整；不允许静默超支。预算耗尽时按熔断处理：写 checkpoint 并保持非 done，交用户决定是否追加预算。任务说明另行指定时，以任务说明为准。
 

@@ -4,7 +4,7 @@
 
 ## 入口技能
 
-- `yxj-work`：普通任务入口。它的“参考技能”一节给出阶段 → 参考文件的映射。
+- `yxj-work`：普通任务入口。它的“参考技能”一节给出阶段 → 参考文件的映射；plan 的实施计划读参考技能，轻量文档分支使用内置 `yxj-work/templates/document-task.md`，不增加技能数量。
 - `yxj-work-long`：跨阶段、跨会话或长时间任务入口。
 - `yxj-work-handoff`：用户主动调用的交接入口。
 

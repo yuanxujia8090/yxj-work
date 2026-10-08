@@ -127,7 +127,7 @@
   <p class="lede">
     一套把 AI 编程会话变成「有范围、有证据、能中断、能续接」的工作流。本文覆盖七类日常场景
     （产品调研、需求评估、方案设计、开发执行、问题定位排查、长任务执行、长任务次日状态检查），
-    并逐个说明 <code>skills/</code> 目录下 33 个技能的作用与调用方式。
+    另含既有材料的轻量文档分支，并逐个说明 <code>skills/</code> 目录下 33 个技能的作用与调用方式。
   </p>
   <div class="meta">源仓库 /Users/yuanxj/Documents/github/yxj-work · 入口技能 3 个 · 辅助技能 30 个 · 全部默认不可被模型自动唤起</div>
 </header>
@@ -144,6 +144,7 @@
     <li class="sub"><a href="#donegate">3.4 完成判定</a></li>
     <li class="sub"><a href="#breaker">3.5 预算与熔断</a></li>
     <li class="sub"><a href="#skillrule">3.6 技能加载边界</a></li>
+    <li class="sub"><a href="#light-document">3.7 轻量文档整理</a></li>
     <li><a href="#scenarios">4. 七类日常场景</a></li>
     <li class="sub"><a href="#s1">4.1 产品调研</a></li>
     <li class="sub"><a href="#s2">4.2 需求评估</a></li>
@@ -180,7 +181,7 @@
 
 <div class="note">
   <strong>谁在什么时候读哪份文件，是写死的</strong>：入口 <code>yxj-work</code> 里有一张「阶段 → 参考技能」映射表（见 <a href="#stagetable">第 6 节</a>），
-  进入某阶段就先读该阶段的 playbook，再读表里列出的技能文件。没有第二份清单，也不靠模型临场决定。
+  进入某阶段就先读该阶段的 playbook，再按表里的分支条件读取参考文件。plan 的实施计划读参考技能，轻量文档读模板；没有第二份清单。
 </div>
 
 <h2 id="install">2. 安装与调用</h2>
@@ -318,6 +319,18 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 <p>辅助技能加载后仍受当前任务的契约、<code>.work-docs</code> 文件边界、预算、熔断和验证要求约束。如果技能自带规则与当前契约冲突，<strong>以契约为准</strong>，并把差异记到 <code>audit/</code>。</p>
 
 <p>调用第三方技能前先按 <code>playbooks/third-party-skill.md</code> 分类：只读的可以直接跑；能指定输出根的必须传入本次任务目录；固定写入或写入不可知的，只能在隔离的临时目录里试跑，否则任务标 <code>blocked</code>。调用前后都要存目录清单，发现 <code>.work-docs</code> 之外的意外文件立即熔断，且<strong>未经授权不得移动、删除或覆盖</strong>那个文件。</p>
+
+<h3 id="light-document">3.7 轻量文档整理</h3>
+
+<p>材料和目标已确定的测试用例、检查清单、变更说明默认 L1 / <code>plan</code>，不新增阶段。用 <code>skills/yxj-work/templates/document-task.md</code> 填最小契约和状态，运行校验器后读固定主材料，立即写初稿，再只为具体缺口补读。默认不研究校验器源码，不加载实施计划的「做可重复工具」参考技能。</p>
+<pre>/yxj-work 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下</pre>
+<p>「我要测试下」表示用户拿用例去测，不等于要求 Agent 代跑。默认不搭环境、不执行测试、不全量审查、不检查发布；未确定功能仍走 design，实施规格仍走原计划分支，实际执行另进 exec。</p>
+<ul>
+  <li><strong>6 次资料工具调用</strong>检查点：材料足够就写初稿，不足先写已有条目与具体缺口。批量读取按实际动作计数，不能靠包裹命令绕过。</li>
+  <li><strong>20 次总工具调用</strong>检查点：验收齐全则交付；仅可选细节缺失则说明；关键必过事实缺失则保持非 done。不能降低必过项，不能把部分初稿标完成。</li>
+  <li>补读前指出初稿中的哪条预期结果或事实缺口；单纯读取或查询环境不算进展。固定方案和提交；若纳入未提交差异先明确范围，合并状态通常只作执行前提。</li>
+</ul>
+<p>验收的是覆盖、事实和可理解性，不是运行环境；证据按原格式绑定，网站运行层保留 not_run。交付注明「用例已整理，测试未执行」。检查点是技能约束，<strong>不是宿主自动拦截或速度保证</strong>；是否减少空转需要实际模型会话验证。模板与流程回归可运行 <code>bash scripts/test-document-template.sh</code> 和 <code>bash scripts/test-flow.sh</code>。</p>
 
 <h2 id="scenarios">4. 七类日常场景</h2>
 
@@ -798,9 +811,9 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
       <td><code>yxj-codebase-design</code>、<code>yxj-architect</code>、<code>yxj-arena</code>、<code>yxj-prototype</code>、<code>yxj-principle-redesign-from-first-principles</code>、<code>yxj-principle-foundational-thinking</code>、<code>yxj-principle-outcome-oriented-execution</code></td>
     </tr>
     <tr>
-      <td><code>plan</code><br>逐任务实施规格</td>
+      <td><code>plan</code><br>实施规格 / 轻量文档</td>
       <td><code>playbooks/plan.md</code></td>
-      <td><code>yxj-principle-build-the-lever</code></td>
+      <td>实施计划：<code>yxj-principle-build-the-lever</code>；轻量文档：<code>templates/document-task.md</code>，不默认加载该技能</td>
     </tr>
     <tr>
       <td><code>exec</code><br>按计划改并验证</td>

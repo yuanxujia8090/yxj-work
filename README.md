@@ -2,7 +2,7 @@
 
 独立的工作流 skill 仓库。源仓库是唯一事实源；安装到各客户端技能目录（如 `~/.pi/agent/skills/`、`~/.config/opencode/skills/`）的形态是副本或直达源仓库的软链。
 
-完整使用说明（七类日常场景 + 33 个技能逐个简介）：`docs/usage-guide.html`，浏览器直接打开即可。
+完整使用说明（七类日常场景 + 轻量文档分支 + 33 个技能逐个简介）：`docs/usage-guide.html`，浏览器直接打开即可。
 
 ## 包含内容
 
@@ -80,6 +80,21 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 
 所有工作流持久文件必须位于 `.work-docs/`。用户明确指定的项目代码是任务目标，不伪装成工作流文档；第三方 skill 的报告、日志、缓存、下载和中间文件必须能指定到任务目录，否则隔离或阻塞。
 
+## 轻量文档整理
+
+材料和目标已确定时，测试用例、检查清单和变更说明默认走 L1 / plan 的轻量文档分支，不新增阶段。例如：
+
+```text
+/yxj-work 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下
+/yxj-work 根据这三个已合并提交整理更新说明，不执行测试
+```
+
+流程：按 `skills/yxj-work/templates/document-task.md` 填最小契约与状态 → 校验 → 读固定主材料 → 写初稿 → 只为具体缺口补读 → 核对覆盖与可理解性 → 交付。默认不搭建环境、不代跑测试、不做全量代码审查或发布检查；「我要测试下」是用户拿用例去测，不是授权代跑。未确定功能仍走 design，实施计划保留原 plan 分支，实际执行进入 exec。
+
+主材料原则上在 **6 次资料工具调用**检查点前形成初稿或写明具体缺口；到 **20 次总工具调用**必须判断是否交付或阻塞。按实际动作计数，批量读取不能绕过。仅可选细节缺失可说明后交付；必过项不能降级，部分初稿不能标 done。单纯读取或查询环境不算文档进展。当前工作区合并只作为执行前提，文档依据固定提交；若纳入未提交差异，先明确范围。
+
+模板保留现有 Acceptance、证据绑定和指纹格式，默认调用校验器而非研究其源码。检查点是技能约束，**不是宿主自动拦截或速度保证**；规则字符串检查不能证明模型一定遵守。文档完成验证覆盖与可理解性，不证明网站行为已跑通，交付注明「用例已整理，测试未执行」。
+
 ## 契约、状态和证据
 
 新任务的 `contract.md` 保留 `done_when` 摘要，并增加带编号的 `Acceptance` 验收条件。每条条件必须写 `outcome`、`verification`、`verification_type`、`layer` 和 `required`。同时写 `risk`、`risk_reason`、`review_policy`、`contract_revision`、`Decision Gates` 和 `Contract Changes`。
@@ -98,7 +113,7 @@ bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 
 `check-state.sh`（随技能安装到 `skills/yxj-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；新契约的每条 required 验收必须绑定完整 evidence（包含 `acceptance`、`command`、`run_at`、`result`、`last_edit_at`），中/高风险完成还必须有匹配 `review_policy` 的 `review_evidence`。`tests/fixtures/`、`test-fixtures.sh` 和 `test-v2-lifecycle.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值、阻塞字段缺失、新契约关联和完成门失败场景。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
 
-为避免长会话拖慢，正式阶段采用三条效率规则：按断言驱动读取（先列断言，再定位实现符号和局部代码）；模型请求首次超时后先写 `audit/` 恢复摘要，不原样重试，并在宿主允许时降低思考级别或切换更快模型；低风险、只读、`review_policy: auto` 的审查使用轻量 review，只保留验收所需的 contract、evidence、state 和校验脚本。
+轻量文档的边界和初稿检查点见上一节；其他正式阶段采用三条效率规则：按断言驱动读取（先列断言，再定位实现符号和局部代码）；模型请求首次超时后先写 `audit/` 恢复摘要，不原样重试，并在宿主允许时降低思考级别或切换更快模型；低风险、只读、`review_policy: auto` 的审查使用轻量 review，只保留验收所需的 contract、evidence、state 和校验脚本。
 
 ## 完成判定
 
@@ -132,6 +147,7 @@ bash scripts/test-contract.sh
 bash scripts/test-fixtures.sh
 bash scripts/test-v2-lifecycle.sh
 bash scripts/test-flow.sh
+bash scripts/test-document-template.sh
 bash scripts/test-install.sh
 tmp="$(mktemp -d)"
 bash scripts/install.sh --dest "$tmp"
@@ -140,4 +156,4 @@ bash scripts/check-workflow.sh --source "$PWD" --installed "$tmp"
 
 详细边界见 `docs/architecture.md` 和 `docs/file-boundary.md`。
 
-真实会话中观察到的待处置行为场景（含会话 ID 与证据）记在 `docs/session-scenarios.md`，后续新场景直接追加到该文件。
+真实会话中观察到的行为场景与处置状态（含会话 ID 与证据）记在 `docs/session-scenarios.md`，后续新场景直接追加到该文件。
