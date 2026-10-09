@@ -20,6 +20,8 @@ need skills/yxj-work/scripts/check-contract.sh
 need scripts/test-install.sh
 need scripts/test-fixtures.sh
 need scripts/test-v2-lifecycle.sh
+need scripts/check-skill-metadata.sh
+need scripts/test-skill-metadata.sh
 need tests/fixtures/v2-review-valid/contract.md
 need tests/fixtures/v2-review-valid/state.md
 need scripts/test-flow.sh
@@ -28,11 +30,7 @@ need .work-docs/index.md
 for file in "$ROOT"/skills/yxj-work/SKILL.md "$ROOT"/skills/yxj-work-long/SKILL.md "$ROOT"/skills/yxj-work-handoff/SKILL.md "$ROOT"/skills/yxj-work/playbooks/*.md; do
   [[ -f "$file" ]] || fail "missing runtime file $file"
 done
-
-# Every project skill is user-invoked only; a missing marker would allow automatic injection.
-while IFS= read -r file; do
-  grep -Fqx 'disable-model-invocation: true' "$file" || fail "skill allows automatic invocation: ${file#"$ROOT/"}"
-done < <(find "$ROOT/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -print | sort)
+bash "$ROOT/scripts/check-skill-metadata.sh" "$ROOT" >/dev/null
 
 # Every listed runtime skill must exist; the list is the single source of truth for install.sh.
 while IFS= read -r skill; do

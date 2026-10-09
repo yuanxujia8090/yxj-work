@@ -1,5 +1,13 @@
 # Bugfix Playbook
 
+## 阶段入口
+
+适用场景：已有可观察的错误或异常行为，需要复现、定位根因、做最小修复并回归。
+输入：现象、预期与实际行为、复现条件、错误证据、相关调用方和当前基线。
+输出：失败前证据、根因判断、最小修复、通过后证据和仍未覆盖的风险。
+不做什么：不先改代码再找解释，不只修表面症状，不把无法复现的猜测当作已修复。
+停止条件：原始复现面有失败前与通过后证据，或复现失败并明确记录阻塞与下一步。
+
 0. Verify the working context before reproducing: execution root, branch/worktree, and whether the issue is already fixed there (`git log -S`, `git branch --contains`, current diff). Record workspace facts in the contract. If the report does not match the current baseline, stop and confirm the target workspace with the user.
 1. Reproduce with expected versus actual behavior; prefer a failing command or behavioral test.
 2. If reproduction fails, record attempted paths and stop guessing.

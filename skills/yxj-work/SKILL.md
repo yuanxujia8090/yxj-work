@@ -53,6 +53,24 @@ disable-model-invocation: true
 
 第三方技能按 `playbooks/third-party-skill.md` 处理，不因它被列在仓库里就自动调用。同一技能在多行出现时只读一次。读取后若其规则与当前契约冲突，以契约为准并在 `audit/` 记录差异。
 
+## 阶段启动摘要
+
+正式阶段通过最小契约校验后、开始广泛读取前，以及恢复已有任务时，按下面顺序给出简短中文摘要：
+
+```text
+当前阶段：阶段名、进入原因和当前状态（路由、state）
+任务：目标与 done_when（contract）
+风险：risk、risk_reason、review_policy（contract）
+允许改动：scope（contract）
+禁止动作：forbidden 与未通过的决策门（contract）
+必过验收：required 条目及已完成/未完成状态（contract、state）
+已有证据：证据路径及它实际支持的结论（evidence、最近 checkpoint）
+当前阻塞：blocked_by、unblock_condition、待确认事项（state、contract）
+下一步第一动作：next_action 中可直接执行的第一步（state、最近 checkpoint）
+```
+
+摘要不是第二套状态事实源，不单独持久化为新状态文件；事实来源对应上面的括号，用户请求只用来识别新任务目标和授权。新任务先写最小 contract/state，尚未验证的项写 `not_run`；历史任务缺字段写“未记录”，只有缺口影响当前动作或完成门时才补齐，不批量迁移。contract 决定边界，state 记录进展，evidence 证明结果；若记录矛盾，先说明冲突并核对证据，不用摘要覆盖任务事实。完整示例见 `playbooks/verification.md`。
+
 ## 阶段执行表
 
 上表同时是阶段、playbook 和参考技能的唯一映射；不要再为同一阶段建立第二份清单。
@@ -94,9 +112,17 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 - L2：任务类型、done_when、允许/禁止改动、验证层级、产物位置、阶段和下一入口。
 - L3：L2 加每个 checkpoint 的状态、证据、依赖、阻塞和第一步。
 
-`state.md` 使用简单的按行格式：每个字段一行 `key: value`；新格式任务还记录 `contract_fingerprint`（契约指纹，即契约文件内容摘要）和 `evidence_schema: 2`；required 验证一行 `required_verification: A1 status=passed evidence=evidence/check.txt`；证据一行 `evidence:check|acceptance=A1|command=...|run_at=...|result=passed|last_edit_at=...`，且对应证据文件必须存在。`review_policy` 不是 `auto` 时，done 状态还要有 `review_evidence: review|policy=...|status=passed|path=outputs/review.md`，并且审查证据文件必须存在。历史已完成的 v2 state 不带 `evidence_schema: 2` 时保持兼容读取。固定记录 `task_id`、`level`、`stage`、`status`、`done_when`、`evidence`、`unknowns`、`blocked_by`、`unblock_condition`、`next_action`、`calls_since_progress`、`last_progress_at`、`budget`（`used/limit`）、`strategy_fingerprints`、`updated_at`。验证层级为 `syntax/config`、`static`、`runtime/local`、`external`、`consumer`，每层只能是 `passed|failed|not_run|blocked` 并带 evidence 指针。`status` 仅取 `in_progress|done|blocked|stopped|cancelled`；`stage` 使用路由中定义的阶段名，交接收尾时记 `handoff`。这两个枚举由 `scripts/check-repo.sh` 与 `check-state.sh` 双向断言，改一处不同步会直接报错。
+`state.md` 使用简单的按行格式：每个字段一行 `key: value`；新格式任务还记录 `contract_fingerprint`（契约指纹，即契约文件内容摘要）和 `evidence_schema: 2`；required 验证一行 `required_verification: A1 status=passed evidence=evidence/check.txt`；证据一行 `evidence:check|acceptance=A1|command=...|run_at=...|result=passed|last_edit_at=...`，且对应证据文件必须存在。`review_policy` 不是 `auto` 时，done 状态还要有 `review_evidence: review|policy=...|status=passed|path=outputs/review.md`，并且审查证据文件必须存在。历史已完成的 v2 state 不带 `evidence_schema: 2` 时保持兼容读取。固定记录 `task_id`、`level`、`stage`、`status`、`done_when`、`evidence`、`unknowns`、`blocked_by`、`unblock_condition`、`next_action`、`calls_since_progress`、`last_progress_at`、`budget`（`used/limit`）、`strategy_fingerprints`、`updated_at`。验证层级为 `syntax/config`、`static`、`runtime/local`、`external`、`consumer`，每层只能是 `passed|failed|not_run|blocked` 并带 evidence 指针。它们也分别回答不同问题：代码是否可解析、静态规则是否满足、本地服务是否实际运行、外部服务/权限是否可用、最终用户或下游系统是否看到预期结果。每个验证项应写清观察对象、预期结果和验证动作；grep/关键词匹配只证明静态文本存在，不能证明运行行为。`status` 仅取 `in_progress|done|blocked|stopped|cancelled`；`stage` 使用路由中定义的阶段名，交接收尾时记 `handoff`。这两个枚举由 `scripts/check-repo.sh` 与 `check-state.sh` 双向断言，改一处不同步会直接报错。
 
 只有全部 required 验证为 `passed`、required 子任务已结束、没有越界文件、决策门允许交付且每个结论有 evidence，才能写 `status: done`。`failed`、`blocked`、`not_run`、in_progress required 子任务、未解决决策门或无 evidence 时禁止 done。optional 项必须在契约中声明并写明跳过原因。
+
+## 真实使用面验证
+
+像检查网页一样：组件能编译、按钮能点击、用户能走完流程，是不同证据。代码层、接口层、流程层、运行层、交付层表示观察对象，不是新的任务等级，也不是 `layer` 的新枚举。现有 `layer` 仍只有 `syntax/config|static|runtime/local|external|consumer`；按实际运行环境选择，同一观察面可以跨层。
+
+每条新增或调整的 Acceptance 都写清“观察对象、预期结果、验证动作”；使用现有 `outcome` 和 `verification` 字段即可，不增加必填字段。evidence 记录实际观察结果、失败输出、时间和限制，并沿用 acceptance 编号绑定。仅运行命令而没有核对预期结果不能作为通过证据。五类观察面、现有 layer 的解释、正反例和摘要示例统一放在 `playbooks/verification.md`；写契约、执行验证和审查证据时主动读取它。
+
+`verification_type` 表示由谁/怎样验证：`automatic` 为自动命令或断言，`manual` 为人工逐项核对，`consumer` 为最终用户或下游系统实际消费产物，`external` 为验证依赖外部服务或权限。它与环境层 `layer` 分开：例如自动调用外部服务为 `automatic + external`，本地用户流程可以为 `consumer + runtime/local`。证据无法取得时写 `not_run`；实际运行未达到预期写 `failed`；被权限或依赖卡住写 `blocked`。required 条目不能凭较低层证据放行，不为凑完成降低 required 条目。
 
 ## 执行效率规则
 

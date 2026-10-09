@@ -20,7 +20,9 @@ disable-model-invocation: true
 
 在当前命令执行目录初始化唯一 `.work-docs`，创建 L3 任务契约和状态。每个阶段写文件范围、done_when、验证命令、依赖和产物位置。父任务及子任务都必须使用唯一 task id（目录名格式 `{YYYYMMDD}-{NN}-{slug}`；`{NN}` 为当日两位自增序号，从 `01` 起、不回收空号；取号前先读 `.work-docs/index.md`，范围相同的进行中任务续用原 id，否则取当日最大序号 +1 并追加索引行）。
 
-启动已有任务时，不创建新任务目录。先依次读取 `.work-docs/index.md`、任务 `state.md`、最近的 `audit/checkpoint-*.md`、`handoff.md` 和 `evidence/`；然后在回复开头给出恢复摘要，至少包含当前状态、已完成、下一步第一动作、阻塞和证据位置。
+创建或启动阶段时，读取 `../yxj-work/SKILL.md` 的“阶段启动摘要”和“真实使用面验证”规则，按其固定顺序给出阶段启动摘要，不另建模板。新任务先完成最小契约校验；已有任务只读记录恢复。缺少字段写“未记录”，不推测。
+
+启动已有任务时，不创建新任务目录。先依次读取 `.work-docs/index.md`、任务 `state.md`、最近的 `audit/checkpoint-*.md`、`handoff.md` 和 `evidence/`；然后按上面的格式给出恢复摘要。摘要是阅读导航，不是第二套状态事实源；冲突时按主入口的 contract/state/evidence 分工核对，并说明冲突。
 
 ## 阶段结束与跨天恢复
 

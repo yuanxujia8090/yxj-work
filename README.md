@@ -62,6 +62,8 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 
 辅助技能不能由模型自动唤起，两种用法：入口技能在对应阶段主动读取（映射见 `skills/yxj-work/SKILL.md` 的阶段表），或用户主动点名，例如 `/yxj-why`、`/yxj-arena`。普通任务按开发、排查修复或调研链路进入阶段；正式阶段先创建任务骨架和最小契约，并通过 `check-contract.sh` 后再广泛读取；长任务跨会话前必须更新 checkpoint 和 handoff，下一会话先读记录再继续。
 
+按用户目标选阶段的简表见 [skills 目录说明](skills/README.md#阶段选择表)。九个正式阶段的执行说明均列出适用场景、输入、输出、禁止范围和停止条件。正式阶段在契约校验后、广泛读取前显示启动摘要：阶段、任务、风险、允许改动、禁止动作、必过验收、已有证据、阻塞和下一步。恢复已有任务沿用同一摘要；缺字段显示“未记录”，不另建状态源。
+
 `fast-answer` 不创建工作目录。L1/L2/L3 任务以命令实际执行目录为根，创建唯一：
 
 ```text
@@ -114,6 +116,10 @@ bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 `check-state.sh`（随技能安装到 `skills/yxj-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；新契约的每条 required 验收必须绑定完整 evidence（包含 `acceptance`、`command`、`run_at`、`result`、`last_edit_at`），中/高风险完成还必须有匹配 `review_policy` 的 `review_evidence`。`tests/fixtures/`、`test-fixtures.sh` 和 `test-v2-lifecycle.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值、阻塞字段缺失、新契约关联和完成门失败场景。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
 
 轻量文档的边界和初稿检查点见上一节；其他正式阶段采用三条效率规则：按断言驱动读取（先列断言，再定位实现符号和局部代码）；模型请求首次超时后先写 `audit/` 恢复摘要，不原样重试，并在宿主允许时降低思考级别或切换更快模型；低风险、只读、`review_policy: auto` 的审查使用轻量 review，只保留验收所需的 contract、evidence、state 和校验脚本。
+
+验证要核对用户或下游能观察到的结果。代码、接口、流程、运行和交付五类观察面与现有 `layer` 枚举分开；在 `outcome` 和 `verification` 中写清观察对象、预期结果、验证动作即可。统一解释、正反例和启动摘要示例见 [验证说明](skills/yxj-work/playbooks/verification.md)。
+
+仓库检查还会核对全部技能的头部名称、单行描述和 `disable-model-invocation: true`（默认不由模型自动唤起）。可单独运行 `bash scripts/check-skill-metadata.sh "$PWD"` 和 `bash scripts/test-skill-metadata.sh`；后者用有效及错误样例验证拦截能力，测试夹具保留供检查，不改技能源文件。
 
 ## 完成判定
 

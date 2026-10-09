@@ -36,6 +36,31 @@ need_text skills/yxj-work/playbooks/plan.md 'Split work into independently verif
 need_text skills/yxj-work/playbooks/exec.md 'Verify from narrow to broad'
 need_text skills/yxj-work/playbooks/review.md 'Review correctness, security boundaries'
 
+# Productized stage entry: each formal stage exposes the same human-readable contract.
+for stage in investigate research design plan exec bugfix review ops mixed; do
+  need_text "skills/yxj-work/playbooks/$stage.md" '## 阶段入口'
+  need_text "skills/yxj-work/playbooks/$stage.md" '适用场景：'
+  need_text "skills/yxj-work/playbooks/$stage.md" '输入：'
+  need_text "skills/yxj-work/playbooks/$stage.md" '输出：'
+  need_text "skills/yxj-work/playbooks/$stage.md" '不做什么：'
+  need_text "skills/yxj-work/playbooks/$stage.md" '停止条件：'
+done
+need_text skills/yxj-work/SKILL.md '## 阶段启动摘要'
+need_text skills/yxj-work/SKILL.md '代码层、接口层、流程层、运行层、交付层'
+need_text skills/yxj-work/SKILL.md '摘要不是第二套状态事实源'
+for field in 当前阶段 任务 风险 允许改动 禁止动作 必过验收 已有证据 当前阻塞 下一步第一动作; do
+  need_text skills/yxj-work/SKILL.md "${field}："
+done
+need_text skills/yxj-work/SKILL.md 'playbooks/verification.md'
+need_text skills/yxj-work/playbooks/verification.md '正确示例'
+need_text skills/yxj-work/playbooks/verification.md '反例'
+need_text skills/yxj-work-long/SKILL.md '阶段启动摘要'
+need_text skills/README.md '阶段选择表'
+# The user-facing stage table must cover exactly the canonical route names.
+route_names="$(awk '/^## 路由$/{f=1;next} /^## /{f=0} f' "$ROOT/skills/yxj-work/SKILL.md" | sed -n 's/^- `\([a-z-]*\)`.*/\1/p' | sort)"
+table_names="$(awk -F '|' '/^## 阶段选择表$/{f=1;next} /^## /{f=0} f && /^\|/ {value=$3; sub(/^[[:space:]]*/, "", value); if (match(value, /^[a-z][a-z-]*/)) print substr(value, RSTART, RLENGTH)}' "$ROOT/skills/README.md" | sort)"
+[[ "$route_names" == "$table_names" ]] || fail 'stage selection table differs from canonical routes'
+
 # Lightweight document work remains a plan branch, not a new runtime stage.
 need_text skills/yxj-work/SKILL.md '轻量文档整理'
 need_text skills/yxj-work/SKILL.md '单纯读取新文件、获取环境状态不算有效进展'
@@ -66,6 +91,12 @@ need_text skills/yxj-work-long/SKILL.md '并同步更新 `state.md`'
 need_text skills/yxj-work-long/SKILL.md '启动已有任务时，不创建新任务目录。先依次读取 `.work-docs/index.md`'
 need_text skills/yxj-work-long/SKILL.md '`handoff.md`'
 need_text skills/yxj-work-handoff/SKILL.md '下一会话第一步'
+
+# Skill metadata and invocation boundaries stay explicit and single-sourced.
+need_text skills/README.md '技能元数据'
+need_text skills/README.md '运行时清单是安装范围的唯一来源'
+need_text scripts/runtime-skills.txt 'disable-model-invocation: true'
+bash "$ROOT/scripts/check-skill-metadata.sh" "$ROOT" >/dev/null
 
 # show-me-your-work is intentionally not another runtime entry.
 if grep -Fxq 'show-me-your-work' "$ROOT/scripts/runtime-skills.txt"; then

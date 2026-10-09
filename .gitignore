@@ -1,4 +1,4 @@
 .work-docs
 .omo
 .vscode
-.tmp-session-analysis/
+.tmp-session-analysis/.DS_Store
