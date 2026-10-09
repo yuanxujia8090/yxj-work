@@ -55,7 +55,7 @@ if [[ "$MODE" == link ]]; then
     fi
     ln -s "$ROOT/skills/$skill" "$dst"
   done < <(runtime_skills)
-  printf 'install: linked yxj-work skills into %s\n' "$DEST"
+  printf 'install: linked x-work skills into %s\n' "$DEST"
   exit 0
 fi
 
@@ -85,7 +85,7 @@ fi
 # Validate every target before changing any target. This prevents a partial update.
 while IFS= read -r skill; do
   dst="$DEST/$skill"
-  marker="$dst/.yxj-work-installed"
+  marker="$dst/.x-work-installed"
   if [[ -e "$dst" && "$UPDATE" -ne 1 ]]; then
     printf 'install: refusing to overwrite existing %s (use --update only for a marked install)\n' "$dst" >&2
     exit 1
@@ -106,7 +106,7 @@ while IFS= read -r skill; do
   rm -rf "$dst"
   mkdir -p "$dst"
   cp -R "$src"/. "$dst"/
-  printf 'source=%s\ninstalled_at=%s\n' "$ROOT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$dst/.yxj-work-installed"
+  printf 'source=%s\ninstalled_at=%s\n' "$ROOT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$dst/.x-work-installed"
 done < <(runtime_skills)
 
-printf 'install: installed yxj-work skills into %s\n' "$DEST"
+printf 'install: installed x-work skills into %s\n' "$DEST"

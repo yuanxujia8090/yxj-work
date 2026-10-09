@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-CONTRACT_CHECK="$ROOT/skills/yxj-work/scripts/check-contract.sh"
-STATE_CHECK="$ROOT/skills/yxj-work/scripts/check-state.sh"
+CONTRACT_CHECK="$ROOT/skills/x-work/scripts/check-contract.sh"
+STATE_CHECK="$ROOT/skills/x-work/scripts/check-state.sh"
 fail() { printf 'v2-lifecycle: %s\n' "$1" >&2; exit 1; }
 expect_fail() {
   local expected="$1"; shift

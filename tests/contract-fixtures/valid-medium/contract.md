@@ -2,7 +2,7 @@ task_id: fixture-valid-medium
 level: L2
 task_type: exec
 objective: 修改共享流程并保留原有行为
-scope: skills/yxj-work/ 与对应测试
+scope: skills/x-work/ 与对应测试
 forbidden: 生产环境和用户目录
 risk: medium
 risk_reason: 影响公共工作流，但可以回滚

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-CHECK="$ROOT/skills/yxj-work/scripts/check-contract.sh"
+CHECK="$ROOT/skills/x-work/scripts/check-contract.sh"
 fail() { printf 'contract: %s\n' "$1" >&2; exit 1; }
 expect_pass() { "$CHECK" "$ROOT/tests/contract-fixtures/$1" >/dev/null || fail "expected pass: $1"; }
 expect_fail() { if "$CHECK" "$ROOT/tests/contract-fixtures/$1" >/dev/null 2>&1; then fail "expected failure: $1"; fi; }

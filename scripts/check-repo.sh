@@ -9,14 +9,14 @@ need README.md
 need docs/architecture.md
 need docs/file-boundary.md
 need scripts/runtime-skills.txt
-need skills/yxj-work/SKILL.md
-need skills/yxj-work-long/SKILL.md
-need skills/yxj-work-handoff/SKILL.md
+need skills/x-work/SKILL.md
+need skills/x-work-long/SKILL.md
+need skills/x-work-handoff/SKILL.md
 need scripts/check-repo.sh
 need scripts/install.sh
 need scripts/check-workflow.sh
-need skills/yxj-work/scripts/check-state.sh
-need skills/yxj-work/scripts/check-contract.sh
+need skills/x-work/scripts/check-state.sh
+need skills/x-work/scripts/check-contract.sh
 need scripts/test-install.sh
 need scripts/test-fixtures.sh
 need scripts/test-v2-lifecycle.sh
@@ -27,7 +27,7 @@ need tests/fixtures/v2-review-valid/state.md
 need scripts/test-flow.sh
 need .work-docs/index.md
 
-for file in "$ROOT"/skills/yxj-work/SKILL.md "$ROOT"/skills/yxj-work-long/SKILL.md "$ROOT"/skills/yxj-work-handoff/SKILL.md "$ROOT"/skills/yxj-work/playbooks/*.md; do
+for file in "$ROOT"/skills/x-work/SKILL.md "$ROOT"/skills/x-work-long/SKILL.md "$ROOT"/skills/x-work-handoff/SKILL.md "$ROOT"/skills/x-work/playbooks/*.md; do
   [[ -f "$file" ]] || fail "missing runtime file $file"
 done
 bash "$ROOT/scripts/check-skill-metadata.sh" "$ROOT" >/dev/null
@@ -38,14 +38,14 @@ while IFS= read -r skill; do
 done < <(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/runtime-skills.txt")
 
 # The English marker is checked separately below; the Chinese/English skills use the numeric marker.
-for marker in 'name: yxj-work' 'name: yxj-work-long' 'name: yxj-work-handoff' '.work-docs' 'status: done' 'blocked_by' 'attempted_paths' 'unblock_condition' 'next_action' 'external_skill_write_outside_work_docs' '20 次工具调用' '60 次工具调用' '30 分钟' 'calls_since_progress' 'last_progress_at' 'budget' 'strategy_fingerprints' 'evidence freshness' 'static' '只能由用户主动调用' '自动扫描、推荐、注入' '替用户触发' 'disable-model-invocation' '参考技能' 'Acceptance' 'risk_reason' 'review_policy' 'contract_revision' 'verification_type' 'check-contract.sh'; do
+for marker in 'name: x-work' 'name: x-work-long' 'name: x-work-handoff' '.work-docs' 'status: done' 'blocked_by' 'attempted_paths' 'unblock_condition' 'next_action' 'external_skill_write_outside_work_docs' '20 次工具调用' '60 次工具调用' '30 分钟' 'calls_since_progress' 'last_progress_at' 'budget' 'strategy_fingerprints' 'evidence freshness' 'static' '只能由用户主动调用' '自动扫描、推荐、注入' '替用户触发' 'disable-model-invocation' '参考技能' 'Acceptance' 'risk_reason' 'review_policy' 'contract_revision' 'verification_type' 'check-contract.sh'; do
   grep -R -F -- "$marker" "$ROOT/skills" >/dev/null || fail "missing marker: $marker"
 done
 
-work_thresholds="$(grep -Eo 'L1/L2[^。]*20 次工具调用|L3 和 long 模式[^。]*60 次工具调用|L1/L2/L3 的预算分别为 60/150/400 次工具调用' "$ROOT/skills/yxj-work/SKILL.md" | tr '\n' ';')"
-long_thresholds="$(grep -Eo '60 次工具调用或 30 分钟' "$ROOT/skills/yxj-work-long/SKILL.md" | tr '\n' ';')"
-[[ "$work_thresholds" == *'20 次工具调用'* && "$work_thresholds" == *'60 次工具调用'* && "$work_thresholds" == *'60/150/400 次工具调用'* ]] || fail 'yxj-work thresholds missing'
-[[ "$long_thresholds" == *'60 次工具调用或 30 分钟'* ]] || fail 'yxj-work-long thresholds missing'
+work_thresholds="$(grep -Eo 'L1/L2[^。]*20 次工具调用|L3 和 long 模式[^。]*60 次工具调用|L1/L2/L3 的预算分别为 60/150/400 次工具调用' "$ROOT/skills/x-work/SKILL.md" | tr '\n' ';')"
+long_thresholds="$(grep -Eo '60 次工具调用或 30 分钟' "$ROOT/skills/x-work-long/SKILL.md" | tr '\n' ';')"
+[[ "$work_thresholds" == *'20 次工具调用'* && "$work_thresholds" == *'60 次工具调用'* && "$work_thresholds" == *'60/150/400 次工具调用'* ]] || fail 'x-work thresholds missing'
+[[ "$long_thresholds" == *'60 次工具调用或 30 分钟'* ]] || fail 'x-work-long thresholds missing'
 
 # Runtime files may mention old names only in explicit protection/reference text.
 if grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$ROOT/skills"; then
@@ -60,15 +60,15 @@ fi
 # doc that states them, so editing one side without the other fails the repo check.
 for doc in README.md docs/architecture.md docs/usage-guide.html; do
   grep -Fq '60/150/400' "$ROOT/$doc" || fail "budget numbers missing in $doc"
-  grep -Fq 'skills/yxj-work/scripts/' "$ROOT/$doc" || fail "check-state path missing in $doc"
+  grep -Fq 'skills/x-work/scripts/' "$ROOT/$doc" || fail "check-state path missing in $doc"
 done
-grep -Fq '60/150/400 次工具调用' "$ROOT/skills/yxj-work/SKILL.md" || fail 'budget numbers missing in yxj-work SKILL.md'
-grep -Fq 'in_progress|done|blocked|stopped|cancelled' "$ROOT/skills/yxj-work/SKILL.md" || fail 'status enum missing in SKILL.md'
-grep -Fq 'in_progress|done|blocked|stopped|cancelled' "$ROOT/skills/yxj-work/scripts/check-state.sh" || fail 'status enum missing in check-state.sh'
+grep -Fq '60/150/400 次工具调用' "$ROOT/skills/x-work/SKILL.md" || fail 'budget numbers missing in x-work SKILL.md'
+grep -Fq 'in_progress|done|blocked|stopped|cancelled' "$ROOT/skills/x-work/SKILL.md" || fail 'status enum missing in SKILL.md'
+grep -Fq 'in_progress|done|blocked|stopped|cancelled' "$ROOT/skills/x-work/scripts/check-state.sh" || fail 'status enum missing in check-state.sh'
 
 # The stage enum in check-state.sh must be exactly the route names in SKILL.md plus `handoff`.
-route_stages="$(awk '/^## 路由$/{f=1;next} /^## /{f=0} f' "$ROOT/skills/yxj-work/SKILL.md" | sed -n 's/^- `\([a-z-]*\)`.*/\1/p' | sort | tr '\n' ' ')"
-case_stages="$(sed -n 's/^  \(fast-answer|[a-z|-]*\)) ;;$/\1/p' "$ROOT/skills/yxj-work/scripts/check-state.sh" | tr '|' '\n' | sort | tr '\n' ' ')"
+route_stages="$(awk '/^## 路由$/{f=1;next} /^## /{f=0} f' "$ROOT/skills/x-work/SKILL.md" | sed -n 's/^- `\([a-z-]*\)`.*/\1/p' | sort | tr '\n' ' ')"
+case_stages="$(sed -n 's/^  \(fast-answer|[a-z|-]*\)) ;;$/\1/p' "$ROOT/skills/x-work/scripts/check-state.sh" | tr '|' '\n' | sort | tr '\n' ' ')"
 expected_stages="$(printf '%s\n' $route_stages handoff | sort | tr '\n' ' ')"
 [[ "$case_stages" == "$expected_stages" ]] || fail "stage enum mismatch: check-state.sh has [$case_stages], SKILL.md route + handoff gives [$expected_stages]"
 

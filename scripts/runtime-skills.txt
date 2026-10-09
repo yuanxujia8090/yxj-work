@@ -3,40 +3,40 @@
 # skill by the relative path ../<name>/SKILL.md in both the source repository and the install target.
 # One directory name per line; blank lines and # comments are ignored.
 #
-# Entry skills (user-invoked with /yxj-work, /yxj-work-long, /yxj-work-handoff).
-yxj-work
-yxj-work-long
-yxj-work-handoff
+# Entry skills (user-invoked with /x-work, /x-work-long, /x-work-handoff).
+x-work
+x-work-long
+x-work-handoff
 
 # Companion skills. All set disable-model-invocation: true, so no task content auto-invokes them:
-# an entry skill reads the file it needs on purpose (see the reference-skill table in yxj-work).
-yxj-architect
-yxj-arena
-yxj-blast-radius
-yxj-codebase-design
-yxj-create-verification-skill
-yxj-how
-yxj-interrogate
-yxj-principle-attack-the-premise
-yxj-principle-boundary-discipline
-yxj-principle-build-the-lever
-yxj-principle-encode-lessons-in-structure
-yxj-principle-fix-root-causes
-yxj-principle-foundational-thinking
-yxj-principle-guard-the-context-window
-yxj-principle-laziness-protocol
-yxj-principle-outcome-oriented-execution
-yxj-principle-prove-it-works
-yxj-principle-redesign-from-first-principles
-yxj-principle-separate-before-serializing-shared-state
-yxj-principle-type-system-discipline
-yxj-prototype
-yxj-receiving-code-review
-yxj-requesting-code-review
-yxj-resolving-merge-conflicts
-yxj-teach
-yxj-technical-writing
-yxj-typescript-best-practices
-yxj-unslop
-yxj-why
-yxj-wizard
+# an entry skill reads the file it needs on purpose (see the reference-skill table in x-work).
+x-architect
+x-arena
+x-blast-radius
+x-codebase-design
+x-create-verification-skill
+x-how
+x-interrogate
+x-principle-attack-the-premise
+x-principle-boundary-discipline
+x-principle-build-the-lever
+x-principle-encode-lessons-in-structure
+x-principle-fix-root-causes
+x-principle-foundational-thinking
+x-principle-guard-the-context-window
+x-principle-laziness-protocol
+x-principle-outcome-oriented-execution
+x-principle-prove-it-works
+x-principle-redesign-from-first-principles
+x-principle-separate-before-serializing-shared-state
+x-principle-type-system-discipline
+x-prototype
+x-receiving-code-review
+x-requesting-code-review
+x-resolving-merge-conflicts
+x-teach
+x-technical-writing
+x-typescript-best-practices
+x-unslop
+x-why
+x-wizard
