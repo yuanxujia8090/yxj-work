@@ -125,7 +125,8 @@
 <header class="doc-head">
   <h1>yxj-work 使用说明</h1>
   <p class="lede">
-    一套把 AI 编程会话变成「有范围、有证据、能中断、能续接」的工作流。本文覆盖七类日常场景
+    一套把 AI 编程会话变成「有范围、有证据、能中断、能续接」的工作流。本文先用一节把当前核心流程从命令到交付逐步讲清
+    （见第 3 节），再覆盖七类日常场景
     （产品调研、需求评估、方案设计、开发执行、问题定位排查、长任务执行、长任务次日状态检查），
     另含既有材料的轻量文档分支，并逐个说明 <code>skills/</code> 目录下 33 个技能的作用与调用方式。
   </p>
@@ -137,29 +138,30 @@
   <ol>
     <li><a href="#what">1. 这是什么</a></li>
     <li><a href="#install">2. 安装与调用</a></li>
-    <li><a href="#basics">3. 五个必须先懂的机制</a></li>
-    <li class="sub"><a href="#route">3.1 路由：L0 与 L1/L2/L3</a></li>
-    <li class="sub"><a href="#contract">3.2 契约与状态</a></li>
-    <li class="sub"><a href="#evidence">3.3 证据与证据新鲜度</a></li>
-    <li class="sub"><a href="#donegate">3.4 完成判定</a></li>
-    <li class="sub"><a href="#breaker">3.5 预算与熔断</a></li>
-    <li class="sub"><a href="#skillrule">3.6 技能加载边界</a></li>
-    <li class="sub"><a href="#light-document">3.7 轻量文档整理</a></li>
-    <li><a href="#scenarios">4. 七类日常场景</a></li>
-    <li class="sub"><a href="#s1">4.1 产品调研</a></li>
-    <li class="sub"><a href="#s2">4.2 需求评估</a></li>
-    <li class="sub"><a href="#s3">4.3 方案设计</a></li>
-    <li class="sub"><a href="#s4">4.4 开发执行</a></li>
-    <li class="sub"><a href="#s5">4.5 问题定位排查</a></li>
-    <li class="sub"><a href="#s6">4.6 长任务执行</a></li>
-    <li class="sub"><a href="#s7">4.7 长任务次日状态检查</a></li>
-    <li><a href="#skills">5. skills 目录逐个说明</a></li>
-    <li><a href="#stagetable">6. 阶段 → 参考技能全表</a></li>
-    <li><a href="#files">7. 文件边界与目录结构</a></li>
-    <li><a href="#statefile">8. state.md 字段速查</a></li>
-    <li><a href="#cmd">9. 常用命令</a></li>
-    <li><a href="#faq">10. 常见疑问</a></li>
-    <li><a href="#cheatsheet">11. 一页速查</a></li>
+    <li><a href="#flow">3. 核心流程：一次任务从头到尾</a></li>
+    <li><a href="#basics">4. 五个必须先懂的机制</a></li>
+    <li class="sub"><a href="#route">4.1 路由：L0 与 L1/L2/L3</a></li>
+    <li class="sub"><a href="#contract">4.2 契约与状态</a></li>
+    <li class="sub"><a href="#evidence">4.3 证据与证据新鲜度</a></li>
+    <li class="sub"><a href="#donegate">4.4 完成判定</a></li>
+    <li class="sub"><a href="#breaker">4.5 预算与熔断</a></li>
+    <li class="sub"><a href="#skillrule">4.6 技能加载边界</a></li>
+    <li class="sub"><a href="#light-document">4.7 轻量文档整理</a></li>
+    <li><a href="#scenarios">5. 七类日常场景</a></li>
+    <li class="sub"><a href="#s1">5.1 产品调研</a></li>
+    <li class="sub"><a href="#s2">5.2 需求评估</a></li>
+    <li class="sub"><a href="#s3">5.3 方案设计</a></li>
+    <li class="sub"><a href="#s4">5.4 开发执行</a></li>
+    <li class="sub"><a href="#s5">5.5 问题定位排查</a></li>
+    <li class="sub"><a href="#s6">5.6 长任务执行</a></li>
+    <li class="sub"><a href="#s7">5.7 长任务次日状态检查</a></li>
+    <li><a href="#skills">6. skills 目录逐个说明</a></li>
+    <li><a href="#stagetable">7. 阶段 → 参考技能全表</a></li>
+    <li><a href="#files">8. 文件边界与目录结构</a></li>
+    <li><a href="#statefile">9. state.md 字段速查</a></li>
+    <li><a href="#cmd">10. 常用命令</a></li>
+    <li><a href="#faq">11. 常见疑问</a></li>
+    <li><a href="#cheatsheet">12. 一页速查</a></li>
   </ol>
 </nav>
 
@@ -180,7 +182,7 @@
 </p>
 
 <div class="note">
-  <strong>谁在什么时候读哪份文件，是写死的</strong>：入口 <code>yxj-work</code> 里有一张「阶段 → 参考技能」映射表（见 <a href="#stagetable">第 6 节</a>），
+  <strong>谁在什么时候读哪份文件，是写死的</strong>：入口 <code>yxj-work</code> 里有一张「阶段 → 参考技能」映射表（见 <a href="#stagetable">第 7 节</a>），
   进入某阶段就先读该阶段的 playbook，再按表里的分支条件读取参考文件。plan 的实施计划读参考技能，轻量文档读模板；没有第二份清单。
 </div>
 
@@ -214,9 +216,9 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 <table>
   <thead><tr><th>命令</th><th>用途</th><th>对应场景</th></tr></thead>
   <tbody>
-    <tr><td><code>/yxj-work &lt;任务说明&gt;</code></td><td>普通任务入口：调研、设计、计划、执行、修复、审查</td><td>本文 4.1 – 4.5</td></tr>
-    <tr><td><code>/yxj-work-long &lt;长任务说明&gt;</code></td><td>跨阶段、跨会话、过夜或长时间外部运行的任务入口</td><td>本文 4.6 – 4.7</td></tr>
-    <tr><td><code>/yxj-work-handoff &lt;补充说明&gt;</code></td><td>把当前任务写成交接文件，供新会话继续（只能你主动调用）</td><td>本文 4.7</td></tr>
+    <tr><td><code>/yxj-work &lt;任务说明&gt;</code></td><td>普通任务入口：调研、设计、计划、执行、修复、审查</td><td>本文 5.1 – 5.5</td></tr>
+    <tr><td><code>/yxj-work-long &lt;长任务说明&gt;</code></td><td>跨阶段、跨会话、过夜或长时间外部运行的任务入口</td><td>本文 5.6 – 5.7</td></tr>
+    <tr><td><code>/yxj-work-handoff &lt;补充说明&gt;</code></td><td>把当前任务写成交接文件，供新会话继续（只能你主动调用）</td><td>本文 5.7</td></tr>
   </tbody>
 </table>
 
@@ -225,9 +227,45 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
   两种加载方式：入口按映射表主动读取，或你主动点名 <code>/yxj-why</code>、<code>/yxj-arena</code>。看不到它们被自动调用是设计如此，不是没生效。
 </div>
 
-<h2 id="basics">3. 五个必须先懂的机制</h2>
+<h2 id="flow">3. 核心流程：一次任务从头到尾</h2>
 
-<h3 id="route">3.1 路由：L0 与 L1/L2/L3</h3>
+<p>流程环节变多了，但主线只有一条：先立规矩，再干活，最后拿证据交差。下面是一次正式任务从敲命令到交付的完整路径；每个环节的细节在 <a href="#basics">第 4 节</a> 展开，产物落盘位置在 <a href="#files">第 8 节</a>。</p>
+
+<pre><code>/yxj-work &lt;任务说明&gt;
+  │
+  ├─ L0 快问快答 ──────────────► 直接回答，不建任何目录（到此结束）
+  │
+  └─ L1 / L2 / L3 正式任务
+       1 路由       按目标选阶段（单阶段，或开发 / 排查 / 调研三条链路）
+       2 建骨架     取 task-id → 建 .work-docs/tasks/&lt;task-id&gt;/ → 写最小 contract.md
+       3 契约校验   check-contract.sh 通过才开工（没过就改契约，不许先干后补）
+       4 启动摘要   9 行中文摘要：阶段 / 任务 / 风险 / 允许改动 / 禁止动作 /
+                    必过验收 / 已有证据 / 阻塞 / 下一步第一动作
+       5 阶段执行   读 playbook → 按映射表读参考技能 → 断言驱动读取 → 结果写进 evidence/
+       6 决策门     中 / 高风险等你确认；不可逆、花钱、对外发布、生产变更、改范围不自动豁免
+       7 固定收尾   contract → evidence → 报告 → state → check-contract.sh
+                    → check-state.sh → index.md
+       8 完成门     五条完成判定 + evidence_schema: 2 两道硬门全过 → status: done
+  │
+  └─ 任一环节熔断 ──► status: blocked + audit/ 失败记录 + checkpoint / handoff
+                      下个会话只读文件恢复，且必须换一条实质不同的策略</code></pre>
+
+<ul>
+  <li><strong>2–4 是「先立规矩再干活」</strong>：契约没过校验就不广泛读取，更不动目标代码。细节见 <a href="#contract">4.2</a>；轻量文档分支（<a href="#light-document">4.7</a>）骨架最薄，但同样要过契约与状态校验；L0 完全不建目录。</li>
+  <li><strong>4 的启动摘要不是第二套状态源</strong>：九行内容全部读自 contract、state 和最近 checkpoint，只告诉你当前边界和第一步动作；缺字段显示「未记录」，不另建文件。示例见 <code>skills/yxj-work/playbooks/verification.md</code>。</li>
+  <li><strong>5–6 是干活的主体</strong>：读哪些文件由入口的「阶段 → 参考技能」表写死（<a href="#stagetable">第 7 节</a>）；每轮读取都要回答一个断言、缩小一个未知项或留下一条证据。验证怎么做见 <a href="#evidence">4.3</a>。</li>
+  <li><strong>7–8 是出口</strong>：收尾顺序固定，先落证据再写状态；五条完成判定见 <a href="#donegate">4.4</a>，熔断与恢复规则见 <a href="#breaker">4.5</a>。</li>
+</ul>
+
+<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）就是把第 5 步的阶段串起来：每个阶段各自重复 2–7，决策门放行才进下一阶段，<code>mixed</code> 同样不新增清单。长任务入口 <code>yxj-work-long</code> 走同一条主线，只多两件事：每个阶段结束追加 <code>audit/checkpoint-&lt;序号&gt;.md</code> 并同步 state，暂停或跨天前先写 <code>handoff.md</code>；恢复时按 <code>index.md → state.md → 最近 checkpoint → handoff.md → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
+
+<div class="note rule">
+  <strong>判断流程走到哪，只看两个文件</strong>：<code>state.md</code> 的 <code>stage</code> 和 <code>status</code> 回答「现在在哪一步、还能不能继续」；<code>contract.md</code> 的 <code>Acceptance</code> 回答「做到什么才算完」。对话记忆不算数，文件里没有就是没发生。
+</div>
+
+<h2 id="basics">4. 五个必须先懂的机制</h2>
+
+<h3 id="route">4.1 路由：L0 与 L1/L2/L3</h3>
 
 <p>每次调用先分流。<code>fast-answer</code>（L0）是快问快答——术语解释、简单命令说明、单一事实确认——直接回答，<strong>不创建任何工作目录</strong>。</p>
 
@@ -251,7 +289,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
   <li>调研：<code>research → decision gate</code>。只有决策门判 <code>proceed</code> 才继续进开发和评审。</li>
 </ul>
 
-<h3 id="contract">3.2 契约与状态</h3>
+<h3 id="contract">4.2 契约与状态</h3>
 
 <p>正式任务先创建任务骨架和最小契约，再动真东西：<code>contract.md</code>（这次任务做什么、范围到哪、怎么算做完）和 <code>state.md</code>（现在在哪一步、有哪些证据、被什么挡住）。先运行 <code>check-contract.sh</code> 通过，再开始广泛读取；不要调查到后半程才补契约。L1 只写一句 <code>done_when</code>、允许范围、验证方式和未知项；L2 还要写任务类型、禁止改动、验证层级、产物位置、阶段和下一入口；L3 每个检查点再带状态、证据、依赖、阻塞和第一步。</p>
 
@@ -275,13 +313,13 @@ bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; 
 
 blocked ──► in_progress           （阻塞解除 / 共同前提重新验证通过 / 有新证据的新策略）</code></pre>
 
-<h3 id="evidence">3.3 证据与证据新鲜度</h3>
+<h3 id="evidence">4.3 证据与证据新鲜度</h3>
 
 <p>每条证据记录 <code>acceptance</code>（绑定哪条验收条件，如 <code>A1</code>）、<code>command</code>、<code>run_at</code>、<code>result</code> 和相关文件的 <code>last_edit_at</code>，证据文件本身必须真实存在。<strong>运行时间早于文件最后修改时间的证据作废</strong>——改了代码还引用旧跑出来的结果，等于没验证。</p>
 
 <p>验证分五层，按契约要求从窄到宽跑：<code>syntax/config</code> → <code>static</code> → <code>runtime/local</code> → <code>external</code> → <code>consumer</code>。关键词搜索和 grep 属于 <code>static</code>，只能证明「字符串在那儿」，不能单独证明「行为生效」。</p>
 
-<h3 id="donegate">3.4 完成判定</h3>
+<h3 id="donegate">4.4 完成判定</h3>
 
 <p>下面五条同时成立才能写 <code>status: done</code>：</p>
 <ol>
@@ -295,7 +333,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <p>启用新版完成门的任务（<code>state.md</code> 里写 <code>evidence_schema: 2</code>）还有两道脚本硬门，<code>check-state.sh</code> 逐条检查：每条 <code>required: yes</code> 验收都必须绑定一条完整 evidence（含 <code>acceptance</code>、<code>command</code>、<code>run_at</code>、<code>result</code>、<code>last_edit_at</code>，对应证据文件真实存在且 <code>result=passed</code>）；契约 <code>review_policy</code> 不是 <code>auto</code> 时，还必须有一行 <code>review_evidence</code>（<code>policy</code> 与契约一致、<code>status=passed</code>、审查文件真实存在）。历史已完成的 v2 任务不带 <code>evidence_schema: 2</code>，按旧规则兼容读取。</p>
 
-<h3 id="breaker">3.5 预算与熔断</h3>
+<h3 id="breaker">4.5 预算与熔断</h3>
 
 <p>熔断的触发条件（每个子任务独立计数）：</p>
 <ul>
@@ -314,13 +352,13 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <p>为控制长会话耗时，采用断言驱动读取：先列断言，再按断言定位实现符号和局部代码，并立即写 evidence；低风险、只读、<code>review_policy: auto</code> 的审查使用轻量 review，跳过与验收无关的构建、测试和全量参考材料。固定收尾顺序：写 contract → 写 evidence → 写报告 → 写 state → <code>check-contract.sh</code> → <code>check-state.sh</code> → 更新 <code>.work-docs/index.md</code>。</p>
 
-<h3 id="skillrule">3.6 技能加载边界</h3>
+<h3 id="skillrule">4.6 技能加载边界</h3>
 
 <p>辅助技能加载后仍受当前任务的契约、<code>.work-docs</code> 文件边界、预算、熔断和验证要求约束。如果技能自带规则与当前契约冲突，<strong>以契约为准</strong>，并把差异记到 <code>audit/</code>。</p>
 
 <p>调用第三方技能前先按 <code>playbooks/third-party-skill.md</code> 分类：只读的可以直接跑；能指定输出根的必须传入本次任务目录；固定写入或写入不可知的，只能在隔离的临时目录里试跑，否则任务标 <code>blocked</code>。调用前后都要存目录清单，发现 <code>.work-docs</code> 之外的意外文件立即熔断，且<strong>未经授权不得移动、删除或覆盖</strong>那个文件。</p>
 
-<h3 id="light-document">3.7 轻量文档整理</h3>
+<h3 id="light-document">4.7 轻量文档整理</h3>
 
 <p>材料和目标已确定的测试用例、检查清单、变更说明默认 L1 / <code>plan</code>，不新增阶段。用 <code>skills/yxj-work/templates/document-task.md</code> 填最小契约和状态，运行校验器后读固定主材料，立即写初稿，再只为具体缺口补读。默认不研究校验器源码，不加载实施计划的「做可重复工具」参考技能。</p>
 <pre>/yxj-work 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下</pre>
@@ -332,12 +370,12 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 </ul>
 <p>验收的是覆盖、事实和可理解性，不是运行环境；证据按原格式绑定，网站运行层保留 not_run。交付注明「用例已整理，测试未执行」。检查点是技能约束，<strong>不是宿主自动拦截或速度保证</strong>；是否减少空转需要实际模型会话验证。模板与流程回归可运行 <code>bash scripts/test-document-template.sh</code> 和 <code>bash scripts/test-flow.sh</code>。</p>
 
-<h2 id="scenarios">4. 七类日常场景</h2>
+<h2 id="scenarios">5. 七类日常场景</h2>
 
 <p>下面每节按同一模板写：什么情况下用它、怎么敲、内部走什么、你会拿到什么产物、验收看什么、常见坑。标 <span class="tag native">原生阶段</span> 的是工作流本来就有这个阶段；标 <span class="tag combo">组合用法</span> 的是用现有阶段拼出来的用法。</p>
 
 <div class="scenario" id="s1">
-  <h3>4.1 产品调研 <span class="tag native">原生阶段 research</span></h3>
+  <h3>5.1 产品调研 <span class="tag native">原生阶段 research</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -365,7 +403,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 </div>
 
 <div class="scenario" id="s2">
-  <h3>4.2 需求评估 <span class="tag combo">组合用法</span></h3>
+  <h3>5.2 需求评估 <span class="tag combo">组合用法</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -395,7 +433,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="scenario" id="s3">
-  <h3>4.3 方案设计 <span class="tag native">原生阶段 design</span></h3>
+  <h3>5.3 方案设计 <span class="tag native">原生阶段 design</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -425,7 +463,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="scenario" id="s4">
-  <h3>4.4 开发执行 <span class="tag native">原生阶段 plan → exec → review</span></h3>
+  <h3>5.4 开发执行 <span class="tag native">原生阶段 plan → exec → review</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -458,7 +496,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
   </dl>
 </div>
 <div class="scenario" id="s5">
-  <h3>4.5 问题定位排查 <span class="tag native">原生阶段 investigate → bugfix → review</span></h3>
+  <h3>5.5 问题定位排查 <span class="tag native">原生阶段 investigate → bugfix → review</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -492,7 +530,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="scenario" id="s6">
-  <h3>4.6 长任务执行 <span class="tag native">入口 yxj-work-long</span></h3>
+  <h3>5.6 长任务执行 <span class="tag native">入口 yxj-work-long</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -524,7 +562,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="scenario" id="s7">
-  <h3>4.7 长任务次日状态检查（恢复） <span class="tag native">恢复流程 + yxj-work-handoff</span></h3>
+  <h3>5.7 长任务次日状态检查（恢复） <span class="tag native">恢复流程 + yxj-work-handoff</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -558,12 +596,12 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <dd>拿上一会话的记忆当事实；把 handoff 当完成证明（它只是状态入口）；状态与证据冲突时顺着状态走。</dd>
   </dl>
 </div>
-<h2 id="skills">5. skills 目录逐个说明</h2>
+<h2 id="skills">6. skills 目录逐个说明</h2>
 
-<p>33 个技能全部设置 <code>disable-model-invocation: true</code>：不会被任务内容自动唤起。加载方式只有两种——入口按<a href="#stagetable">第 6 节映射表</a>主动读取，或你主动点名 <code>/yxj-&lt;名字&gt;</code>。</p>
+<p>33 个技能全部设置 <code>disable-model-invocation: true</code>：不会被任务内容自动唤起。加载方式只有两种——入口按<a href="#stagetable">第 7 节映射表</a>主动读取，或你主动点名 <code>/yxj-&lt;名字&gt;</code>。</p>
 
 <div class="skill-group" id="sk-entry">
-  <h3>5.1 三个入口技能</h3>
+  <h3>6.1 三个入口技能</h3>
 
   <div class="skill">
     <div class="name">yxj-work</div>
@@ -574,7 +612,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
   <div class="skill">
     <div class="name">yxj-work-long</div>
     <div class="what">跨阶段、跨会话、过夜或长时间外部运行的任务入口。在普通规则之外增加 L3 契约、阶段 checkpoint、次日恢复摘要、400 次 / 8 小时总预算。</div>
-    <div class="when">用：<code>/yxj-work-long &lt;长任务说明&gt;</code>。进入判据见 4.6。</div>
+    <div class="when">用：<code>/yxj-work-long &lt;长任务说明&gt;</code>。进入判据见 5.6。</div>
   </div>
 
   <div class="skill">
@@ -585,7 +623,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="skill-group" id="sk-understand">
-  <h3>5.2 理解代码（investigate / research 阶段读取）</h3>
+  <h3>6.2 理解代码（investigate / research 阶段读取）</h3>
 
   <div class="skill">
     <div class="name">yxj-how</div>
@@ -607,7 +645,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="skill-group" id="sk-design">
-  <h3>5.3 设计与对抗评审（design / review 阶段读取）</h3>
+  <h3>6.3 设计与对抗评审（design / review 阶段读取）</h3>
 
   <div class="skill">
     <div class="name">yxj-codebase-design</div>
@@ -640,7 +678,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
   </div>
 </div>
 <div class="skill-group" id="sk-review">
-  <h3>5.4 代码审查与冲突处理（review 阶段读取）</h3>
+  <h3>6.4 代码审查与冲突处理（review 阶段读取）</h3>
 
   <div class="skill">
     <div class="name">yxj-requesting-code-review</div>
@@ -662,7 +700,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="skill-group" id="sk-writing">
-  <h3>5.5 写作与语言规范</h3>
+  <h3>6.5 写作与语言规范</h3>
 
   <div class="skill">
     <div class="name">yxj-unslop</div>
@@ -690,7 +728,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="skill-group" id="sk-ops">
-  <h3>5.6 人工步骤与验证（ops 阶段读取）</h3>
+  <h3>6.6 人工步骤与验证（ops 阶段读取）</h3>
 
   <div class="skill">
     <div class="name">yxj-wizard</div>
@@ -706,7 +744,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="skill-group" id="sk-principle">
-  <h3>5.7 十三条工程原则（yxj-principle-*）</h3>
+  <h3>6.7 十三条工程原则（yxj-principle-*）</h3>
 
   <p>这些是短小的单条原则，多数由其他技能引用，也可以在你自己卡住时点名。格式统一为：一句话是什么 → 什么时候用。</p>
 
@@ -788,7 +826,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <div class="when">用在：按需读取——并行任务、共享文件或共享状态设计时。</div>
   </div>
 </div>
-<h2 id="stagetable">6. 阶段 → 参考技能全表</h2>
+<h2 id="stagetable">7. 阶段 → 参考技能全表</h2>
 
 <p>这是入口 <code>yxj-work</code> 里那张映射表的完整复制，也是「哪个阶段读哪些文件」的唯一事实源。每进入一个阶段：先读 playbook，再读表里的技能文件，最后按 playbook 写产物和验证证据。同一技能在多行出现时只读一次。</p>
 
@@ -855,7 +893,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
 <p>第三方技能按 <code>playbooks/third-party-skill.md</code> 处理，不因为它被列在仓库里就自动调用。技能自带规则与当前契约冲突时，以契约为准，并把差异记录到 <code>audit/</code>。</p>
 
-<h2 id="files">7. 文件边界与目录结构</h2>
+<h2 id="files">8. 文件边界与目录结构</h2>
 
 <p>以命令实际执行的目录为工作根，创建或复用一个 <code>.work-docs/</code>：</p>
 
@@ -886,7 +924,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
   工作流生成的持久文件只能落在上面这个目录树里。禁止写到 <code>.audit/</code>、<code>docs/handoff/</code>、<code>00-Inbox/</code>、项目的 docs 目录、外部 <code>local://</code> 或外部 <code>.audit/</code>。用户指定的项目代码是<strong>任务目标</strong>，不是工作流产物：在契约和证据里记录它的路径，但不要把它复制进 <code>.work-docs</code>（除非你要求）。
 </div>
 
-<h2 id="statefile">8. state.md 字段速查</h2>
+<h2 id="statefile">9. state.md 字段速查</h2>
 
 <p><code>state.md</code> 用「每行一个 <code>key: value</code>」的简单格式，方便脚本校验。固定字段：</p>
 
@@ -918,7 +956,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
 <p><strong>有效进展</strong>只有两种：某个 <code>done_when</code> 条目拿到新 evidence，或某个 required 验证从 <code>failed|not_run</code> 变为 <code>passed</code>。每次有效进展都更新 <code>calls_since_progress</code>（归零）、<code>last_progress_at</code>、<code>budget</code> 和 <code>strategy_fingerprints</code>。</p>
 
-<h2 id="cmd">9. 常用命令</h2>
+<h2 id="cmd">10. 常用命令</h2>
 
 <h3>日常入口</h3>
 <pre><code>/yxj-work &lt;任务说明&gt;                      # 普通任务
@@ -959,7 +997,7 @@ bash scripts/test-flow.sh                                      # 流程回归</c
 
 <p><code>check-state.sh</code> 会拒绝这些情况：标记 <code>done</code> 但存在 failed / not_run / blocked 的必需验证，或证据已过期；非 blocked 状态却已达到无进展阈值；blocked 却缺 <code>blocked_by</code>、<code>unblock_condition</code>、<code>next_action</code>；<code>status: done</code> 但 <code>budget</code> 已耗尽（<code>used &gt;= limit</code>）；<code>status: done</code> 但没有任何 <code>required_verification</code>。启用 <code>evidence_schema: 2</code> 后还会拒绝：required 验收缺 evidence 绑定、证据文件不存在、evidence 缺 <code>acceptance</code>/<code>command</code>/<code>run_at</code>/<code>result</code>/<code>last_edit_at</code> 任一字段、evidence 结果不是 <code>passed</code>、<code>contract_revision</code> 或 <code>contract_fingerprint</code> 与契约不一致、中/高风险 done 缺 <code>review_evidence</code> 或其 policy / status / 审查文件对不上。</p>
 
-<h2 id="faq">10. 常见疑问</h2>
+<h2 id="faq">11. 常见疑问</h2>
 
 <h3>为什么辅助技能没有被自动唤起？</h3>
 <p>因为全部设了 <code>disable-model-invocation: true</code>。这是刻意设计：避免模型因为「看到 .ts 文件」或「看到报错」就自行塞进一段技能指令，让任务范围失控。要用就两条路——入口按阶段读，或你点名。</p>
@@ -994,7 +1032,7 @@ bash scripts/test-flow.sh                                      # 流程回归</c
 <h3>长任务预算用完了但活还没干完？</h3>
 <p>写最终 checkpoint、更新 <code>state.md</code>、保持 <code>in_progress</code> 或 <code>blocked</code>，<strong>不许标 done</strong>。第二天恢复时按新预算继续，且必须换策略。</p>
 
-<h2 id="cheatsheet">11. 一页速查</h2>
+<h2 id="cheatsheet">12. 一页速查</h2>
 
 <table>
   <thead><tr><th>我想做的事</th><th>敲什么</th><th>产物在哪</th></tr></thead>
