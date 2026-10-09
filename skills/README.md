@@ -55,7 +55,7 @@ disable-model-invocation: true
 
 ## 技能元数据
 
-每个 `skills/<name>/SKILL.md` 的头部至少包含与目录一致的 `name`、非空 `description` 和 `disable-model-invocation: true`。前两个字段用于识别职责，最后一个字段表示默认不由模型自动唤起；实际安装范围只由 `scripts/runtime-skills.txt` 决定。元数据检查只验证结构和边界，不根据描述自动路由或扩大调用范围。
+每个 `skills/<name>/SKILL.md` 的头部至少包含与目录一致的 `name`、非空 `description` 和 `disable-model-invocation: true`。前两个字段用于识别职责，最后一个字段表示默认不由模型自动唤起；实际安装范围只由 `scripts/runtime-skills.txt` 决定。检查只接受单行标量并采用“不认识就拒绝”：`description` 必须能解析成非空字符串，空引号、`[]`、`false`、块标量（`|`、`>`）、纯数字、未闭合引号和 `key : value` 非规范键写法都会被拒绝，因为宿主加载器遇到它们会丢弃整个技能或读错名称。元数据检查只验证结构和边界，不根据描述自动路由或扩大调用范围。
 
 ## 安装范围
 

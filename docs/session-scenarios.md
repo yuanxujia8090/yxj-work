@@ -12,6 +12,27 @@
 |---|---|---|---|
 | SC-001 | 2026-10-07 | L0 判定后中途写文件不升级档位，产物落盘但无契约 | 暂不优化 |
 | SC-002 | 2026-10-08 | 整理测试用例扩大为环境调查与反复规划，56 分钟后仍未交付 | 轻量分支已落地，格式回归通过；模型行为待验证 |
+| SC-003 | 2026-10-09 | worktree 里改技能规则后，会话仍读到 main 的旧副本 | 合并到 main 后文件就位；模型行为未验证 |
+
+---
+
+## SC-003 · 分支里的技能规则改动不生效
+
+**会话**：`01a11e82`（2026-10-09，任务 20261009-03/04 的审查会话；本地 JSONL 在 `~/.pi/agent/sessions/`）。
+
+### 现象与证据
+
+v2.1 分支在 worktree 里新增了阶段启动摘要、真实使用面验证和 `playbooks/verification.md`，但同一会话注入的 `yxj-work` 规则不含这些段落。原因是安装目录用的是软链，指向主仓库的工作树，而主仓库当时切在 `main`：
+
+```text
+~/.pi/agent/skills/yxj-work -> /Users/yuanxj/Documents/github/yxj-work/skills/yxj-work
+```
+
+证据：`grep -c 阶段启动摘要 ~/.pi/agent/skills/yxj-work/SKILL.md` 得 0；`test -f ~/.pi/agent/skills/yxj-work/playbooks/verification.md` 为不存在；`git -C <主仓库> branch --show-current` 为 `main`。命令输出记在 `.work-docs/tasks/20261009-04-branch-main-review-recheck/evidence/checks.txt`（本地，不随仓库分发）。
+
+### 处置与验证边界
+
+本次把 v2.1 快进合并到 main（见 `DECISIONS.md` 2026-10-09 第二条），软链随之读到新文件；合并后 `playbooks/verification.md` 可见，33 条软链未变。属静态与仓库状态验证：只说明“规则文件已就位”，不声称对模型行为的影响已量化。
 
 ---
 

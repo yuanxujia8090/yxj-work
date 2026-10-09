@@ -9,3 +9,9 @@
 - 阶段选择表提供用户目标说明；阶段与参考文件的执行映射仍以主入口为准。
 - 本次做当前会话的只读任务与恢复演练。用户理解成本、独立模型遵守率和真实跨天效果需要后续自然任务观测，暂不扩大到三类完整行为实验。
 - 试跑后选择保留当前规则、暂停扩大自动化；具体结果和限制见 `.work-docs/tasks/20261009-01-gstack-workflow-productization/outputs/report.md`。这不授权推送、发布或生产操作。
+
+## 2026-10-09：v2.1 合并回 main
+
+- 用户确认把 v2.1 的三个提交（`092f420` 阶段入口与验证规范、`bc52d1e` .gitignore 补行、`b196efe` 技能元数据检查器修复）快进合并到 main。合并前只读检查见 `.work-docs/tasks/20261009-06-merge-precheck/outputs/precheck-report.md`：可快进、无冲突、合入文件与主工作树未跟踪文件无交集。
+- 技能元数据检查器改为 fail-closed：拒绝会被宿主加载器丢弃的单行写法（空引号、`[]`、`false`、块标量、纯数字、未闭合引号、`key : value` 非规范键写法）；测试夹具默认写入 `tests/tmp/skill-metadata` 并由 `.gitignore` 忽略。
+- 未 push，未删除 v2.1 分支与 worktree；是否推送与清理由用户后续决定。

@@ -119,7 +119,7 @@ bash skills/yxj-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 
 验证要核对用户或下游能观察到的结果。代码、接口、流程、运行和交付五类观察面与现有 `layer` 枚举分开；在 `outcome` 和 `verification` 中写清观察对象、预期结果、验证动作即可。统一解释、正反例和启动摘要示例见 [验证说明](skills/yxj-work/playbooks/verification.md)。
 
-仓库检查还会核对全部技能的头部名称、单行描述和 `disable-model-invocation: true`（默认不由模型自动唤起）。可单独运行 `bash scripts/check-skill-metadata.sh "$PWD"` 和 `bash scripts/test-skill-metadata.sh`；后者用有效及错误样例验证拦截能力，测试夹具保留供检查，不改技能源文件。
+仓库检查还会核对全部技能的头部名称、单行描述和 `disable-model-invocation: true`（默认不由模型自动唤起）。检查器采用“不认识就拒绝”：`description` 必须能解析成非空字符串的单行标量，`description: ""`、`[]`、`false`、`>-`、纯数字、未闭合引号和 `key : value` 这类非规范键写法都会被拦下（宿主加载器遇到它们会静默丢弃整个技能）。可单独运行 `bash scripts/check-skill-metadata.sh "$PWD"` 和 `bash scripts/test-skill-metadata.sh`；后者用有效及错误样例（24 例）验证拦截能力，夹具默认写在 `tests/tmp/skill-metadata`，已由 `.gitignore` 忽略，可用 `YXJ_TEST_ROOT` 改位置，不改技能源文件。
 
 ## 完成判定
 
@@ -153,6 +153,7 @@ bash scripts/test-contract.sh
 bash scripts/test-fixtures.sh
 bash scripts/test-v2-lifecycle.sh
 bash scripts/test-flow.sh
+bash scripts/test-skill-metadata.sh
 bash scripts/test-document-template.sh
 bash scripts/test-install.sh
 tmp="$(mktemp -d)"
