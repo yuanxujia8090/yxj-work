@@ -8,8 +8,8 @@
 不做什么：不超出契约范围，不用编译成功替代行为验证，不在失败后原样重复同一策略。
 停止条件：required 验收和对应证据满足完成门，或遇到阻塞、越界、决策变化而停下并记录。
 
-1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-work/scripts/check-contract.sh <task-dir>` before broad exploration. For an existing task, read contract, plan, state, target files, callers, tests, current differences, and the workspace baseline (cwd, branch/worktree, pending changes). If a model request times out, record a recovery summary in `audit/` before continuing.
-2. If the contract uses v2 format, run `skills/x-work/scripts/check-contract.sh <task-dir>` before editing; do not execute against an incomplete contract.
+1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-rail/scripts/check-contract.sh <task-dir>` before broad exploration. For an existing task, read contract, plan, state, target files, callers, tests, current differences, and the workspace baseline (cwd, branch/worktree, pending changes). If a model request times out, record a recovery summary in `audit/` before continuing.
+2. If the contract uses v2 format, run `skills/x-rail/scripts/check-contract.sh <task-dir>` before editing; do not execute against an incomplete contract.
 3. List the current logical change and its required verification before editing. Read only the target symbols and their callers first; expand to full files only when a specific Acceptance condition requires it.
 4. Modify only files inside the task boundary. User project files are targets; workflow records stay in `.work-docs`.
 5. Verify from narrow to broad: `syntax/config`, `static`, `runtime/local`, `external`, `consumer` as required by the contract. A manual, consumer or external condition must be explicitly recorded rather than silently treated as automatic.

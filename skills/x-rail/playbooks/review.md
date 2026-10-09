@@ -9,7 +9,7 @@
 停止条件：每条 Acceptance 都有对应审查结论和证据，或明确列出阻塞与未审查范围。
 
 1. Read the contract, change set, evidence and unverified items. For a new formal task, create the task skeleton and minimal contract before broad exploration. If a model request times out, record the recovery summary in `audit/` before continuing.
-2. Run `skills/x-work/scripts/check-contract.sh <task-dir>` for a v2 contract before reviewing the change set.
+2. Run `skills/x-rail/scripts/check-contract.sh <task-dir>` for a v2 contract before reviewing the change set.
 3. Apply the contract's `review_policy`: low/auto uses automatic verification plus a delivery summary; medium/user-confirm adds an independent read-only review; high/full-review requires user confirmation and full review.
    For `review_policy: auto` + low-risk + read-only reviews, use **轻量 review**: keep contract, evidence, state and both check scripts; skip builds, tests and unrelated reference files unless an Acceptance condition requires them.
 4. 先列断言，再按断言读取局部实现。Start with an assertion ledger: list the document/spec claims or Acceptance conditions, map each to implementation symbols, read only the relevant local code, and write evidence immediately. Do not dump multiple complete source files before identifying the claim they answer.

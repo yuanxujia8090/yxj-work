@@ -8,7 +8,7 @@
 不做什么：不把搜索摘要当作事实，不在 `proceed` 之前进入设计、计划或实施，不替用户拍板不可逆决策。
 停止条件：得到 `proceed`、`design_only`、`gather_more` 或 `do_not_build` 中一个有证据的结论。
 
-1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-work/scripts/check-contract.sh <task-dir>` before broad exploration. For an existing task, first read its contract and state. If a model request times out, record a recovery summary in `audit/` before continuing.
+1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-rail/scripts/check-contract.sh <task-dir>` before broad exploration. For an existing task, first read its contract and state. If a model request times out, record a recovery summary in `audit/` before continuing.
 2. Confirm object, terminology, version and environment; unresolved identity blocks conclusions.
 3. Rewrite the request as a falsifiable question with done_when and stop_when; split into 1–5 claims.
 4. Prefer official documentation/API, official repositories/releases, primary data or user statements, reproducible measurements, then secondary sources.

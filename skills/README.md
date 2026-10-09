@@ -4,9 +4,9 @@
 
 ## 入口技能
 
-- `x-work`：普通任务入口。它的“参考技能”一节给出阶段 → 参考文件的映射；plan 的实施计划读参考技能，轻量文档分支使用内置 `x-work/templates/document-task.md`，不增加技能数量。
-- `x-work-long`：跨阶段、跨会话或长时间任务入口。
-- `x-work-handoff`：用户主动调用的交接入口。
+- `x-rail`：普通任务入口。它的“参考技能”一节给出阶段 → 参考文件的映射；plan 的实施计划读参考技能，轻量文档分支使用内置 `x-rail/templates/document-task.md`，不增加技能数量。
+- `x-rail-long`：跨阶段、跨会话或长时间任务入口。
+- `x-handoff`：用户主动调用的交接入口。
 
 ## 辅助技能
 
@@ -29,14 +29,14 @@ disable-model-invocation: true
 
 因此模型不会因为任务内容、文件类型或错误类型自动唤起任何技能。技能只有两种加载方式：
 
-1. 入口技能按 `x-work` 的“参考技能”表**主动读取**对应文件（相对路径 `../<技能名>/SKILL.md`）；
+1. 入口技能按 `x-rail` 的“参考技能”表**主动读取**对应文件（相对路径 `../<技能名>/SKILL.md`）；
 2. 用户主动点名调用（`/x-<name>`）。
 
 无论哪种方式加载，仍需遵守当前任务的 contract、`.work-docs` 文件边界、预算、熔断和验证要求。
 
 ## 阶段选择表
 
-下表帮助用户表达目标；执行时以 [主入口路由](x-work/SKILL.md#路由) 为准，playbook 与参考技能路径只维护在主入口映射中。各阶段 playbook 提供“适用场景 / 输入 / 输出 / 不做什么 / 停止条件”。
+下表帮助用户表达目标；执行时以 [主入口路由](x-rail/SKILL.md#路由) 为准，playbook 与参考技能路径只维护在主入口映射中。各阶段 playbook 提供“适用场景 / 输入 / 输出 / 不做什么 / 停止条件”。
 
 | 你现在需要什么 | 阶段及可期待的结果 |
 |---|---|
@@ -51,7 +51,7 @@ disable-model-invocation: true
 | 整理平台人工操作 | ops（操作指引），产出手册和回滚步骤 |
 | 研究、设计、实施有顺序依赖 | mixed（组合任务），逐阶段通过决策门后推进 |
 
-正式阶段启动与恢复时会显示风险、允许范围、必过验收、证据和第一步动作；验证观察面与摘要示例见 [验证说明](x-work/playbooks/verification.md)。
+正式阶段启动与恢复时会显示风险、允许范围、必过验收、证据和第一步动作；验证观察面与摘要示例见 [验证说明](x-rail/playbooks/verification.md)。
 
 ## 技能元数据
 
@@ -61,7 +61,7 @@ disable-model-invocation: true
 
 `scripts/runtime-skills.txt` 是安装清单，包含 3 个入口与全部辅助技能。它们都安装到同一个技能目录下，因此入口里的相对读取路径 `../<技能名>/SKILL.md` 在源仓库与安装目标下都成立；运行时清单是安装范围的唯一来源。
 
-安装：`bash scripts/install.sh --dest "$HOME/.pi/agent/skills"`。`--update` 只覆盖带本仓库 `.x-work-installed` 标记的目录。
+安装：`bash scripts/install.sh --dest "$HOME/.pi/agent/skills"`。`--update` 只覆盖带本仓库 `.x-rail-installed` 标记的目录。
 软链安装（开发模式，直连源仓库）：`bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link`；卸载用 `--unlink`（只删指向本仓库的链接）。软链与复制模式互斥。
 
 如果确认某个技能长期不需要，从 `scripts/runtime-skills.txt` 移除对应行再删除该目录即可；门禁只校验清单里列出的目录。

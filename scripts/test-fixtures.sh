@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-CHECK="$ROOT/skills/x-work/scripts/check-state.sh"
+CHECK="$ROOT/skills/x-rail/scripts/check-state.sh"
 fail() { printf 'fixtures: %s\n' "$1" >&2; exit 1; }
 expect_pass() { "$CHECK" "$1" >/dev/null || fail "expected pass: $1"; }
 expect_fail() { if "$CHECK" "$1" >/dev/null 2>&1; then fail "expected failure: $1"; fi; }

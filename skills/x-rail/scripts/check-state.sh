@@ -12,7 +12,7 @@ calls="$(value calls_since_progress)"
 budget="$(value budget)"
 [[ -n "$status" ]] || fail 'missing status'
 [[ -n "$stage" ]] || fail 'missing stage'
-# Enum must match the route stage names in skills/x-work/SKILL.md (check-repo.sh asserts both).
+# Enum must match the route stage names in skills/x-rail/SKILL.md (check-repo.sh asserts both).
 case "$status" in
   in_progress|done|blocked|stopped|cancelled) ;;
   *) fail "invalid status: $status" ;;

@@ -3,13 +3,13 @@
 # skill by the relative path ../<name>/SKILL.md in both the source repository and the install target.
 # One directory name per line; blank lines and # comments are ignored.
 #
-# Entry skills (user-invoked with /x-work, /x-work-long, /x-work-handoff).
-x-work
-x-work-long
-x-work-handoff
+# Entry skills (user-invoked with /x-rail, /x-rail-long, /x-handoff).
+x-rail
+x-rail-long
+x-handoff
 
 # Companion skills. All set disable-model-invocation: true, so no task content auto-invokes them:
-# an entry skill reads the file it needs on purpose (see the reference-skill table in x-work).
+# an entry skill reads the file it needs on purpose (see the reference-skill table in x-rail).
 x-architect
 x-arena
 x-blast-radius

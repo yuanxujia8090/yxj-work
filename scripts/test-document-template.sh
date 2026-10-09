@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 # Caller may contain all test artifacts inside its task directory.
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/document-template.XXXXXX")"
-TEMPLATE="$ROOT/skills/x-work/templates/document-task.md"
+TEMPLATE="$ROOT/skills/x-rail/templates/document-task.md"
 [[ -f "$TEMPLATE" ]] || { printf 'document-template: missing template\n' >&2; exit 1; }
 python3 - "$TEMPLATE" "$tmp" <<'PY'
 import sys, pathlib, re, hashlib, datetime
@@ -29,14 +29,14 @@ for name in ['contract.md', 'state.md']:
 print(task)
 PY
 task="$tmp/20261008-01-template-check"
-bash "$ROOT/skills/x-work/scripts/check-contract.sh" "$task"
-bash "$ROOT/skills/x-work/scripts/check-state.sh" "$task"
+bash "$ROOT/skills/x-rail/scripts/check-contract.sh" "$task"
+bash "$ROOT/skills/x-rail/scripts/check-state.sh" "$task"
 # A copied, unfinished template must NOT be accepted as done.
 python3 - "$task/state.md" <<'PY'
 import sys, pathlib
 p = pathlib.Path(sys.argv[1]); p.write_text(p.read_text().replace('status: in_progress', 'status: done'))
 PY
-if result="$(bash "$ROOT/skills/x-work/scripts/check-state.sh" "$task" 2>&1)"; then
+if result="$(bash "$ROOT/skills/x-rail/scripts/check-state.sh" "$task" 2>&1)"; then
   printf 'document-template: unfinished document accepted as done\n' >&2; exit 1
 fi
 [[ "$result" == *'required acceptance not passed'* ]] || { printf '%s\n' "$result"; exit 1; }
@@ -53,8 +53,8 @@ for n, name in [(1, 'coverage'), (2, 'clarity')]:
 s = s.replace('|result=not_run|', '|result=passed|')
 (p/'state.md').write_text(s)
 PY
-bash "$ROOT/skills/x-work/scripts/check-state.sh" "$task"
+bash "$ROOT/skills/x-rail/scripts/check-state.sh" "$task"
 # Template must ship unmodified in a temporary copy install.
 bash "$ROOT/scripts/install.sh" --dest "$tmp/installed" >/dev/null
-cmp "$TEMPLATE" "$tmp/installed/x-work/templates/document-task.md"
+cmp "$TEMPLATE" "$tmp/installed/x-rail/templates/document-task.md"
 printf 'document-template: passed (initial state, unfinished done rejected, verified done, installed template)\n'

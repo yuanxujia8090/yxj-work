@@ -8,7 +8,7 @@
 不做什么：不在根因和复现证据不足时修改代码，不把猜测写成结论，不代替 bugfix 阶段实施修复。
 停止条件：问题已被证据回答并可进入 bugfix/review，或证据不足而应标记 blocked 并写明解除条件。
 
-1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-work/scripts/check-contract.sh <task-dir>` before broad exploration. For an existing task, read task state, contract and recent evidence first. If a model request times out, record a recovery summary in `audit/` before continuing.
+1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-rail/scripts/check-contract.sh <task-dir>` before broad exploration. For an existing task, read task state, contract and recent evidence first. If a model request times out, record a recovery summary in `audit/` before continuing.
 2. State the observable question and done_when; identify the smallest read or runtime check that can answer it.
 3. Narrow files, configuration, services and versions before running commands.
 4. Record findings as fact, inference or unknown with evidence pointers.

@@ -1,12 +1,12 @@
 ---
-name: x-work-handoff
-description: 将当前 x-work 任务写入 .work-docs/tasks/<task-id>/handoff.md，供新会话继续。
+name: x-handoff
+description: 将当前 x-rail 任务写入 .work-docs/tasks/<task-id>/handoff.md，供新会话继续。
 disable-model-invocation: true
 ---
 
-# x-work-handoff
+# x-handoff
 
-本技能只能由用户主动调用。`x-work` 或 `x-work-long` 不得因为任务进入交接阶段而自动触发本技能。
+本技能只能由用户主动调用。`x-rail` 或 `x-rail-long` 不得因为任务进入交接阶段而自动触发本技能。
 
 交接文件只能写入当前任务的 `.work-docs/tasks/<task-id>/handoff.md`，不得写入工作区外部的交接目录。`<task-id>` 是完整目录名，形如 `20260928-01-yxj-work-independent-workflow`。
 

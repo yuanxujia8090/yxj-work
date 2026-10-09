@@ -182,7 +182,7 @@
 </p>
 
 <div class="note">
-  <strong>谁在什么时候读哪份文件，是写死的</strong>：入口 <code>x-work</code> 里有一张「阶段 → 参考技能」映射表（见 <a href="#stagetable">第 7 节</a>），
+  <strong>谁在什么时候读哪份文件，是写死的</strong>：入口 <code>x-rail</code> 里有一张「阶段 → 参考技能」映射表（见 <a href="#stagetable">第 7 节</a>），
   进入某阶段就先读该阶段的 playbook，再按表里的分支条件读取参考文件。plan 的实施计划读参考技能，轻量文档读模板；没有第二份清单。
 </div>
 
@@ -201,7 +201,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills"
 # 3) 安装后校验：源仓库与安装目标逐项对照
 bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"</code></pre>
 
-<p>若要更新已安装副本，只覆盖带本仓库写入标记 <code>.x-work-installed</code> 的目录：</p>
+<p>若要更新已安装副本，只覆盖带本仓库写入标记 <code>.x-rail-installed</code> 的目录：</p>
 
 <pre><code>bash scripts/check-repo.sh
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update</code></pre>
@@ -216,9 +216,9 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 <table>
   <thead><tr><th>命令</th><th>用途</th><th>对应场景</th></tr></thead>
   <tbody>
-    <tr><td><code>/x-work &lt;任务说明&gt;</code></td><td>普通任务入口：调研、设计、计划、执行、修复、审查</td><td>本文 5.1 – 5.5</td></tr>
-    <tr><td><code>/x-work-long &lt;长任务说明&gt;</code></td><td>跨阶段、跨会话、过夜或长时间外部运行的任务入口</td><td>本文 5.6 – 5.7</td></tr>
-    <tr><td><code>/x-work-handoff &lt;补充说明&gt;</code></td><td>把当前任务写成交接文件，供新会话继续（只能你主动调用）</td><td>本文 5.7</td></tr>
+    <tr><td><code>/x-rail &lt;任务说明&gt;</code></td><td>普通任务入口：调研、设计、计划、执行、修复、审查</td><td>本文 5.1 – 5.5</td></tr>
+    <tr><td><code>/x-rail-long &lt;长任务说明&gt;</code></td><td>跨阶段、跨会话、过夜或长时间外部运行的任务入口</td><td>本文 5.6 – 5.7</td></tr>
+    <tr><td><code>/x-handoff &lt;补充说明&gt;</code></td><td>把当前任务写成交接文件，供新会话继续（只能你主动调用）</td><td>本文 5.7</td></tr>
   </tbody>
 </table>
 
@@ -231,7 +231,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <p>流程环节变多了，但主线只有一条：先立规矩，再干活，最后拿证据交差。下面是一次正式任务从敲命令到交付的完整路径；每个环节的细节在 <a href="#basics">第 4 节</a> 展开，产物落盘位置在 <a href="#files">第 8 节</a>。</p>
 
-<pre><code>/x-work &lt;任务说明&gt;
+<pre><code>/x-rail &lt;任务说明&gt;
   │
   ├─ L0 快问快答 ──────────────► 直接回答，不建任何目录（到此结束）
   │
@@ -252,12 +252,12 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <ul>
   <li><strong>2–4 是「先立规矩再干活」</strong>：契约没过校验就不广泛读取，更不动目标代码。细节见 <a href="#contract">4.2</a>；轻量文档分支（<a href="#light-document">4.7</a>）骨架最薄，但同样要过契约与状态校验；L0 完全不建目录。</li>
-  <li><strong>4 的启动摘要不是第二套状态源</strong>：九行内容全部读自 contract、state 和最近 checkpoint，只告诉你当前边界和第一步动作；缺字段显示「未记录」，不另建文件。示例见 <code>skills/x-work/playbooks/verification.md</code>。</li>
+  <li><strong>4 的启动摘要不是第二套状态源</strong>：九行内容全部读自 contract、state 和最近 checkpoint，只告诉你当前边界和第一步动作；缺字段显示「未记录」，不另建文件。示例见 <code>skills/x-rail/playbooks/verification.md</code>。</li>
   <li><strong>5–6 是干活的主体</strong>：读哪些文件由入口的「阶段 → 参考技能」表写死（<a href="#stagetable">第 7 节</a>）；每轮读取都要回答一个断言、缩小一个未知项或留下一条证据。验证怎么做见 <a href="#evidence">4.3</a>。</li>
   <li><strong>7–8 是出口</strong>：收尾顺序固定，先落证据再写状态；五条完成判定见 <a href="#donegate">4.4</a>，熔断与恢复规则见 <a href="#breaker">4.5</a>。</li>
 </ul>
 
-<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）就是把第 5 步的阶段串起来：每个阶段各自重复 2–7，决策门放行才进下一阶段，<code>mixed</code> 同样不新增清单。长任务入口 <code>x-work-long</code> 走同一条主线，只多两件事：每个阶段结束追加 <code>audit/checkpoint-&lt;序号&gt;.md</code> 并同步 state，暂停或跨天前先写 <code>handoff.md</code>；恢复时按 <code>index.md → state.md → 最近 checkpoint → handoff.md → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
+<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）就是把第 5 步的阶段串起来：每个阶段各自重复 2–7，决策门放行才进下一阶段，<code>mixed</code> 同样不新增清单。长任务入口 <code>x-rail-long</code> 走同一条主线，只多两件事：每个阶段结束追加 <code>audit/checkpoint-&lt;序号&gt;.md</code> 并同步 state，暂停或跨天前先写 <code>handoff.md</code>；恢复时按 <code>index.md → state.md → 最近 checkpoint → handoff.md → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
 
 <div class="note rule">
   <strong>判断流程走到哪，只看两个文件</strong>：<code>state.md</code> 的 <code>stage</code> 和 <code>status</code> 回答「现在在哪一步、还能不能继续」；<code>contract.md</code> 的 <code>Acceptance</code> 回答「做到什么才算完」。对话记忆不算数，文件里没有就是没发生。
@@ -297,10 +297,10 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <p>动代码前先跑结构校验（只查字段、枚举和策略关系，不给文字打分；历史契约没有 <code>Acceptance</code> 时直接放行，不强制迁移）：</p>
 
-<pre><code>bash skills/x-work/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;        # 默认 --ready
-bash skills/x-work/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --draft  # 确认门未完成时只能起草
-bash skills/x-work/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --seal    # 固化契约快照到 audit/contract-r&lt;N&gt;.md
-bash skills/x-work/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --locked  # 交付前复核历史快照与变更记录</code></pre>
+<pre><code>bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;        # 默认 --ready
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --draft  # 确认门未完成时只能起草
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --seal    # 固化契约快照到 audit/contract-r&lt;N&gt;.md
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --locked  # 交付前复核历史快照与变更记录</code></pre>
 
 <p>中/高风险契约在确认门是 <code>pending</code>（还没拍板）时，只有 <code>--draft</code> 能通过；契约字段必须从第 1 列写成 <code>key: value</code>，不能写成 Markdown 列表项 <code>- key: value</code>，检查器会直接提示格式错误。契约实质变化必须提升 <code>contract_revision</code> 并在 <code>Contract Changes</code> 记录原因、批准人和受影响证据，改了内容但没升版本号会被 <code>--seal</code>/<code>--locked</code> 拦下。</p>
 
@@ -360,8 +360,8 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <h3 id="light-document">4.7 轻量文档整理</h3>
 
-<p>材料和目标已确定的测试用例、检查清单、变更说明默认 L1 / <code>plan</code>，不新增阶段。用 <code>skills/x-work/templates/document-task.md</code> 填最小契约和状态，运行校验器后读固定主材料，立即写初稿，再只为具体缺口补读。默认不研究校验器源码，不加载实施计划的「做可重复工具」参考技能。</p>
-<pre>/x-work 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下</pre>
+<p>材料和目标已确定的测试用例、检查清单、变更说明默认 L1 / <code>plan</code>，不新增阶段。用 <code>skills/x-rail/templates/document-task.md</code> 填最小契约和状态，运行校验器后读固定主材料，立即写初稿，再只为具体缺口补读。默认不研究校验器源码，不加载实施计划的「做可重复工具」参考技能。</p>
+<pre>/x-rail 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下</pre>
 <p>「我要测试下」表示用户拿用例去测，不等于要求 Agent 代跑。默认不搭环境、不执行测试、不全量审查、不检查发布；未确定功能仍走 design，实施规格仍走原计划分支，实际执行另进 exec。</p>
 <ul>
   <li><strong>6 次资料工具调用</strong>检查点：材料足够就写初稿，不足先写已有条目与具体缺口。批量读取按实际动作计数，不能靠包裹命令绕过。</li>
@@ -383,9 +383,9 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
     <dt>怎么敲</dt>
     <dd>
-<pre><code>/x-work 调研 &lt;产品/技术&gt;：现在有哪些替代方案，各自的能力边界和真实使用成本，给出是否值得投入的判断</code></pre>
+<pre><code>/x-rail 调研 &lt;产品/技术&gt;：现在有哪些替代方案，各自的能力边界和真实使用成本，给出是否值得投入的判断</code></pre>
       想强制收敛到结论，就把停止条件一起写进去：
-<pre><code>/x-work 调研 X。要求：隐含假设显式列出，结论必须能落到 proceed / do_not_build，每条附证据出处</code></pre>
+<pre><code>/x-rail 调研 X。要求：隐含假设显式列出，结论必须能落到 proceed / do_not_build，每条附证据出处</code></pre>
     </dd>
 
     <dt>内部走什么</dt>
@@ -411,7 +411,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
     <dt>怎么敲</dt>
     <dd>
-<pre><code>/x-work 评估需求：&lt;需求描述&gt;。产出：（1）该需求解决的真实问题，不做会怎样；
+<pre><code>/x-rail 评估需求：&lt;需求描述&gt;。产出：（1）该需求解决的真实问题，不做会怎样；
 （2）最小可用范围 vs 完整范围；（3）涉及的不可逆决策；（4）有证据支撑的结论：
 proceed / design_only / do_not_build。不要改代码。</code></pre>
       需要更强的对抗时点名它：
@@ -441,7 +441,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
     <dt>怎么敲</dt>
     <dd>
-<pre><code>/x-work 设计 &lt;要做的东西&gt; 的实现方案：模块边界、接口、数据流、验证方式和不可逆决策</code></pre>
+<pre><code>/x-rail 设计 &lt;要做的东西&gt; 的实现方案：模块边界、接口、数据流、验证方式和不可逆决策</code></pre>
       想先探形状，再定稿：
 <pre><code>/x-prototype 用一次性脚本验证「状态这样设计是否够用」，结论写回设计</code></pre>
       方案有分叉、想同时看多个答案：
@@ -471,11 +471,11 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
     <dt>怎么敲</dt>
     <dd>
-<pre><code>/x-work 按上面的设计实现 &lt;功能名&gt;。范围：&lt;文件/模块&gt;，其他文件不动</code></pre>
+<pre><code>/x-rail 按上面的设计实现 &lt;功能名&gt;。范围：&lt;文件/模块&gt;，其他文件不动</code></pre>
       需求明确、改动很小，可以一句走完全程：
-<pre><code>/x-work 给 &lt;模块&gt; 加上 &lt;行为&gt;，跑通现有测试，给出改动前后的对比输出</code></pre>
+<pre><code>/x-rail 给 &lt;模块&gt; 加上 &lt;行为&gt;，跑通现有测试，给出改动前后的对比输出</code></pre>
       想在同一任务里连着走完：
-<pre><code>/x-work 实现 &lt;功能&gt;：先计划、再执行、最后只读审查一遍</code></pre>
+<pre><code>/x-rail 实现 &lt;功能&gt;：先计划、再执行、最后只读审查一遍</code></pre>
     </dd>
 
     <dt>内部走什么</dt>
@@ -504,9 +504,9 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
     <dt>怎么敲</dt>
     <dd>
-<pre><code>/x-work 定位：&lt;症状描述&gt;。给出最小复现、受影响范围和证据，先不改代码</code></pre>
+<pre><code>/x-rail 定位：&lt;症状描述&gt;。给出最小复现、受影响范围和证据，先不改代码</code></pre>
       复现稳定后再修：
-<pre><code>/x-work 修复 &lt;症状&gt;：先复现，追根因，最小改动，跑回归，给出修复前后的对比输出</code></pre>
+<pre><code>/x-rail 修复 &lt;症状&gt;：先复现，追根因，最小改动，跑回归，给出修复前后的对比输出</code></pre>
       想知道「这块代码改动会波及哪里」时点名：
 <pre><code>/x-blast-radius 我要改 &lt;函数/模块&gt;，列出可能被影响的其他地方，并用真实运行证明安全前提</code></pre>
     </dd>
@@ -530,15 +530,15 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="scenario" id="s6">
-  <h3>5.6 长任务执行 <span class="tag native">入口 x-work-long</span></h3>
+  <h3>5.6 长任务执行 <span class="tag native">入口 x-rail-long</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
-    <dd>满足以下任一条就进长任务（否则用普通 <code>/x-work</code>）：跨两个以上阶段、跨会话或过夜、多个子任务、长时间外部运行（等训练、等构建、等第三方批处理）、研究→决策→开发的交接、证据量明显超出普通阈值。</dd>
+    <dd>满足以下任一条就进长任务（否则用普通 <code>/x-rail</code>）：跨两个以上阶段、跨会话或过夜、多个子任务、长时间外部运行（等训练、等构建、等第三方批处理）、研究→决策→开发的交接、证据量明显超出普通阈值。</dd>
 
     <dt>怎么敲</dt>
     <dd>
-<pre><code>/x-work-long &lt;长任务说明&gt;。预算：400 次工具调用或 8 小时；每个阶段结束写 checkpoint</code></pre>
+<pre><code>/x-rail-long &lt;长任务说明&gt;。预算：400 次工具调用或 8 小时；每个阶段结束写 checkpoint</code></pre>
       建议把「分几个阶段、每阶段验证什么」写清楚，后面的 checkpoint 就按这个切。
     </dd>
 
@@ -562,7 +562,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="scenario" id="s7">
-  <h3>5.7 长任务次日状态检查（恢复） <span class="tag native">恢复流程 + x-work-handoff</span></h3>
+  <h3>5.7 长任务次日状态检查（恢复） <span class="tag native">恢复流程 + x-handoff</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -570,9 +570,9 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
     <dt>怎么敲</dt>
     <dd>
-<pre><code>/x-work-long 继续 &lt;task-id&gt;：先给恢复摘要（当前状态、已完成、下一步第一动作、阻塞、证据位置），再执行下一步</code></pre>
+<pre><code>/x-rail-long 继续 &lt;task-id&gt;：先给恢复摘要（当前状态、已完成、下一步第一动作、阻塞、证据位置），再执行下一步</code></pre>
       不确定 task-id 时直接问：
-<pre><code>/x-work-long 检查 &lt;项目目录&gt;/.work-docs 下有哪些未完成任务，每个给一行状态摘要</code></pre>
+<pre><code>/x-rail-long 检查 &lt;项目目录&gt;/.work-docs 下有哪些未完成任务，每个给一行状态摘要</code></pre>
     </dd>
 
     <dt>内部走什么</dt>
@@ -583,7 +583,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
     <dt>想主动补一份交接时</dt>
     <dd>
-      你点名 <code>/x-work-handoff</code>（入口不会自动触发它）。它只写当前任务的 <code>.work-docs/tasks/&lt;task-id&gt;/handoff.md</code>，不得写到工作区外。步骤：读 <code>state.md</code>、<code>contract.md</code>、最近 checkpoint 和 evidence → 检查每条证据的 <code>run_at</code> 是否不早于相关文件的 <code>last_edit_at</code>，新鲜的就直接引用，过期的重跑并记真实结果 → 更新 <code>handoff.md</code>，内容含背景、<code>done_when</code>、当前阶段与状态、验证输出、已完成、下一步第一动作、卡点与已尝试策略、约束、待拍板、关键文件和证据路径 → 熔断过的任务还要写 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code> 和禁止重复的策略指纹 → 自检「新会话只读这份文件能否直接执行下一步」。
+      你点名 <code>/x-handoff</code>（入口不会自动触发它）。它只写当前任务的 <code>.work-docs/tasks/&lt;task-id&gt;/handoff.md</code>，不得写到工作区外。步骤：读 <code>state.md</code>、<code>contract.md</code>、最近 checkpoint 和 evidence → 检查每条证据的 <code>run_at</code> 是否不早于相关文件的 <code>last_edit_at</code>，新鲜的就直接引用，过期的重跑并记真实结果 → 更新 <code>handoff.md</code>，内容含背景、<code>done_when</code>、当前阶段与状态、验证输出、已完成、下一步第一动作、卡点与已尝试策略、约束、待拍板、关键文件和证据路径 → 熔断过的任务还要写 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code> 和禁止重复的策略指纹 → 自检「新会话只读这份文件能否直接执行下一步」。
     </dd>
 
     <dt>产物落在哪</dt>
@@ -604,21 +604,21 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
   <h3>6.1 三个入口技能</h3>
 
   <div class="skill">
-    <div class="name">x-work</div>
+    <div class="name">x-rail</div>
     <div class="what">普通任务入口。支持 fast-answer、investigate、research、design、plan、exec、bugfix、review、ops、mixed 十种路由。契约格式、状态字段、熔断规则、完成判定和文件边界都由它定义。</div>
-    <div class="when">用：<code>/x-work &lt;任务说明&gt;</code>。绝大多数日常任务从这里进。</div>
+    <div class="when">用：<code>/x-rail &lt;任务说明&gt;</code>。绝大多数日常任务从这里进。</div>
   </div>
 
   <div class="skill">
-    <div class="name">x-work-long</div>
+    <div class="name">x-rail-long</div>
     <div class="what">跨阶段、跨会话、过夜或长时间外部运行的任务入口。在普通规则之外增加 L3 契约、阶段 checkpoint、次日恢复摘要、400 次 / 8 小时总预算。</div>
-    <div class="when">用：<code>/x-work-long &lt;长任务说明&gt;</code>。进入判据见 5.6。</div>
+    <div class="when">用：<code>/x-rail-long &lt;长任务说明&gt;</code>。进入判据见 5.6。</div>
   </div>
 
   <div class="skill">
-    <div class="name">x-work-handoff</div>
+    <div class="name">x-handoff</div>
     <div class="what">把当前任务写成 <code>handoff.md</code>，作为下一个会话的恢复入口，并保证里面的「下一会话第一步」与 <code>next_action</code> 第一条一致。</div>
-    <div class="when">用：<code>/x-work-handoff &lt;补充说明&gt;</code>。要收工、过夜、或把任务交给下一个会话接着干时。入口不得自动触发它，只能你点名。</div>
+    <div class="when">用：<code>/x-handoff &lt;补充说明&gt;</code>。要收工、过夜、或把任务交给下一个会话接着干时。入口不得自动触发它，只能你点名。</div>
   </div>
 </div>
 
@@ -828,7 +828,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 <h2 id="stagetable">7. 阶段 → 参考技能全表</h2>
 
-<p>这是入口 <code>x-work</code> 里那张映射表的完整复制，也是「哪个阶段读哪些文件」的唯一事实源。每进入一个阶段：先读 playbook，再读表里的技能文件，最后按 playbook 写产物和验证证据。同一技能在多行出现时只读一次。</p>
+<p>这是入口 <code>x-rail</code> 里那张映射表的完整复制，也是「哪个阶段读哪些文件」的唯一事实源。每进入一个阶段：先读 playbook，再读表里的技能文件，最后按 playbook 写产物和验证证据。同一技能在多行出现时只读一次。</p>
 
 <table>
   <thead><tr><th>阶段</th><th>playbook</th><th>主动读取的参考技能</th></tr></thead>
@@ -959,13 +959,13 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 <h2 id="cmd">10. 常用命令</h2>
 
 <h3>日常入口</h3>
-<pre><code>/x-work &lt;任务说明&gt;                      # 普通任务
-/x-work-long &lt;长任务说明&gt;                 # 长任务
-/x-work-handoff &lt;补充说明&gt;                # 主动写交接
-/x-work 调研 &lt;对象&gt;：&lt;要回答的问题&gt;        # 产品调研
-/x-work 定位：&lt;症状&gt;                      # 问题定位（先不改代码）
-/x-work 修复 &lt;症状&gt;：复现 → 根因 → 最小修复 → 回归
-/x-work-long 继续 &lt;task-id&gt;：先给恢复摘要，再执行下一步</code></pre>
+<pre><code>/x-rail &lt;任务说明&gt;                      # 普通任务
+/x-rail-long &lt;长任务说明&gt;                 # 长任务
+/x-handoff &lt;补充说明&gt;                # 主动写交接
+/x-rail 调研 &lt;对象&gt;：&lt;要回答的问题&gt;        # 产品调研
+/x-rail 定位：&lt;症状&gt;                      # 问题定位（先不改代码）
+/x-rail 修复 &lt;症状&gt;：复现 → 根因 → 最小修复 → 回归
+/x-rail-long 继续 &lt;task-id&gt;：先给恢复摘要，再执行下一步</code></pre>
 
 <h3>点名辅助技能</h3>
 <pre><code>/x-how &lt;模块&gt;            # 这块怎么跑起来的
@@ -987,8 +987,8 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update   # 更新已�
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link     # 软链安装/重建（开发模式）
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 软链卸载（只删本仓库链接）
 bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"   # 源与安装目标对照
-bash skills/x-work/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;   # 契约结构校验（动代码前必跑；--draft/--ready/--seal/--locked）
-bash skills/x-work/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 校验状态文件（写 status: done 前必须运行并通过）
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;   # 契约结构校验（动代码前必跑；--draft/--ready/--seal/--locked）
+bash skills/x-rail/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 校验状态文件（写 status: done 前必须运行并通过）
 bash scripts/test-contract.sh                                 # 契约校验器回归
 bash scripts/test-fixtures.sh                                 # 夹具回归
 bash scripts/test-v2-lifecycle.sh                             # v2 完成门生命周期回归
@@ -1037,17 +1037,17 @@ bash scripts/test-flow.sh                                      # 流程回归</c
 <table>
   <thead><tr><th>我想做的事</th><th>敲什么</th><th>产物在哪</th></tr></thead>
   <tbody>
-    <tr><td>问一个简单事实</td><td><code>/x-work &lt;问题&gt;</code>（走 L0 快问快答）</td><td>不建目录，直接回答</td></tr>
-    <tr><td>调研产品 / 技术选型</td><td><code>/x-work 调研 …</code></td><td><code>outputs/</code> 报告 + 决策门；台账在 <code>evidence/</code></td></tr>
-    <tr><td>评估一个需求该不该做</td><td><code>/x-work 评估需求：…</code> + <code>/x-interrogate</code></td><td><code>outputs/</code> 评估报告；决策在 <code>audit/</code></td></tr>
-    <tr><td>设计方案（不改代码）</td><td><code>/x-work 设计 …</code></td><td><code>outputs/</code> 设计文档</td></tr>
-    <tr><td>实现功能</td><td><code>/x-work 实现 …</code></td><td>计划与审查进 <code>outputs/</code>，验证输出进 <code>evidence/</code></td></tr>
-    <tr><td>查一个问题</td><td><code>/x-work 定位：…</code></td><td>证据在 <code>evidence/</code>，结论在 <code>audit/</code></td></tr>
-    <tr><td>修一个 bug</td><td><code>/x-work 修复 …：复现 → 根因 → 最小修复 → 回归</code></td><td>修复前后对比输出在 <code>evidence/</code></td></tr>
-    <tr><td>跑长任务 / 过夜</td><td><code>/x-work-long …</code></td><td>多出 <code>audit/checkpoint-*.md</code> 与 <code>handoff.md</code></td></tr>
-    <tr><td>第二天接着干</td><td><code>/x-work-long 继续 &lt;task-id&gt;</code></td><td>先读 index → state → checkpoint → handoff → evidence</td></tr>
-    <tr><td>只想知道任务到哪了</td><td><code>/x-work-long 检查 &lt;目录&gt;/.work-docs</code></td><td>每个任务一行状态摘要</td></tr>
-    <tr><td>把任务交出去</td><td><code>/x-work-handoff</code></td><td><code>handoff.md</code></td></tr>
+    <tr><td>问一个简单事实</td><td><code>/x-rail &lt;问题&gt;</code>（走 L0 快问快答）</td><td>不建目录，直接回答</td></tr>
+    <tr><td>调研产品 / 技术选型</td><td><code>/x-rail 调研 …</code></td><td><code>outputs/</code> 报告 + 决策门；台账在 <code>evidence/</code></td></tr>
+    <tr><td>评估一个需求该不该做</td><td><code>/x-rail 评估需求：…</code> + <code>/x-interrogate</code></td><td><code>outputs/</code> 评估报告；决策在 <code>audit/</code></td></tr>
+    <tr><td>设计方案（不改代码）</td><td><code>/x-rail 设计 …</code></td><td><code>outputs/</code> 设计文档</td></tr>
+    <tr><td>实现功能</td><td><code>/x-rail 实现 …</code></td><td>计划与审查进 <code>outputs/</code>，验证输出进 <code>evidence/</code></td></tr>
+    <tr><td>查一个问题</td><td><code>/x-rail 定位：…</code></td><td>证据在 <code>evidence/</code>，结论在 <code>audit/</code></td></tr>
+    <tr><td>修一个 bug</td><td><code>/x-rail 修复 …：复现 → 根因 → 最小修复 → 回归</code></td><td>修复前后对比输出在 <code>evidence/</code></td></tr>
+    <tr><td>跑长任务 / 过夜</td><td><code>/x-rail-long …</code></td><td>多出 <code>audit/checkpoint-*.md</code> 与 <code>handoff.md</code></td></tr>
+    <tr><td>第二天接着干</td><td><code>/x-rail-long 继续 &lt;task-id&gt;</code></td><td>先读 index → state → checkpoint → handoff → evidence</td></tr>
+    <tr><td>只想知道任务到哪了</td><td><code>/x-rail-long 检查 &lt;目录&gt;/.work-docs</code></td><td>每个任务一行状态摘要</td></tr>
+    <tr><td>把任务交出去</td><td><code>/x-handoff</code></td><td><code>handoff.md</code></td></tr>
   </tbody>
 </table>
 
@@ -1057,7 +1057,7 @@ bash scripts/test-flow.sh                                      # 流程回归</c
 
 <footer>
   由 x-rail 源仓库的 <code>skills/</code>、<code>scripts/</code>、<code>docs/</code> 现状生成。文件位置：<code>/Users/yuanxj/Documents/github/x-rail/docs/usage-guide.html</code>。
-  规则若与仓库文件不一致，以 <code>skills/x-work/SKILL.md</code>、<code>skills/x-work-long/SKILL.md</code> 和 <code>docs/architecture.md</code> 为准。
+  规则若与仓库文件不一致，以 <code>skills/x-rail/SKILL.md</code>、<code>skills/x-rail-long/SKILL.md</code> 和 <code>docs/architecture.md</code> 为准。
 </footer>
 
 </main>

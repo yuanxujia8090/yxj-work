@@ -8,7 +8,7 @@
 当前阶段：exec；已通过契约校验，按计划实施；状态 in_progress
 任务：补充阶段入口和验证规范；done_when 为 required 验收全部有新鲜证据
 风险：medium；会改工作流文档和检查脚本；review_policy=user-confirm（交付需只读审查证据）
-允许改动：skills/x-work/**、scripts/test-flow.sh；不改业务代码和历史任务
+允许改动：skills/x-rail/**、scripts/test-flow.sh；不改业务代码和历史任务
 禁止动作：不推送、不发布、不修改项目外安装副本；交付前需完成只读审查
 必过验收：A1/A2 已通过；A3/A4/A5 未运行
 已有证据：evidence/flow.txt 支持 A1；尚无运行层证据

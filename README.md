@@ -6,9 +6,9 @@
 
 ## 包含内容
 
-- `x-work`：普通任务入口，支持 fast-answer、investigate、research、design、plan、exec、bugfix、review、ops、mixed。
-- `x-work-long`：跨阶段、跨会话和长时间任务入口。
-- `x-work-handoff`：在 `.work-docs/tasks/<task-id>/handoff.md` 写入可恢复交接。
+- `x-rail`：普通任务入口，支持 fast-answer、investigate、research、design、plan、exec、bugfix、review、ops、mixed。
+- `x-rail-long`：跨阶段、跨会话和长时间任务入口。
+- `x-handoff`：在 `.work-docs/tasks/<task-id>/handoff.md` 写入可恢复交接。
 
 `scripts/runtime-skills.txt` 是运行时清单：`install.sh` 与 `check-workflow.sh` 都认它列出的目录。清单包含 3 个入口技能与 30 个辅助技能（清单与用途见 `skills/README.md`），全部随安装一起复制到同一个技能目录。
 
@@ -25,7 +25,7 @@ bash scripts/check-repo.sh
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills"
 ```
 
-安装脚本默认拒绝覆盖已有目录。仅当目标目录包含本仓库写入的 `.x-work-installed` 标记时，才允许使用：
+安装脚本默认拒绝覆盖已有目录。仅当目标目录包含本仓库写入的 `.x-rail-installed` 标记时，才允许使用：
 
 ```bash
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update
@@ -55,12 +55,12 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 安装后调用：
 
 ```text
-/x-work <任务说明>
-/x-work-long <长任务说明>
-/x-work-handoff <交接补充说明>
+/x-rail <任务说明>
+/x-rail-long <长任务说明>
+/x-handoff <交接补充说明>
 ```
 
-辅助技能不能由模型自动唤起，两种用法：入口技能在对应阶段主动读取（映射见 `skills/x-work/SKILL.md` 的阶段表），或用户主动点名，例如 `/x-why`、`/x-arena`。普通任务按开发、排查修复或调研链路进入阶段；正式阶段先创建任务骨架和最小契约，并通过 `check-contract.sh` 后再广泛读取；长任务跨会话前必须更新 checkpoint 和 handoff，下一会话先读记录再继续。
+辅助技能不能由模型自动唤起，两种用法：入口技能在对应阶段主动读取（映射见 `skills/x-rail/SKILL.md` 的阶段表），或用户主动点名，例如 `/x-why`、`/x-arena`。普通任务按开发、排查修复或调研链路进入阶段；正式阶段先创建任务骨架和最小契约，并通过 `check-contract.sh` 后再广泛读取；长任务跨会话前必须更新 checkpoint 和 handoff，下一会话先读记录再继续。
 
 按用户目标选阶段的简表见 [skills 目录说明](skills/README.md#阶段选择表)。九个正式阶段的执行说明均列出适用场景、输入、输出、禁止范围和停止条件。正式阶段在契约校验后、广泛读取前显示启动摘要：阶段、任务、风险、允许改动、禁止动作、必过验收、已有证据、阻塞和下一步。恢复已有任务沿用同一摘要；缺字段显示“未记录”，不另建状态源。
 
@@ -87,11 +87,11 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 材料和目标已确定时，测试用例、检查清单和变更说明默认走 L1 / plan 的轻量文档分支，不新增阶段。例如：
 
 ```text
-/x-work 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下
-/x-work 根据这三个已合并提交整理更新说明，不执行测试
+/x-rail 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下
+/x-rail 根据这三个已合并提交整理更新说明，不执行测试
 ```
 
-流程：按 `skills/x-work/templates/document-task.md` 填最小契约与状态 → 校验 → 读固定主材料 → 写初稿 → 只为具体缺口补读 → 核对覆盖与可理解性 → 交付。默认不搭建环境、不代跑测试、不做全量代码审查或发布检查；「我要测试下」是用户拿用例去测，不是授权代跑。未确定功能仍走 design，实施计划保留原 plan 分支，实际执行进入 exec。
+流程：按 `skills/x-rail/templates/document-task.md` 填最小契约与状态 → 校验 → 读固定主材料 → 写初稿 → 只为具体缺口补读 → 核对覆盖与可理解性 → 交付。默认不搭建环境、不代跑测试、不做全量代码审查或发布检查；「我要测试下」是用户拿用例去测，不是授权代跑。未确定功能仍走 design，实施计划保留原 plan 分支，实际执行进入 exec。
 
 主材料原则上在 **6 次资料工具调用**检查点前形成初稿或写明具体缺口；到 **20 次总工具调用**必须判断是否交付或阻塞。按实际动作计数，批量读取不能绕过。仅可选细节缺失可说明后交付；必过项不能降级，部分初稿不能标 done。单纯读取或查询环境不算文档进展。当前工作区合并只作为执行前提，文档依据固定提交；若纳入未提交差异，先明确范围。
 
@@ -106,18 +106,18 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 卸载（�
 执行前运行：
 
 ```bash
-bash skills/x-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/<task-id>
 ```
 
 `check-contract.sh` 只检查契约结构、枚举、验收条件和风险策略关系，不判断自然语言质量。字段必须从第 1 列写成 `key: value`，写成 Markdown 列表项 `- key: value` 会被直接拦下（提示 `fields must use key: value at column 1`）。默认模式为 `--ready`；中/高风险契约的确认门未完成时只允许 `--draft`；`--seal` 把契约快照固化到 `audit/contract-r<N>.md`，`--locked` 用于交付前复核历史快照与变更记录齐全。历史契约没有 `Acceptance` 时保持兼容，不强制迁移。
 
 `state.md` 是按行记录的状态文件：除了基本字段，还要记录 `calls_since_progress`、`last_progress_at`、`budget: used/limit`、`strategy_fingerprints`。新格式任务的 `contract_revision` 和 `contract_fingerprint` 必须与契约一致，启用新版完成门时增加 `evidence_schema: 2`；`required_verification` 必须引用 `A1` 等验收条件编号；标记 done 时必须覆盖并通过所有 `required: yes` 条件。每条 evidence 都记录 `acceptance`、`command`、`run_at`、`result` 和相关文件的 `last_edit_at`，且对应证据文件必须存在；运行时间早于文件修改时间的证据不能支撑交付。历史已完成的 v2 state 不带 `evidence_schema: 2` 时保持兼容读取。
 
-`check-state.sh`（随技能安装到 `skills/x-work/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；新契约的每条 required 验收必须绑定完整 evidence（包含 `acceptance`、`command`、`run_at`、`result`、`last_edit_at`），中/高风险完成还必须有匹配 `review_policy` 的 `review_evidence`。`tests/fixtures/`、`test-fixtures.sh` 和 `test-v2-lifecycle.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值、阻塞字段缺失、新契约关联和完成门失败场景。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
+`check-state.sh`（随技能安装到 `skills/x-rail/scripts/`）可验证状态文件，写 `status: done` 前必须运行并通过；新契约的每条 required 验收必须绑定完整 evidence（包含 `acceptance`、`command`、`run_at`、`result`、`last_edit_at`），中/高风险完成还必须有匹配 `review_policy` 的 `review_evidence`。`tests/fixtures/`、`test-fixtures.sh` 和 `test-v2-lifecycle.sh` 覆盖合法完成、未运行、过期证据、无进展超阈值、阻塞字段缺失、新契约关联和完成门失败场景。关键词或 grep 检查只属于 `static`（静态）证据，不能单独证明行为生效。
 
 轻量文档的边界和初稿检查点见上一节；其他正式阶段采用三条效率规则：按断言驱动读取（先列断言，再定位实现符号和局部代码）；模型请求首次超时后先写 `audit/` 恢复摘要，不原样重试，并在宿主允许时降低思考级别或切换更快模型；低风险、只读、`review_policy: auto` 的审查使用轻量 review，只保留验收所需的 contract、evidence、state 和校验脚本。
 
-验证要核对用户或下游能观察到的结果。代码、接口、流程、运行和交付五类观察面与现有 `layer` 枚举分开；在 `outcome` 和 `verification` 中写清观察对象、预期结果、验证动作即可。统一解释、正反例和启动摘要示例见 [验证说明](skills/x-work/playbooks/verification.md)。
+验证要核对用户或下游能观察到的结果。代码、接口、流程、运行和交付五类观察面与现有 `layer` 枚举分开；在 `outcome` 和 `verification` 中写清观察对象、预期结果、验证动作即可。统一解释、正反例和启动摘要示例见 [验证说明](skills/x-rail/playbooks/verification.md)。
 
 仓库检查还会核对全部技能的头部名称、单行描述和 `disable-model-invocation: true`（默认不由模型自动唤起）。检查器采用“不认识就拒绝”：`description` 必须能解析成非空字符串的单行标量，`description: ""`、`[]`、`false`、`>-`、纯数字、未闭合引号和 `key : value` 这类非规范键写法都会被拦下（宿主加载器遇到它们会静默丢弃整个技能）。可单独运行 `bash scripts/check-skill-metadata.sh "$PWD"` 和 `bash scripts/test-skill-metadata.sh`；后者用有效及错误样例（24 例）验证拦截能力，夹具默认写在 `tests/tmp/skill-metadata`，已由 `.gitignore` 忽略，可用 `YXJ_TEST_ROOT` 改位置，不改技能源文件。
 
@@ -143,7 +143,7 @@ bash skills/x-work/scripts/check-contract.sh .work-docs/tasks/<task-id>
 
 ## 更新与卸载
 
-更新前从源仓库运行 `check-repo.sh`，再用 `install.sh --update`。卸载只删除本仓库安装、且仍带有 `.x-work-installed` 标记的目录（`scripts/runtime-skills.txt` 列出的全部目录）；不要删除任务目录或用户文件。
+更新前从源仓库运行 `check-repo.sh`，再用 `install.sh --update`。卸载只删除本仓库安装、且仍带有 `.x-rail-installed` 标记的目录（`scripts/runtime-skills.txt` 列出的全部目录）；不要删除任务目录或用户文件。
 
 ## 验收
 

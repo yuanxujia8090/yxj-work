@@ -35,7 +35,7 @@ while IFS= read -r skill; do
     continue
   fi
   [[ -d "$dst" ]] || fail "missing installed $skill"
-  marker="$dst/.x-work-installed"
+  marker="$dst/.x-rail-installed"
   [[ -f "$marker" ]] || fail "missing install marker for $skill"
   grep -Fqx "source=$SOURCE" "$marker" || fail "invalid install source for $skill"
 done < <(runtime_skills)
@@ -59,20 +59,20 @@ while IFS= read -r skill; do
   while IFS= read -r -d '' inst; do
     rel="${inst#"$INSTALLED/"}"
     [[ -f "$SOURCE/skills/${rel}" ]] || fail "unexpected installed file: $rel"
-  done < <(find "$INSTALLED/$skill" -type f ! -name '.x-work-installed' -print0)
+  done < <(find "$INSTALLED/$skill" -type f ! -name '.x-rail-installed' -print0)
 done < <(runtime_skills)
 
-# The contract checker is part of the installed x-work runtime.
-[[ -f "$INSTALLED/x-work/scripts/check-contract.sh" ]] || fail 'missing installed contract checker'
+# The contract checker is part of the installed x-rail runtime.
+[[ -f "$INSTALLED/x-rail/scripts/check-contract.sh" ]] || fail 'missing installed contract checker'
 
 # Installed runtime files must preserve the same boundary checks.
 # grep exit code: 0 = violation found, 1 = clean, >=2 = the check itself broke (never a pass).
 rc=0
-grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$INSTALLED/x-work" "$INSTALLED/x-work-long" "$INSTALLED/x-work-handoff" || rc=$?
+grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$INSTALLED/x-rail" "$INSTALLED/x-rail-long" "$INSTALLED/x-handoff" || rc=$?
 [[ "$rc" -le 1 ]] || fail "boundary grep failed (rc=$rc)"
 [[ "$rc" -eq 1 ]] || fail 'forbidden external route in installed runtime skill'
 rc=0
-grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL' "$INSTALLED/x-work" "$INSTALLED/x-work-long" "$INSTALLED/x-work-handoff" || rc=$?
+grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL' "$INSTALLED/x-rail" "$INSTALLED/x-rail-long" "$INSTALLED/x-handoff" || rc=$?
 [[ "$rc" -le 1 ]] || fail "old-name grep failed (rc=$rc)"
 [[ "$rc" -eq 1 ]] || fail 'old runtime dependency in installed skill'
 

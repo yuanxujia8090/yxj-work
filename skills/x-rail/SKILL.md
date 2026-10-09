@@ -1,10 +1,10 @@
 ---
-name: x-work
+name: x-rail
 description: 独立开发、调研、计划、执行、修复和审查入口；正式任务将工作流文件收敛到当前执行目录的 .work-docs。
 disable-model-invocation: true
 ---
 
-# x-work
+# x-rail
 
 每次调用都是一个新任务。命令后的文字是任务说明。源仓库是唯一事实源；本 skill 不读取或修改其他同名/旧 skill。
 
@@ -104,7 +104,7 @@ L1/L2/L3 任务以命令实际执行目录为工作根，创建或复用唯一 `
 
 新任务还必须写 `risk: low|medium|high`、`risk_reason`、`review_policy: auto|user-confirm|full-review`、`contract_revision`、`Decision Gates` 和 `Contract Changes`。任务规模 `L1/L2/L3/long` 与影响风险分开判断：低风险可自动进入执行；中风险默认需要用户确认和只读审查；高风险必须用户确认和完整审查。涉及不可逆操作、花钱、对外发布、生产或需求范围变化时，决策门不能被自动豁免。
 
-开始执行前运行 `skills/x-work/scripts/check-contract.sh <task-dir>`。它检查字段、枚举、验收条件、风险策略和版本结构；不判断文字是否“足够聪明”。`check-state.sh` 继续检查状态和证据，并对新格式任务检查 `contract_revision`、`contract_fingerprint` 与 `required_verification` 的验收编号引用。历史契约没有 `Acceptance` 时保持 v1.x 兼容，不强制迁移。
+开始执行前运行 `skills/x-rail/scripts/check-contract.sh <task-dir>`。它检查字段、枚举、验收条件、风险策略和版本结构；不判断文字是否“足够聪明”。`check-state.sh` 继续检查状态和证据，并对新格式任务检查 `contract_revision`、`contract_fingerprint` 与 `required_verification` 的验收编号引用。历史契约没有 `Acceptance` 时保持 v1.x 兼容，不强制迁移。
 
 契约实质变化必须提升 `contract_revision`，在 `Contract Changes` 中记录旧值、新值、原因、批准人和受影响证据；删除、放宽或降低 required 验收条件必须重新经过对应决策门。
 
