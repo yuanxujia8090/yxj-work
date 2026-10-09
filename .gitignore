@@ -3,3 +3,4 @@
 .vscode
 .tmp-session-analysis/
 .DS_Store
+tests/tmp/
