@@ -1,6 +1,8 @@
 # Ops Playbook
 
-## 阶段入口
+<stage name="ops">
+  <inputs>当前用户授权、contract、state、当前阶段材料。明确只读时不落盘。输入与约束先核对。</inputs>
+  <procedure>## 阶段入口
 
 适用场景：需要整理平台操作、账户配置、凭据设置、部署切换或其他由人完成的步骤。
 输入：平台、账户/项目、操作目标、当前配置、回滚条件和允许范围。
@@ -12,4 +14,7 @@
 2. Record platform, account/project, navigation path, exact field value, expected confirmation and rollback.
 3. Production switch, spending, public publishing, destructive changes and irreversible schema decisions set `status: stopped` pending user action.
 4. Store manuals in `outputs/` and user-returned screenshots or command evidence in `evidence/`.
-5. External failure is `blocked`, not success; distinguish configuration, credentials, permissions, rate limits and service health.
+5. External failure is `blocked`, not success; distinguish configuration, credentials, permissions, rate limits and service health.</procedure>
+  <quality_check>人工步骤、权限、风险、回滚前置明确；不代操作外部平台。</quality_check>
+  <exit>输出新结论或目标产物版本、证据与未覆盖项。严格 check；候选完成走 task.py complete。阻塞保留状态，不放宽必需验收。</exit>
+</stage>

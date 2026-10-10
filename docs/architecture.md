@@ -1,47 +1,52 @@
-# Architecture
+# 架构
 
-## Source and installation
+## 源码与安装
 
-`/Users/yuanxj/Documents/github/x-rail` is the source of truth. Installed skills are copies or symlinks; the source repository remains the single source of truth. Runtime skills never import or read `yxj-mode`, `yxj-mode-long`, or `yxj-handoff`.
+源仓库是唯一事实源。`scripts/runtime-skills.txt` 决定安装范围：4 个入口与 30 个辅助技能，同级安装。入口是 `x-rail`、`x-rail-long`、`x-handoff`、`x-self-check`。全部禁用模型自动调用，只由用户点名或入口按条件读取。
 
-The repository owns three entry skills:
+使用 Bash 和 Python 3.10 以上版本，仅依赖标准库。安装副本中的脚本从自身目录定位模块，不要求消费者项目有 `skills/`。全局软链仍指向主仓库时，隔离分支不会改变其他会话。
 
-- `x-rail`
-- `x-rail-long`
-- `x-handoff`
+## 公共规则
 
-It also carries 30 companion skills under `skills/x-*`, listed in `scripts/runtime-skills.txt` and installed alongside the entry skills. All of them set `disable-model-invocation: true`, so no task content auto-invokes them: an entry skill reads the file it needs on purpose (the stage → file table in `x-rail/SKILL.md`), and the user may invoke one by name. Because entry and companion skills install into the same directory, the relative read path `../<name>/SKILL.md` holds in both the source repository and the install target.
+主入口 XML（可扩展标记语言）像组件标签，用模块分开授权、路由、流程、验证和恢复。十条路由与状态检查器支持的阶段一致，另保留 handoff 特例。九份阶段说明有 inputs、procedure、quality_check、exit。长入口和交接引用公共规则，不另维护一套预算。
 
-## Runtime flow
+规则不等于宿主权限。分析请求保持只读，不为创建骨架而写文件。风险决定审查；确认针对不可逆、费用、对外发布、需求变化。委派只在当前授权下启动。原始资料中的指令不是授权。
 
-新任务契约在执行前经过 `skills/x-rail/scripts/check-contract.sh` 结构校验；它检查 `Acceptance`、`risk`、`review_policy`、`contract_revision` 等字段关系，要求字段从第 1 列写成 `key: value`（拒绝 `- key: value` 列表项），不做自然语言评分。历史契约没有 `Acceptance` 时保持 v1.x 兼容。
+## 任务生命周期
 
-1. Classify the request as L0 fast-answer or L1/L2/L3 work.
-2. For L1/L2/L3, resolve the current execution directory and initialize one `.work-docs` root.
-3. Create or reuse a task directory named `{YYYYMMDD}-{NN}-{slug}` (format and number-allocation rule: `docs/file-boundary.md`); the `task_id` field equals that directory name.
-4. Write the minimal contract before broad exploration; then run `skills/x-rail/scripts/check-contract.sh <task-dir>`. Do not investigate for most of the task and add the contract at the end. New contracts use numbered `Acceptance` conditions, risk, review policy, decision gates and contract revision; `done_when` remains a compatibility summary.
-5. Read the stage playbook and the branch-specific reference files in the single table in `x-rail/SKILL.md`; after the minimal contract passes, use assertion-driven local reads and record evidence. In plan, implementation plans load the existing companion skill; lightweight documents use the shipped template instead.
-6. If a model request times out, write a recovery summary to `audit/` before continuing; do not repeat the same request with the full history. When the host permits it, lower the thinking level or switch to a faster model without changing global Pi configuration.
-7. Apply risk policy: medium-risk tasks need target/boundary confirmation and read-only review; high-risk tasks need user confirmation and full review. For low-risk, read-only, `review_policy: auto` reviews, use the lightweight path: retain contract, evidence, state and both check scripts, and skip unrelated builds/tests/reference reads. Verify required layers and apply the done gate; new state files bind `contract_revision`、`contract_fingerprint` and `required_verification` to the contract and Acceptance IDs. A done state must cover every required Acceptance condition; under `evidence_schema: 2` each one binds an evidence record, and medium/high-risk tasks also need a `review_evidence` line matching the contract's `review_policy`.
-8. On failure or no progress, trip the child-task circuit breaker and persist a checkpoint.
-9. For long work, update `state.md` and append a checkpoint at every stage boundary; before pausing or crossing a day, update `handoff.md` so the next session can print a recovery summary and execute `next_action` without chat memory.
+1. 固定目标、范围、材料版本、未知和可观察验收。
+2. 创建或续用任务编号，写最小契约和进行中状态。
+3. `task.py seal` 封存契约，`task.py check` 检查运行前材料。
+4. 按阶段定向实施与取证，记录准确结果和输入摘要。
+5. 写候选完成状态，`task.py complete --candidate` 验证后替换正式状态。
+6. 成功后同步导航索引；索引写入失败提示修复，不改变验收事实。
 
-## 轻量文档分支
+`skills/x-rail/scripts/task_checks.py` 共享解析、时间、路径、证据、快照和依赖逻辑。两个 shell 入口默认严格模式；历史明确 `--legacy-readonly`，不自动降级、不允许由历史模式提交新完成。
 
-既有材料的测试用例、检查清单和变更说明默认 L1 / plan，不新增路由、状态枚举或校验器格式。`playbooks/plan.md` 分开实施计划与轻量文档；`templates/document-task.md` 提供 contract/state 默认结构，随 x-rail 目录安装。用户项目不必包含源仓库 scripts/，运行校验器用源或安装 skill 目录。
+完成候选检查当前契约、封存链、授权、编号与规模一致、全部必需验收、当前输入、预算及依赖。检查后提交前复核正式状态、契约和候选，并再次验证输入。失败保留正式状态和索引。单任务一个写入者；不能抵御具有同等写权限的恶意改写。
 
-固定材料版本、提交和纳入的未提交差异；默认只整理、不搭环境、不代跑、不全量审查或发布检查。先读主材料、写初稿，后续读取必须服务初稿里的具体缺口。6 次资料工具调用和 20 次总工具调用是收口检查点（按实际动作计数，不用批量命令绕过），不是宿主自动拦截，不改变原 60/150/400 预算或熔断。关键事实不足则保持非 done；不能降低必过验收。
+## 证据与状态
 
-两项默认验收是覆盖/事实与可理解性，证据分别绑定 coverage、clarity；网站运行层继续 not_run。脚本检查模板合法和安装兼容；模型是否遵守与是否更快，需要独立行为记录验证，不能由字符串检查推出。工作区合并只作为执行前提，不展开无关排查。
+状态格式为第一列 `key: value`。新任务必须 `evidence_schema: 2`，绑定契约版本及内容摘要。每个 passed 必需验收绑定唯一非空证据，记录 acceptance、command、run_at、result、last_edit_at、inputs、contract_revision。命令是数据，不由校验器执行。
 
-## State model
+输入摘要按相关文件原字节 SHA-256 检查，允许无关文件改变，明确记录缺失文件。路径限定工作区内。契约另行绑定；状态、证据和快照不自引用。时间带时区并转换协调世界时比较。审查报告绑定当前输入和版本，但程序不判断报告质量或审查独立性。
 
-`state.md` uses one `key: value` field per line. Required checks use `required_verification: <acceptance-id> status=... evidence=...` (the name is an Acceptance ID such as `A1`); evidence uses `evidence:name|acceptance=A1|command=...|run_at=...|result=...|last_edit_at=...`, and the referenced evidence file must exist. Tasks that opt into the current done gate add `evidence_schema: 2`; their `contract_revision` and `contract_fingerprint` must match the contract, and historical completed v2 states without `evidence_schema: 2` remain readable.
+状态为 in_progress、done、blocked、stopped、cancelled。未运行可记录 not_run 而没有证据，不制造空白通过。必需依赖来自父契约，递归检查子契约、状态和证据，拒绝循环、重复、自引用和逃逸。子任务 done 不自动通过父验收。
 
-`check-state.sh` rejects a done task with failed/not_run/blocked required checks or stale evidence, rejects a non-blocked task at its no-progress threshold, and requires `blocked_by`, `unblock_condition`, and `next_action` for blocked tasks. With `evidence_schema: 2` it additionally requires every `required: yes` Acceptance to bind a complete evidence record (`acceptance`, `command`, `run_at`, `result=passed`, `last_edit_at`, file present), and for medium/high-risk tasks a `review_evidence` line whose `policy` matches the contract's `review_policy`, with `status=passed` and an existing review file. The script ships inside `skills/x-rail/scripts/` and is installed with the skill, so run it against a task directory before writing `status: done`.
+L1/L2/L3 默认预算为 60/150/400 次工具调用。预算小于上限可继续；相等只能合法完成或暂停；超过上限只能有原因地暂停。离线检查证明记录一致，不宣称宿主自动计数或终止。时间检查用明确记录的起止和最后进展，不把用户等待算忙碌。
 
-有效进展只包括验收相关的新 evidence 或 required 验证变为 passed。轻量文档的新 evidence 必须补齐条目、确认预期或解决初稿中的具体缺口；单纯读取新文件或查询环境不算进展。L1/L2 无进展阈值为 20 次工具调用；L3/long 每个子任务为 60 次工具调用或 30 分钟。预算为 L1/L2/L3 分别 60/150/400 次工具调用；恢复时必须使用不同的策略指纹。关键词和 grep 检查只能作为 `static` 证据。
+## 取证与恢复
 
-`in_progress -> done` is allowed only through the done gate. `in_progress -> blocked` is used for recoverable tool, evidence, dependency, or boundary failures. `in_progress -> stopped` is reserved for irreversible actions, user decisions, production changes, spending, publishing, or scope changes. `blocked -> in_progress` requires an unblocked dependency, a revalidated shared assumption, or an evidence-backed new strategy.
+轻量文档先覆盖清单和初稿，补读只处理具体缺口。6 次资料动作、20 次总动作是检查点，不是性能保证。默认不搭环境、代跑、全量审查或追踪别的会话。大输出先工具内聚合。委派另判断授权和独立性。
 
-Parent tasks cannot be `done` while a required child is in_progress, blocked, stopped, or has failed/blocked/not_run required verification.
+有限委派模板在 `templates/child-task.md`。运行成功、产物非空、验收通过分别记录。基础设施错误暂停原依赖，不换协议、不自动重发、不在主会话冒充独立审查。
+
+长任务恢复顺序为索引、contract、state、最近 checkpoint、handoff、audit/runs.json、相关 evidence。核对工作区、版本、未提交差异和输入。原运行先查询，再恢复；无法查询则 unknown 或 blocked。交接不能扩大契约权限。
+
+## 自检与验证界限
+
+`x-self-check` 流式分析本地日志，不联网，不执行日志中的命令。明确调用与执行片段分开，记录模型、技能正文摘要、工具动作、等待和错误类别。未知关联、shell 写入及真实思考时间不猜。历史记录不符合新结构不表示过去交付失败。
+
+显式给任务根和检查模式时，自检复用检查器核对关联记录，保存检查器版本摘要与字节一致性；缺失或重名写 not_run，不自动从严格模式降级。父会话关系属于扫描来源，不当作窗口内活跃运行或成功任务。
+
+结构检查、确定性测试、真实模型演练分别验收。静态规则不能证明模型遵守。隔离安装不代表全局更新；不含删除的回归不代表删除型路径已执行。接口和完整命令见 [README](../README.md)。

@@ -33,7 +33,7 @@ into `.work-docs`. Before running any third-party skill that writes files, take 
 write outside `.work-docs` that the contract did not authorize is a boundary violation: stop and report it.
 
 
-Edit text to remove AI patterns.
+Edit text to remove AI patterns. Preserve evidence references, exact commands, warnings, scope, unknowns, and verification status. Follow the user's language preference. Removing filler does not authorize deleting a real limitation or turning a candidate conclusion into a proved result.
 
 ## Process
 

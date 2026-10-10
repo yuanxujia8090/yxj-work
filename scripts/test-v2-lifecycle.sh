@@ -13,13 +13,13 @@ expect_fail() {
 }
 
 expect_fail 'confirmation is pending; only --draft is allowed' \
-  "$CONTRACT_CHECK" "$ROOT/tests/contract-fixtures/medium-confirmation-pending"
-"$CONTRACT_CHECK" "$ROOT/tests/contract-fixtures/medium-confirmation-pending" --draft >/dev/null
-"$STATE_CHECK" "$ROOT/tests/fixtures/v2-review-valid" >/dev/null
+  "$CONTRACT_CHECK" "$ROOT/tests/contract-fixtures/medium-confirmation-pending" --legacy-readonly
+"$CONTRACT_CHECK" "$ROOT/tests/contract-fixtures/medium-confirmation-pending" --draft --legacy-readonly >/dev/null
+"$STATE_CHECK" "$ROOT/tests/fixtures/v2-review-valid" --legacy-readonly >/dev/null
 
 expect_fail 'evidence check missing result' \
-  "$STATE_CHECK" "$ROOT/tests/fixtures/v2-evidence-incomplete"
+  "$STATE_CHECK" "$ROOT/tests/fixtures/v2-evidence-incomplete" --legacy-readonly
 expect_fail 'review evidence required for user-confirm' \
-  "$STATE_CHECK" "$ROOT/tests/fixtures/v2-review-missing"
+  "$STATE_CHECK" "$ROOT/tests/fixtures/v2-review-missing" --legacy-readonly
 
 printf 'v2-lifecycle: passed\n'

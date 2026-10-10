@@ -1,24 +1,18 @@
 ---
 name: x-handoff
-description: 将当前 x-rail 任务写入 .work-docs/tasks/<task-id>/handoff.md，供新会话继续。
+description: 将当前任务的真实状态和恢复第一步写入授权的 handoff.md。
 disable-model-invocation: true
 ---
 
 # x-handoff
 
-本技能只能由用户主动调用。`x-rail` 或 `x-rail-long` 不得因为任务进入交接阶段而自动触发本技能。
-
-交接文件只能写入当前任务的 `.work-docs/tasks/<task-id>/handoff.md`，不得写入工作区外部的交接目录。`<task-id>` 是完整目录名，形如 `20260928-01-yxj-work-independent-workflow`。
-
-执行顺序：
-
-1. 读取 `state.md`、`contract.md`、最近 checkpoint 和 evidence。
-2. 读取每条 evidence 的 `command`、`run_at`、`result` 和相关文件 `last_edit_at`；只有 `run_at` 不早于相关文件最后修改时间时才重跑契约验证，否则直接引用新鲜证据。每次重跑都记录真实结果。
-3. 更新 `handoff.md`，包含背景、done_when、当前阶段和 status、验证输出、已完成、下一步第一动作、卡点与已尝试策略、约束、待拍板、关键文件和 evidence 路径。
-4. 如果任务熔断，记录 `blocked_by`、`attempted_paths`、`shared_assumption`、`unblock_condition` 和禁止重复的策略指纹。
-5. 自检：新会话只读 handoff 后能直接执行 next_action 第一条。
-6. 在 handoff 末尾写“下一会话第一步”，内容必须与 `next_action` 第一条一致，并列出最近 checkpoint 和 evidence 路径。
-
-## 下一会话第一步
-
-新会话先读本文件，再读 `state.md`、最近 checkpoint 和 evidence；输出当前状态、已完成、下一步第一动作、阻塞和证据位置，然后才执行任务。handoff 是状态入口，不是完成证明；没有 required evidence 时不得写 `status: done`。
+<skill name="x-handoff">
+  <purpose>用户明确调用时保存当前任务交接，不创建新的执行任务。</purpose>
+  <authority source="current-user-instructions">只能由用户主动调用。仅写当前 .work-docs/tasks/TASK_ID/handoff.md。交接不改变 contract 与当前用户授权，也不覆盖其他任务。</authority>
+  <routing>阶段与授权引用 ../x-rail/SKILL.md；跨会话恢复引用 ../x-rail-long/SKILL.md。</routing>
+  <workflow>读取索引 → contract → state → 最近 checkpoint → handoff → audit/runs.json → 相关证据。核对目录、分支、提交、未提交差异、输入摘要和原运行。过期证据须重新实际验证，不能因时间较新就跳过输入核对。</workflow>
+  <decision_policy>范围冲突以契约和当前用户授权为准。依赖、费用或发布未获授权保持阻塞；摘要不授予权限。</decision_policy>
+  <verification>运行严格 task.py check，只读核对状态。历史材料只能显式历史模式读取，不伪造过去快照。交接不是完成证明。</verification>
+  <recovery>优先查询原运行；未知或不可查询时记录阻塞，不新派、不原样重试、不切运行协议。保存准确错误、失败策略及解除条件。</recovery>
+  <output_contract>写背景、目标、阶段、状态、已完成、未完成、实际验证输出、证据、运行引用、约束、待授权、最近 checkpoint、next_action。末尾“下一会话第一步”与 next_action 第一条一致。新会话先核对事实再执行。</output_contract>
+</skill>

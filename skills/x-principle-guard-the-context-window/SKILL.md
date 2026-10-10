@@ -1,6 +1,6 @@
 ---
 name: x-principle-guard-the-context-window
-description: "Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to subagents; keep summaries in the main thread, not raw payloads."
+description: "Apply when context is filling up: aggregate or index large outputs in tools, keep bounded summaries, and delegate only with explicit authorization."
 disable-model-invocation: true
 ---
 
@@ -38,6 +38,6 @@ The context window is finite and non-renewable within a session. Every token sho
 **Why:** Context overflow degrades reasoning quality, creates compression artifacts, and halts progress.
 
 **Pattern:**
-- **Isolate large payloads.** Route verbose outputs, screenshots, and large documents to subagents. The main context gets summaries, not raw data.
+- **Isolate large payloads.** Aggregate, filter, or index verbose output in tools. Keep bounded summaries in the main context. Large context alone does not authorize delegation; check current user permission and task independence first.
 - **Keep frequently used content inline.** Templates and references used on every invocation belong in the skill file, not in separate files that cost a read each time.
 - **Size phases and cap scope.** Limit files per phase, set turn budgets, account for mechanism costs.

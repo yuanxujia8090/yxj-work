@@ -50,7 +50,7 @@ while IFS= read -r skill; do
     dst="$INSTALLED/${rel#skills/}"
     [[ -f "$dst" ]] || fail "missing installed file $rel"
     cmp -s "$src" "$dst" || fail "installed content differs: $rel"
-  done < <(find "$SOURCE/skills/$skill" -type f -print0)
+  done < <(find "$SOURCE/skills/$skill" -type f ! -path '*/__pycache__/*' ! -name '*.pyc' -print0)
 done < <(runtime_skills)
 
 # Reverse check: a copied skill must not contain files absent from the source tree.
@@ -59,11 +59,13 @@ while IFS= read -r skill; do
   while IFS= read -r -d '' inst; do
     rel="${inst#"$INSTALLED/"}"
     [[ -f "$SOURCE/skills/${rel}" ]] || fail "unexpected installed file: $rel"
-  done < <(find "$INSTALLED/$skill" -type f ! -name '.x-rail-installed' -print0)
+  done < <(find "$INSTALLED/$skill" -type f ! -path '*/__pycache__/*' ! -name '*.pyc' ! -name '.x-rail-installed' -print0)
 done < <(runtime_skills)
 
 # The contract checker is part of the installed x-rail runtime.
-[[ -f "$INSTALLED/x-rail/scripts/check-contract.sh" ]] || fail 'missing installed contract checker'
+for file in x-rail/scripts/check-contract.sh x-rail/scripts/task.py x-rail/scripts/task_checks.py x-self-check/scripts/analyze_sessions.py; do
+  [[ -f "$INSTALLED/$file" ]] || fail "missing installed runtime file: $file"
+done
 
 # Installed runtime files must preserve the same boundary checks.
 # The trailing slash on each path matters: `grep -R dir` does not descend into a
@@ -75,7 +77,7 @@ grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inb
 [[ "$rc" -le 1 ]] || fail "boundary grep failed (rc=$rc)"
 [[ "$rc" -eq 1 ]] || fail 'forbidden external route in installed runtime skill'
 rc=0
-grep -R -n -E '~/.pi/agent/skills/yxj-[a-z0-9-]+|yxj-[a-z0-9-]+/SKILL' "$INSTALLED/x-rail/" "$INSTALLED/x-rail-long/" "$INSTALLED/x-handoff/" || rc=$?
+grep -R -n -E '~/.pi/agent/skills/yxj-[a-z0-9-]+|yxj-[a-z0-9-]+/SKILL' "$INSTALLED/x-rail/" "$INSTALLED/x-rail-long/" "$INSTALLED/x-handoff/" "$INSTALLED/x-self-check/" || rc=$?
 [[ "$rc" -le 1 ]] || fail "old-name grep failed (rc=$rc)"
 [[ "$rc" -eq 1 ]] || fail 'old runtime dependency in installed skill'
 

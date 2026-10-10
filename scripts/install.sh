@@ -50,10 +50,9 @@ if [[ "$MODE" == link ]]; then
   done < <(runtime_skills)
   while IFS= read -r skill; do
     dst="$DEST/$skill"
-    if [[ -L "$dst" ]]; then
-      rm -- "$dst"
+    if [[ ! -L "$dst" ]]; then
+      ln -s "$ROOT/skills/$skill" "$dst"
     fi
-    ln -s "$ROOT/skills/$skill" "$dst"
   done < <(runtime_skills)
   printf 'install: linked x-rail skills into %s\n' "$DEST"
   exit 0
@@ -86,6 +85,10 @@ fi
 while IFS= read -r skill; do
   dst="$DEST/$skill"
   marker="$dst/.x-rail-installed"
+  if [[ -L "$dst" ]]; then
+    printf 'install: refusing to replace symlink %s in copy mode\n' "$dst" >&2
+    exit 1
+  fi
   if [[ -e "$dst" && "$UPDATE" -ne 1 ]]; then
     printf 'install: refusing to overwrite existing %s (use --update only for a marked install)\n' "$dst" >&2
     exit 1
@@ -103,9 +106,15 @@ done < <(runtime_skills)
 while IFS= read -r skill; do
   src="$ROOT/skills/$skill"
   dst="$DEST/$skill"
-  rm -rf "$dst"
+  if [[ -e "$dst" || -L "$dst" ]]; then
+    rm -rf "$dst"
+  fi
   mkdir -p "$dst"
-  cp -R "$src"/. "$dst"/
+  while IFS= read -r -d '' file; do
+    relative="${file#"$src/"}"
+    mkdir -p "$(dirname "$dst/$relative")"
+    cp "$file" "$dst/$relative"
+  done < <(find "$src" -type f ! -path '*/__pycache__/*' ! -name '*.pyc' -print0)
   printf 'source=%s\ninstalled_at=%s\n' "$ROOT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$dst/.x-rail-installed"
 done < <(runtime_skills)
 

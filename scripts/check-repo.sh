@@ -37,15 +37,12 @@ while IFS= read -r skill; do
   [[ -f "$ROOT/skills/$skill/SKILL.md" ]] || fail "runtime-skills.txt lists missing skill: $skill"
 done < <(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/runtime-skills.txt")
 
-# The English marker is checked separately below; the Chinese/English skills use the numeric marker.
-for marker in 'name: x-rail' 'name: x-rail-long' 'name: x-handoff' '.work-docs' 'status: done' 'blocked_by' 'attempted_paths' 'unblock_condition' 'next_action' 'external_skill_write_outside_work_docs' '20 次工具调用' '60 次工具调用' '30 分钟' 'calls_since_progress' 'last_progress_at' 'budget' 'strategy_fingerprints' 'evidence freshness' 'static' '只能由用户主动调用' '自动扫描、推荐、注入' '替用户触发' 'disable-model-invocation' '参考技能' 'Acceptance' 'risk_reason' 'review_policy' 'contract_revision' 'verification_type' 'check-contract.sh'; do
-  grep -R -F -- "$marker" "$ROOT/skills" >/dev/null || fail "missing marker: $marker"
-done
-
-work_thresholds="$(grep -Eo 'L1/L2[^。]*20 次工具调用|L3 和 long 模式[^。]*60 次工具调用|L1/L2/L3 的预算分别为 60/150/400 次工具调用' "$ROOT/skills/x-rail/SKILL.md" | tr '\n' ';')"
-long_thresholds="$(grep -Eo '60 次工具调用或 30 分钟' "$ROOT/skills/x-rail-long/SKILL.md" | tr '\n' ';')"
-[[ "$work_thresholds" == *'20 次工具调用'* && "$work_thresholds" == *'60 次工具调用'* && "$work_thresholds" == *'60/150/400 次工具调用'* ]] || fail 'x-rail thresholds missing'
-[[ "$long_thresholds" == *'60 次工具调用或 30 分钟'* ]] || fail 'x-rail-long thresholds missing'
+command -v python3 >/dev/null || fail 'Python 3 is required'
+need skills/x-rail/scripts/task.py
+need skills/x-rail/scripts/task_checks.py
+need skills/x-self-check/scripts/analyze_sessions.py
+need scripts/check-skill-xml.py
+PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/check-skill-xml.py" --root "$ROOT" >/dev/null
 
 # Runtime files may mention old names only in explicit protection/reference text.
 if grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$ROOT/skills"; then
@@ -62,14 +59,13 @@ for doc in README.md docs/architecture.md docs/usage-guide.html; do
   grep -Fq '60/150/400' "$ROOT/$doc" || fail "budget numbers missing in $doc"
   grep -Fq 'skills/x-rail/scripts/' "$ROOT/$doc" || fail "check-state path missing in $doc"
 done
-grep -Fq '60/150/400 次工具调用' "$ROOT/skills/x-rail/SKILL.md" || fail 'budget numbers missing in x-rail SKILL.md'
-grep -Fq 'in_progress|done|blocked|stopped|cancelled' "$ROOT/skills/x-rail/SKILL.md" || fail 'status enum missing in SKILL.md'
-grep -Fq 'in_progress|done|blocked|stopped|cancelled' "$ROOT/skills/x-rail/scripts/check-state.sh" || fail 'status enum missing in check-state.sh'
-
-# The stage enum in check-state.sh must be exactly the route names in SKILL.md plus `handoff`.
-route_stages="$(awk '/^## 路由$/{f=1;next} /^## /{f=0} f' "$ROOT/skills/x-rail/SKILL.md" | sed -n 's/^- `\([a-z-]*\)`.*/\1/p' | sort | tr '\n' ' ')"
-case_stages="$(sed -n 's/^  \(fast-answer|[a-z|-]*\)) ;;$/\1/p' "$ROOT/skills/x-rail/scripts/check-state.sh" | tr '|' '\n' | sort | tr '\n' ' ')"
-expected_stages="$(printf '%s\n' $route_stages handoff | sort | tr '\n' ' ')"
-[[ "$case_stages" == "$expected_stages" ]] || fail "stage enum mismatch: check-state.sh has [$case_stages], SKILL.md route + handoff gives [$expected_stages]"
+# XML checker compares the canonical routes with the shared Python stage enum.
+# Budget values are attributes, not fragile translated prose.
+PYTHONDONTWRITEBYTECODE=1 python3 - "$ROOT" <<'PY'
+import pathlib, sys
+root=pathlib.Path(sys.argv[1]);sys.path.insert(0,str(root/'skills/x-rail/scripts'))
+import task_checks
+assert task_checks.STATUSES == {'in_progress','done','blocked','stopped','cancelled'}
+PY
 
 printf 'check-repo: passed\n'

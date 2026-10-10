@@ -123,6 +123,12 @@ Source: asd-ste100.org (Issue 9, 2025), fetched 2026-07-18. The numbered rules a
 
 Source: Kohl, The Global English Style Guide (SAS Press). Guideline text fetched from the Internet Archive and the SAS sample chapter, 2026-07-18.
 
+## Evidence and user language
+
+Use the user's requested language before this skill's language preference. Apply STE sentence rules to that language without claiming compliance with the English controlled dictionary. Keep one instruction per sentence, put conditions before actions, and use one name per object.
+
+Preserve evidence, exact commands, risk warnings, unknowns, and passed/failed/not_run/blocked distinctions. Shorter writing must not turn unverified behavior into success. Never require a report file when the user requested analysis only.
+
 ## Voice and repo specifics
 
 - Apply the **x-unslop** skill to every doc this skill touches. That skill owns the slop-pattern catalog: AI vocabulary, filler, hedging, formatting tells.

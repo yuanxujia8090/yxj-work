@@ -128,9 +128,9 @@
     一套把 AI 编程会话变成「有范围、有证据、能中断、能续接」的工作流。本文先用一节把当前核心流程从命令到交付逐步讲清
     （见第 3 节），再覆盖七类日常场景
     （产品调研、需求评估、方案设计、开发执行、问题定位排查、长任务执行、长任务次日状态检查），
-    另含既有材料的轻量文档分支，并逐个说明 <code>skills/</code> 目录下 33 个技能的作用与调用方式。
+    另含既有材料的轻量文档分支，并逐个说明 <code>skills/</code> 目录下 34 个技能的作用与调用方式。
   </p>
-  <div class="meta">源仓库 /Users/yuanxj/Documents/github/x-rail · 入口技能 3 个 · 辅助技能 30 个 · 全部默认不可被模型自动唤起</div>
+  <div class="meta">源仓库 /Users/yuanxj/Documents/github/x-rail · 入口技能 4 个 · 辅助技能 30 个 · 全部默认不可被模型自动唤起</div>
 </header>
 
 <nav class="toc">
@@ -177,7 +177,7 @@
 </ul>
 
 <p>
-  它由三个<strong>入口技能</strong>（你自己敲命令触发）和三十个<strong>辅助技能</strong>（入口按阶段主动读取，或你点名调用）组成。
+  它由四个<strong>入口技能</strong>（你自己敲命令触发）和三十个<strong>辅助技能</strong>（入口按阶段主动读取，或你点名调用）组成。
   入口负责流程骨架，辅助技能是每个阶段的具体方法，十三条 <code>x-principle-*</code> 则是短小的单条工程原则，被其他技能引用。
 </p>
 
@@ -188,7 +188,7 @@
 
 <h2 id="install">2. 安装与调用</h2>
 
-<p>安装哪些技能由 <code>scripts/runtime-skills.txt</code> 决定：3 个入口 + 30 个辅助技能，一起复制到同一个技能目录。因为同级安装，入口里的相对读取路径 <code>../&lt;技能名&gt;/SKILL.md</code> 在源仓库和安装目标下都成立。</p>
+<p>安装哪些技能由 <code>scripts/runtime-skills.txt</code> 决定：4 个入口 + 30 个辅助技能，一起复制到同一个技能目录。因为同级安装，入口里的相对读取路径 <code>../&lt;技能名&gt;/SKILL.md</code> 在源仓库和安装目标下都成立。</p>
 
 <pre><code>cd /Users/yuanxj/Documents/github/x-rail
 
@@ -211,13 +211,13 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update</code></pre>
 <pre><code>bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
-<p>安装完成后，日常只敲这三个命令：</p>
+<p>日常执行用前三个入口；只读会话分析用 <code>/x-self-check</code>。所有入口仅由用户明确调用。</p>
 
 <table>
   <thead><tr><th>命令</th><th>用途</th><th>对应场景</th></tr></thead>
   <tbody>
     <tr><td><code>/x-rail &lt;任务说明&gt;</code></td><td>普通任务入口：调研、设计、计划、执行、修复、审查</td><td>本文 5.1 – 5.5</td></tr>
-    <tr><td><code>/x-rail-long &lt;长任务说明&gt;</code></td><td>跨阶段、跨会话、过夜或长时间外部运行的任务入口</td><td>本文 5.6 – 5.7</td></tr>
+    <tr><td><code>/x-rail-long &lt;长任务说明&gt;</code></td><td>跨会话、外部等待或独立依赖汇总。多个阶段本身不触发。</td><td>本文 5.6 – 5.7</td></tr>
     <tr><td><code>/x-handoff &lt;补充说明&gt;</code></td><td>把当前任务写成交接文件，供新会话继续（只能你主动调用）</td><td>本文 5.7</td></tr>
   </tbody>
 </table>
@@ -242,7 +242,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
        4 启动摘要   9 行中文摘要：阶段 / 任务 / 风险 / 允许改动 / 禁止动作 /
                     必过验收 / 已有证据 / 阻塞 / 下一步第一动作
        5 阶段执行   读 playbook → 按映射表读参考技能 → 断言驱动读取 → 结果写进 evidence/
-       6 决策门     中 / 高风险等你确认；不可逆、花钱、对外发布、生产变更、改范围不自动豁免
+       6 决策门     风险决定审查；不可逆、花钱、对外发布、改范围需要确认
        7 固定收尾   contract → evidence → 报告 → state → check-contract.sh
                     → check-state.sh → index.md
        8 完成门     五条完成判定 + evidence_schema: 2 两道硬门全过 → status: done
@@ -257,7 +257,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
   <li><strong>7–8 是出口</strong>：收尾顺序固定，先落证据再写状态；五条完成判定见 <a href="#donegate">4.4</a>，熔断与恢复规则见 <a href="#breaker">4.5</a>。</li>
 </ul>
 
-<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）就是把第 5 步的阶段串起来：每个阶段各自重复 2–7，决策门放行才进下一阶段，<code>mixed</code> 同样不新增清单。长任务入口 <code>x-rail-long</code> 走同一条主线，只多两件事：每个阶段结束追加 <code>audit/checkpoint-&lt;序号&gt;.md</code> 并同步 state，暂停或跨天前先写 <code>handoff.md</code>；恢复时按 <code>index.md → state.md → 最近 checkpoint → handoff.md → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
+<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）就是把第 5 步的阶段串起来：每个阶段各自重复 2–7，决策门放行才进下一阶段，<code>mixed</code> 同样不新增清单。长任务入口 <code>x-rail-long</code> 走同一条主线，只多两件事：每个阶段结束追加 <code>audit/checkpoint-&lt;序号&gt;.md</code> 并同步 state，暂停或跨天前先写 <code>handoff.md</code>；恢复时按 <code>index.md → contract.md → state.md → 最近 checkpoint → handoff.md → audit/runs.json → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
 
 <div class="note rule">
   <strong>判断流程走到哪，只看两个文件</strong>：<code>state.md</code> 的 <code>stage</code> 和 <code>status</code> 回答「现在在哪一步、还能不能继续」；<code>contract.md</code> 的 <code>Acceptance</code> 回答「做到什么才算完」。对话记忆不算数，文件里没有就是没发生。
@@ -276,7 +276,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
   <tbody>
     <tr><td>L1</td><td>一次读取 + 一个小改动</td><td>60</td><td>20 次工具调用</td></tr>
     <tr><td>L2</td><td>多步骤、需要设计和计划</td><td>150</td><td>20 次工具调用</td></tr>
-    <tr><td>L3 / long</td><td>跨阶段、跨会话、过夜</td><td>400，另有 8 小时上限</td><td>每个子任务 60 次工具调用或 30 分钟</td></tr>
+    <tr><td>L3 / long</td><td>规模较大；long 另按跨会话、外部等待或依赖汇总判断</td><td>400，另有 8 小时上限</td><td>每个子任务 60 次工具调用或 30 分钟</td></tr>
   </tbody>
 </table>
 
@@ -291,18 +291,18 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <h3 id="contract">4.2 契约与状态</h3>
 
-<p>正式任务先创建任务骨架和最小契约，再动真东西：<code>contract.md</code>（这次任务做什么、范围到哪、怎么算做完）和 <code>state.md</code>（现在在哪一步、有哪些证据、被什么挡住）。先运行 <code>check-contract.sh</code> 通过，再开始广泛读取；不要调查到后半程才补契约。L1 只写一句 <code>done_when</code>、允许范围、验证方式和未知项；L2 还要写任务类型、禁止改动、验证层级、产物位置、阶段和下一入口；L3 每个检查点再带状态、证据、依赖、阻塞和第一步。</p>
+<p>正式任务先创建任务骨架和最小契约，再动真东西：<code>contract.md</code>（这次任务做什么、范围到哪、怎么算做完）和 <code>state.md</code>（现在在哪一步、有哪些证据、被什么挡住）。先写契约并用 <code>task.py seal</code> 封存，再运行 <code>task.py check</code>。每种规模均有编号验收、风险、授权和版本。明确只读分析时在回复交付，不为骨架落盘。</p>
 
-<p>新任务的契约在 <code>done_when</code> 摘要之外，还有带编号的 <code>Acceptance</code> 验收条件（<code>A1</code>、<code>A2</code>…），每条写 <code>outcome</code>（可观察结果）、<code>verification</code>（怎么验）、<code>verification_type</code>（automatic / manual / consumer / external）、<code>layer</code>（验证层级）和 <code>required</code>（是否必过）；顶层还要写 <code>risk</code>（low / medium / high）、<code>risk_reason</code>、<code>review_policy</code>（auto / user-confirm / full-review）、<code>contract_revision</code>、<code>Decision Gates</code> 和 <code>Contract Changes</code>。任务规模 <code>L1/L2/L3/long</code> 与影响风险是两回事：低风险可自动进入执行；中风险默认需要确认和只读审查；高风险需要确认和完整审查；不可逆操作、花钱、对外发布、生产变更和需求范围变化不能自动豁免。</p>
+<p>新任务的契约在 <code>done_when</code> 摘要之外，还有带编号的 <code>Acceptance</code> 验收条件（<code>A1</code>、<code>A2</code>…），每条写 <code>outcome</code>（可观察结果）、<code>verification</code>（怎么验）、<code>verification_type</code>（automatic / manual / consumer / external）、<code>layer</code>（验证层级）和 <code>required</code>（是否必过）；顶层还要写 <code>risk</code>（low / medium / high）、<code>risk_reason</code>、<code>review_policy</code>（auto / user-confirm / full-review）、<code>contract_revision</code>、<code>Decision Gates</code> 和 <code>Contract Changes</code>。任务规模 <code>L1/L2/L3/long</code> 与影响风险是两回事：低风险自动核对，中高风险按策略审查。确认只针对不可逆、费用、对外发布和需求范围变化。独立委派必须有当前授权。</p>
 
-<p>动代码前先跑结构校验（只查字段、枚举和策略关系，不给文字打分；历史契约没有 <code>Acceptance</code> 时直接放行，不强制迁移）：</p>
+<p>动代码前先跑结构校验（只查字段、枚举和策略关系，不给文字打分；默认严格模式，历史明确 <code>--legacy-readonly</code>，不能据此提交新完成）：</p>
 
 <pre><code>bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;        # 默认 --ready
 bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --draft  # 确认门未完成时只能起草
 bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --seal    # 固化契约快照到 audit/contract-r&lt;N&gt;.md
 bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --locked  # 交付前复核历史快照与变更记录</code></pre>
 
-<p>中/高风险契约在确认门是 <code>pending</code>（还没拍板）时，只有 <code>--draft</code> 能通过；契约字段必须从第 1 列写成 <code>key: value</code>，不能写成 Markdown 列表项 <code>- key: value</code>，检查器会直接提示格式错误。契约实质变化必须提升 <code>contract_revision</code> 并在 <code>Contract Changes</code> 记录原因、批准人和受影响证据，改了内容但没升版本号会被 <code>--seal</code>/<code>--locked</code> 拦下。</p>
+<p>有敏感动作但确认仍为 <code>pending</code> 时，只有 <code>--draft</code> 能通过；契约字段必须从第 1 列写成 <code>key: value</code>，不能写成 Markdown 列表项 <code>- key: value</code>，检查器会直接提示格式错误。契约实质变化必须提升 <code>contract_revision</code> 并在 <code>Contract Changes</code> 记录原因、批准人和受影响证据，改了内容但没升版本号会被 <code>--seal</code>/<code>--locked</code> 拦下。</p>
 
 <p>状态只会按下面这条路走：</p>
 
@@ -331,7 +331,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 </ol>
 <p>出现 <code>failed</code>、<code>blocked</code>、<code>not_run</code>、未解决的决策门、仍在跑的 required 子任务或结论缺证据，一律禁止标 <code>done</code>。可选（optional）项必须在契约里声明，并写明跳过原因。</p>
 
-<p>启用新版完成门的任务（<code>state.md</code> 里写 <code>evidence_schema: 2</code>）还有两道脚本硬门，<code>check-state.sh</code> 逐条检查：每条 <code>required: yes</code> 验收都必须绑定一条完整 evidence（含 <code>acceptance</code>、<code>command</code>、<code>run_at</code>、<code>result</code>、<code>last_edit_at</code>，对应证据文件真实存在且 <code>result=passed</code>）；契约 <code>review_policy</code> 不是 <code>auto</code> 时，还必须有一行 <code>review_evidence</code>（<code>policy</code> 与契约一致、<code>status=passed</code>、审查文件真实存在）。历史已完成的 v2 任务不带 <code>evidence_schema: 2</code>，按旧规则兼容读取。</p>
+<p>新任务必须写 <code>evidence_schema: 2</code>。passed 必需验收绑定唯一非空证据、时间、相关输入摘要和契约版本。审查绑定当前材料，必需依赖递归检查。完成只用任务内候选调用 <code>task.py complete --candidate</code>。失败保留正式状态与索引，历史不自动降级。</p>
 
 <h3 id="breaker">4.5 预算与熔断</h3>
 
@@ -346,11 +346,11 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <p>熔断后必须：停止同策略重试 → 在 <code>audit/</code> 记录失败动作、错误摘要、策略指纹（<strong>修改文件 + 执行命令 + 错误首行</strong>）和证据 → 状态改为 <code>blocked</code> 并填 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code>、<code>next_action</code> → 写 checkpoint 或交接 → 父任务不得 <code>done</code>。</p>
 
-<p>预算上限按层级取值：L1/L2/L3 分别为 60/150/400 次工具调用，L3 另有 8 小时上限。开工后发现真实范围将超出当前 level 预算（例如复现或实测成本显著高于预估）时，在 <code>contract.md</code> 与 <code>state.md</code> 显式升级 level 并记录原因，预算上限同步调整，不允许静默超支。预算耗尽时按熔断处理：写最终 checkpoint、保持非 <code>done</code>，交用户决定是否追加预算。</p>
+<p>预算上限按层级取值：L1/L2/L3 分别为 60/150/400 次工具调用，L3 另有 8 小时上限。开工后发现真实范围将超出当前 level 预算（例如复现或实测成本显著高于预估）时，在 <code>contract.md</code> 与 <code>state.md</code> 显式升级 level 并记录原因，预算上限同步调整，不允许静默超支。used 小于 limit 可继续；相等时合法候选可完成，否则暂停；超限只能有原因地暂停。离线检查不代表宿主自动计数或终止。</p>
 
 <p>恢复时，新策略指纹不能与已有指纹相同。模型请求首次超时后，不原样重试：先在 <code>audit/</code> 写恢复摘要，只保留「已确认事实、未决断言、下一步」三段内容；宿主允许时降低思考级别或切换更快模型，但不修改 Pi 全局配置。说不出新旧策略差在哪，就停下来交给人。</p>
 
-<p>为控制长会话耗时，采用断言驱动读取：先列断言，再按断言定位实现符号和局部代码，并立即写 evidence；低风险、只读、<code>review_policy: auto</code> 的审查使用轻量 review，跳过与验收无关的构建、测试和全量参考材料。固定收尾顺序：写 contract → 写 evidence → 写报告 → 写 state → <code>check-contract.sh</code> → <code>check-state.sh</code> → 更新 <code>.work-docs/index.md</code>。</p>
+<p>为控制长会话耗时，采用断言驱动读取：先列断言，再按断言定位实现符号和局部代码，并立即写 evidence；低风险、只读、<code>review_policy: auto</code> 的审查使用轻量 review，跳过与验收无关的构建、测试和全量参考材料。固定顺序：写 contract → seal → 实施和取证 → 写报告 → 写候选 state → <code>task.py complete --candidate</code> → 更新索引。</p>
 
 <h3 id="skillrule">4.6 技能加载边界</h3>
 
@@ -389,7 +389,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
     </dd>
 
     <dt>内部走什么</dt>
-    <dd>读 <code>playbooks/research.md</code>，并主动读取 <code>x-why</code>（查设计缘由类证据）和 <code>x-how</code>（看现有实现怎么跑）。要点：先把对象、术语、版本、环境确认清楚（身份不明就阻塞，禁止直接下结论）→ 把请求改写成可证伪的问题，拆成 1–5 条断言 → 证据按优先级取：官方文档/API、官方仓库/发布说明、一手数据或用户原话、可复现测量，最后才是二手来源 → 维护证据台账（<code>claim / source / date / fact_or_inference / confidence / reproducible / contradiction / scope</code>）→ 事实、推断、未知分开写 → 只有当一个测量可能改变决策时，才真去跑它。</dd>
+    <dd>读 <code>playbooks/research.md</code>，价值未知时读 <code>x-why</code>，实现未知时读 <code>x-how</code>。要点：先把对象、术语、版本、环境确认清楚（身份不明就阻塞，禁止直接下结论）→ 把请求改写成可证伪的问题，拆成 1–5 条断言 → 证据按优先级取：官方文档/API、官方仓库/发布说明、一手数据或用户原话、可复现测量，最后才是二手来源 → 维护证据台账（<code>claim / source / date / fact_or_inference / confidence / reproducible / contradiction / scope</code>）→ 事实、推断、未知分开写 → 只有当一个测量可能改变决策时，才真去跑它。</dd>
 
     <dt>产物落在哪</dt>
     <dd>最终报告写 <code>.work-docs/tasks/&lt;task-id&gt;/outputs/</code>；证据台账和运行记录写 <code>evidence/</code> 或 <code>audit/</code>。报告结尾必须给 <code>decision_gate: proceed | design_only | gather_more | do_not_build</code>，并附开发交接：范围、证据指针、验收方向、仍需人拍板的不可逆决策。</dd>
@@ -598,10 +598,10 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 <h2 id="skills">6. skills 目录逐个说明</h2>
 
-<p>33 个技能全部设置 <code>disable-model-invocation: true</code>：不会被任务内容自动唤起。加载方式只有两种——入口按<a href="#stagetable">第 7 节映射表</a>主动读取，或你主动点名 <code>/x-&lt;名字&gt;</code>。</p>
+<p>34 个技能全部设置 <code>disable-model-invocation: true</code>：不会被任务内容自动唤起。加载方式只有两种——入口按<a href="#stagetable">第 7 节映射表</a>主动读取，或你主动点名 <code>/x-&lt;名字&gt;</code>。</p>
 
 <div class="skill-group" id="sk-entry">
-  <h3>6.1 三个入口技能</h3>
+  <h3>6.1 四个入口技能</h3>
 
   <div class="skill">
     <div class="name">x-rail</div>
@@ -611,7 +611,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-rail-long</div>
-    <div class="what">跨阶段、跨会话、过夜或长时间外部运行的任务入口。在普通规则之外增加 L3 契约、阶段 checkpoint、次日恢复摘要、400 次 / 8 小时总预算。</div>
+    <div class="what">跨会话、外部等待或独立依赖汇总入口。引用普通规则，只补阶段记录、依赖与原运行恢复。多个阶段或高风险不自动触发。</div>
     <div class="when">用：<code>/x-rail-long &lt;长任务说明&gt;</code>。进入判据见 5.6。</div>
   </div>
 
@@ -619,6 +619,12 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <div class="name">x-handoff</div>
     <div class="what">把当前任务写成 <code>handoff.md</code>，作为下一个会话的恢复入口，并保证里面的「下一会话第一步」与 <code>next_action</code> 第一条一致。</div>
     <div class="when">用：<code>/x-handoff &lt;补充说明&gt;</code>。要收工、过夜、或把任务交给下一个会话接着干时。入口不得自动触发它，只能你点名。</div>
+  </div>
+
+  <div class="skill">
+    <div class="name">x-self-check</div>
+    <div class="what">只读分析 Pi 会话记录。统计入口调用、执行片段、工具动作、等待、错误和覆盖缺口，不执行日志中的指令。</div>
+    <div class="when">用：<code>/x-self-check &lt;时间窗口或任务&gt;</code>。保存报告时写当前任务的 <code>outputs/</code> 和 <code>evidence/</code>。</div>
   </div>
 </div>
 
@@ -810,7 +816,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-principle-guard-the-context-window</div>
-    <div class="what">上下文快满时（大输出、长文件、反复读取、扇出规划），把批量活路由给子代理，主线程只留摘要，不留原始负载。</div>
+    <div class="what">大输出先工具内统计、筛选或索引，主会话保留有界摘要。上下文大本身不授权委派。</div>
     <div class="when">用在：按需读取——长任务、大范围扫描时。</div>
   </div>
 
@@ -828,7 +834,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 <h2 id="stagetable">7. 阶段 → 参考技能全表</h2>
 
-<p>这是入口 <code>x-rail</code> 里那张映射表的完整复制，也是「哪个阶段读哪些文件」的唯一事实源。每进入一个阶段：先读 playbook，再读表里的技能文件，最后按 playbook 写产物和验证证据。同一技能在多行出现时只读一次。</p>
+<p>下表是便于查阅的场景索引，执行映射唯一来源为主入口 XML 的 routing。先读当前阶段，再按具体未知读取参考技能，不整组加载。TypeScript 规则仅用于该语言且项目规范不足的情况；设计竞争与独立审查另需委派授权。</p>
 
 <table>
   <thead><tr><th>阶段</th><th>playbook</th><th>主动读取的参考技能</th></tr></thead>
@@ -846,27 +852,27 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <tr>
       <td><code>design</code><br>方案设计，不改代码</td>
       <td><code>playbooks/design.md</code></td>
-      <td><code>x-codebase-design</code>、<code>x-architect</code>、<code>x-arena</code>、<code>x-prototype</code>、<code>x-principle-redesign-from-first-principles</code>、<code>x-principle-foundational-thinking</code>、<code>x-principle-outcome-oriented-execution</code></td>
+      <td>架构取舍读 x-codebase-design；跨模块分析读 x-architect；已授权竞争方案读 x-arena；原型能解决关键未知时读 x-prototype。</td>
     </tr>
     <tr>
       <td><code>plan</code><br>实施规格 / 轻量文档</td>
       <td><code>playbooks/plan.md</code></td>
-      <td>实施计划：<code>x-principle-build-the-lever</code>；轻量文档：<code>templates/document-task.md</code>，不默认加载该技能</td>
+      <td>写方案读 x-technical-writing，写文档读 x-unslop；轻量文档使用 templates/document-task.md。</td>
     </tr>
     <tr>
       <td><code>exec</code><br>按计划改并验证</td>
       <td><code>playbooks/exec.md</code></td>
-      <td><code>x-typescript-best-practices</code>、<code>x-principle-type-system-discipline</code>、<code>x-principle-boundary-discipline</code>、<code>x-principle-laziness-protocol</code></td>
+      <td>TypeScript 项目规范不足才读 x-typescript-best-practices；深入边界审查才读 x-principle-boundary-discipline。</td>
     </tr>
     <tr>
       <td><code>bugfix</code><br>复现 / 根因 / 回归</td>
       <td><code>playbooks/bugfix.md</code></td>
-      <td><code>x-principle-fix-root-causes</code>、<code>x-principle-attack-the-premise</code></td>
+      <td>需要深入根因核对时读 x-principle-fix-root-causes；先检查共同入口及全部调用方。</td>
     </tr>
     <tr>
       <td><code>review</code><br>只读审查</td>
       <td><code>playbooks/review.md</code></td>
-      <td><code>x-requesting-code-review</code>、<code>x-receiving-code-review</code>、<code>x-interrogate</code>、<code>x-principle-prove-it-works</code></td>
+      <td>授权独立审查读 x-requesting-code-review；处理审查反馈读 x-receiving-code-review。</td>
     </tr>
     <tr>
       <td><code>ops</code><br>平台操作手册</td>
@@ -937,7 +943,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <tr><td><code>status</code></td><td><code>in_progress</code> / <code>done</code> / <code>blocked</code> / <code>stopped</code> / <code>cancelled</code></td></tr>
     <tr><td><code>done_when</code></td><td>什么算做完（可逐条，摘要自 Acceptance）</td></tr>
     <tr><td><code>contract_revision</code> / <code>contract_fingerprint</code></td><td>新格式任务必填：必须与契约的版本号和内容指纹一致</td></tr>
-    <tr><td><code>evidence_schema</code></td><td>启用新版完成门时写 <code>2</code>；历史任务不写或按兼容读取</td></tr>
+    <tr><td><code>evidence_schema</code></td><td>新任务必填 <code>2</code>；历史明确只读模式</td></tr>
     <tr><td><code>evidence</code></td><td>一行一条：<code>evidence:名称|acceptance=A1|command=...|run_at=...|result=...|last_edit_at=...</code>，证据文件必须存在</td></tr>
     <tr><td><code>unknowns</code></td><td>还没搞清的事</td></tr>
     <tr><td><code>blocked_by</code></td><td>被什么挡住（status 为 blocked 时必需）</td></tr>
@@ -947,14 +953,14 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <tr><td><code>last_progress_at</code></td><td>上次有效进展的时间</td></tr>
     <tr><td><code>budget</code></td><td><code>used/limit</code></td></tr>
     <tr><td><code>strategy_fingerprints</code></td><td>已用过的策略指纹（修改文件 + 执行命令 + 错误首行）</td></tr>
-    <tr><td><code>review_evidence</code></td><td>中/高风险完成必填：<code>review_evidence: review|policy=user-confirm|status=passed|path=outputs/review.md</code>，审查文件必须存在且 policy 与契约一致</td></tr>
+    <tr><td><code>review_evidence</code></td><td>中/高风险完成必填：<code>review_evidence</code> 绑定 policy、status、path、inputs、contract_revision、run_at、last_edit_at</td></tr>
     <tr><td><code>updated_at</code></td><td>最后更新时间</td></tr>
   </tbody>
 </table>
 
 <p>必需验证项单独一行，<code>名称</code>是契约 Acceptance 里的验收编号：<code>required_verification: A1 status=passed evidence=evidence/check.txt</code>，状态只能是 <code>passed | failed | not_run | blocked</code>；启用 <code>evidence_schema: 2</code> 时 <code>evidence=</code> 指向的文件必须存在，且对应 evidence 行的 <code>acceptance=</code> 必须等于 <code>A1</code>。</p>
 
-<p><strong>有效进展</strong>只有两种：某个 <code>done_when</code> 条目拿到新 evidence，或某个 required 验证从 <code>failed|not_run</code> 变为 <code>passed</code>。每次有效进展都更新 <code>calls_since_progress</code>（归零）、<code>last_progress_at</code>、<code>budget</code> 和 <code>strategy_fingerprints</code>。</p>
+<p><strong>有效进展</strong>包括有证据的新结论、目标产物新版本或必需验收转为 passed。只读结论不要求落盘；目录创建、更新时间和重复读取不算。每次有效进展都更新 <code>calls_since_progress</code>（归零）、<code>last_progress_at</code>、<code>budget</code> 和 <code>strategy_fingerprints</code>。</p>
 
 <h2 id="cmd">10. 常用命令</h2>
 
@@ -980,22 +986,28 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 /x-unslop                 # 去 AI 味
 /x-technical-writing      # 技术写作标准</code></pre>
 
+<h3>严格完成与自检</h3>
+<pre><code>python3 &lt;skill-dir&gt;/scripts/task.py seal TASK_DIR
+python3 &lt;skill-dir&gt;/scripts/task.py check TASK_DIR
+python3 &lt;skill-dir&gt;/scripts/task.py complete TASK_DIR --candidate TASK_DIR/candidate.md
+python3 &lt;self-check-dir&gt;/scripts/analyze_sessions.py --sessions-root DIR --days 7 --timezone Asia/Shanghai --format json</code></pre>
+<p>需要 Python 3.10 以上，仅用标准库。删除型安装、全局安装和付费演练另需授权。测试目录保留。结构检查不证明模型遵守。</p>
 <h3>脚本（在源仓库根目录运行）</h3>
 <pre><code>bash scripts/check-repo.sh                                     # 仓库自检（含技能边界、marker、预算）
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills"        # 安装
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update   # 更新已安装副本
-bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link     # 软链安装/重建（开发模式）
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link     # 软链安装（正确已有链接保持不变）
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 软链卸载（只删本仓库链接）
 bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"   # 源与安装目标对照
 bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;   # 契约结构校验（动代码前必跑；--draft/--ready/--seal/--locked）
-bash skills/x-rail/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 校验状态文件（写 status: done 前必须运行并通过）
+bash skills/x-rail/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 只读校验正式状态，不替代 complete 候选提交
 bash scripts/test-contract.sh                                 # 契约校验器回归
 bash scripts/test-fixtures.sh                                 # 夹具回归
 bash scripts/test-v2-lifecycle.sh                             # v2 完成门生命周期回归
 bash scripts/test-install.sh                                   # 安装回归
 bash scripts/test-flow.sh                                      # 流程回归</code></pre>
 
-<p><code>check-state.sh</code> 会拒绝这些情况：标记 <code>done</code> 但存在 failed / not_run / blocked 的必需验证，或证据已过期；非 blocked 状态却已达到无进展阈值；blocked 却缺 <code>blocked_by</code>、<code>unblock_condition</code>、<code>next_action</code>；<code>status: done</code> 但 <code>budget</code> 已耗尽（<code>used &gt;= limit</code>）；<code>status: done</code> 但没有任何 <code>required_verification</code>。启用 <code>evidence_schema: 2</code> 后还会拒绝：required 验收缺 evidence 绑定、证据文件不存在、evidence 缺 <code>acceptance</code>/<code>command</code>/<code>run_at</code>/<code>result</code>/<code>last_edit_at</code> 任一字段、evidence 结果不是 <code>passed</code>、<code>contract_revision</code> 或 <code>contract_fingerprint</code> 与契约不一致、中/高风险 done 缺 <code>review_evidence</code> 或其 policy / status / 审查文件对不上。</p>
+<p><code>check-state.sh</code> 会拒绝这些情况：标记 <code>done</code> 但存在 failed / not_run / blocked 的必需验证，或证据已过期；非 blocked 状态却已达到无进展阈值；blocked 却缺 <code>blocked_by</code>、<code>unblock_condition</code>、<code>next_action</code>；预算超限却仍写 <code>in_progress</code> 或 <code>done</code>；<code>status: done</code> 但没有任何 <code>required_verification</code>。启用 <code>evidence_schema: 2</code> 后还会拒绝：required 验收缺 evidence 绑定、证据文件不存在、evidence 缺 <code>acceptance</code>/<code>command</code>/<code>run_at</code>/<code>result</code>/<code>last_edit_at</code> 任一字段、evidence 结果不是 <code>passed</code>、<code>contract_revision</code> 或 <code>contract_fingerprint</code> 与契约不一致、中/高风险 done 缺 <code>review_evidence</code> 或其 policy / status / 审查文件对不上。</p>
 
 <h2 id="faq">11. 常见疑问</h2>
 
@@ -1015,7 +1027,7 @@ bash scripts/test-flow.sh                                      # 流程回归</c
 <p>契约字段写成了 Markdown 列表项 <code>- key: value</code>。字段必须顶格从第 1 列写成 <code>key: value</code>；去掉行首的 <code>- </code> 即可。</p>
 
 <h3>为什么 check-contract 说 confirmation is pending？</h3>
-<p>这是中/高风险契约，而 <code>Decision Gates</code> 的 <code>confirmation_status</code> 还是 <code>pending</code>——任务需要你先拍板（确认验收条件与范围）才能进入执行。起草阶段可以用 <code>--draft</code> 模式校验其余结构；拍板后把 <code>confirmation_status</code> 改成 <code>confirmed</code> 并补齐 <code>confirmation_by</code>、<code>confirmation_at</code>、<code>confirmation_source</code>，默认的 <code>--ready</code> 才能通过。</p>
+<p>契约含敏感动作，但确认仍为 <code>pending</code>，需明确本动作授权才能执行。起草阶段可以用 <code>--draft</code> 模式校验其余结构；拍板后把 <code>confirmation_status</code> 改成 <code>confirmed</code> 并补齐 <code>confirmation_by</code>、<code>confirmation_at</code>、<code>confirmation_source</code>，默认的 <code>--ready</code> 才能通过。</p>
 
 <h3>为什么 check-state 拒绝我的 done？</h3>
 <p>逐条对照报错：最常见的是 required 验收没绑定 evidence（缺 <code>acceptance=</code> 指针或证据文件不存在）、evidence 比代码旧、中/高风险任务缺 <code>review_evidence</code>。这些是 <code>evidence_schema: 2</code> 的完成门，目的就是把「agent 自称完成」挡在门外。</p>
@@ -1030,7 +1042,7 @@ bash scripts/test-flow.sh                                      # 流程回归</c
 <p>立即熔断（<code>blocked_by: external_skill_write_outside_work_docs</code>），保留现场，<strong>不要移动、删除或覆盖</strong>那个文件，等确认后再处置。</p>
 
 <h3>长任务预算用完了但活还没干完？</h3>
-<p>写最终 checkpoint、更新 <code>state.md</code>、保持 <code>in_progress</code> 或 <code>blocked</code>，<strong>不许标 done</strong>。第二天恢复时按新预算继续，且必须换策略。</p>
+<p>写 checkpoint 和暂停原因。刚好耗尽且全部验收通过时可提交完成候选；否则暂停。追加预算须记录授权和新策略，不因换一天重置。</p>
 
 <h2 id="cheatsheet">12. 一页速查</h2>
 
@@ -1045,7 +1057,7 @@ bash scripts/test-flow.sh                                      # 流程回归</c
     <tr><td>查一个问题</td><td><code>/x-rail 定位：…</code></td><td>证据在 <code>evidence/</code>，结论在 <code>audit/</code></td></tr>
     <tr><td>修一个 bug</td><td><code>/x-rail 修复 …：复现 → 根因 → 最小修复 → 回归</code></td><td>修复前后对比输出在 <code>evidence/</code></td></tr>
     <tr><td>跑长任务 / 过夜</td><td><code>/x-rail-long …</code></td><td>多出 <code>audit/checkpoint-*.md</code> 与 <code>handoff.md</code></td></tr>
-    <tr><td>第二天接着干</td><td><code>/x-rail-long 继续 &lt;task-id&gt;</code></td><td>先读 index → state → checkpoint → handoff → evidence</td></tr>
+    <tr><td>第二天接着干</td><td><code>/x-rail-long 继续 &lt;task-id&gt;</code></td><td>先读 index → contract → state → checkpoint → handoff → runs → evidence</td></tr>
     <tr><td>只想知道任务到哪了</td><td><code>/x-rail-long 检查 &lt;目录&gt;/.work-docs</code></td><td>每个任务一行状态摘要</td></tr>
     <tr><td>把任务交出去</td><td><code>/x-handoff</code></td><td><code>handoff.md</code></td></tr>
   </tbody>

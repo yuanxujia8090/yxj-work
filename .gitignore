@@ -5,3 +5,5 @@
 .DS_Store
 tests/tmp/
 .worktrees/
+.pi/
+__pycache__/

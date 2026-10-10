@@ -2,12 +2,20 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 CHECK="$ROOT/scripts/check-skill-metadata.sh"
-TEST_ROOT="${YXJ_TEST_ROOT:-$ROOT/tests/tmp}"
-tmp="$TEST_ROOT/skill-metadata"
-# Fixtures stay inside the project (tests/tmp, gitignored) so they sit next to the code that
-# produces them; a fixed path keeps repeated runs from accumulating copies. They contain only
-# synthetic skill headers and are left in place for inspection.
-rm -rf "$tmp"
+tmp=''
+while (($#)); do
+  case "$1" in
+    --keep-artifacts) shift ;;
+    --test-root) tmp="$2"; shift 2 ;;
+    *) printf 'test-skill-metadata: invalid option\n' >&2; exit 2 ;;
+  esac
+done
+if [[ -n "$tmp" ]]; then
+  [[ ! -e "$tmp" && ! -L "$tmp" ]] || { printf 'test-skill-metadata: test root must be new\n' >&2; exit 1; }
+  mkdir -p "$tmp"
+else
+  tmp="$(mktemp -d)"
+fi
 mkdir -p "$tmp/skills/example"
 file="$tmp/skills/example/SKILL.md"
 valid=$'---\nname: example\ndescription: 使用场景说明\ndisable-model-invocation: true\n---\n# example'

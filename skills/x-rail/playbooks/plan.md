@@ -1,6 +1,8 @@
 # Plan Playbook
 
-## 阶段入口
+<stage name="plan">
+  <inputs>当前用户授权、contract、state、当前阶段材料。明确只读时不落盘。输入与约束先核对。</inputs>
+  <procedure>## 阶段入口
 
 适用场景：需要把已确认目标拆成可执行、可验证、可交接的实施步骤，或整理已确定材料。
 输入：已批准的目标、范围、契约、验收条件、风险策略和固定材料。
@@ -13,7 +15,7 @@
 ## 轻量文档分支
 
 1. 一次确定交付物、依据、不做什么、完成条件。默认 L1；依据优先使用用户指定方案版本和固定提交，未指定提交时记录本次采用的提交及未提交改动是否纳入，不默默忽略用户修改。风险单独判断。
-2. 从 `templates/document-task.md` 填写最小 contract.md 和 state.md，运行 check-contract.sh 后再广泛读取。只读整理通常低风险、auto；中高风险仍遵守确认和审查门。默认按模板调用校验器，只有准确报错涉及格式、或任务确需改变格式时才读校验器源码。
+2. 从 `templates/document-task.md` 填写最小 contract.md 和 state.md，运行 check-contract.sh 后再广泛读取。只读整理通常低风险、auto；中高风险遵守对应审查，确认仅按敏感动作。默认按模板调用校验器，只有准确报错涉及格式、或任务确需改变格式时才读校验器源码。
 3. 默认读取方案行为要求、计划验收表、固定提交摘要、相关测试名称与必要断言。主材料读取原则上控制在 **6 次资料工具调用**以内，按实际读取动作计数；批量包裹或一个命令读多份材料不能绕过。材料足够立即写初稿；到检查点仍不足，先写已有条目和具体缺口。确需继续读大材料时，先在 state 的 next_action 指明尚未覆盖的验收条目，再只读该条目，不重新讨论路由。
 4. 初稿写入 outputs/。测试用例默认列：场景、前置条件、操作步骤、预期结果、优先级、依据。其他文档按目标选择最小可检查结构。可以标注待确认项，但不能以个别细节为由延后整份初稿。
 5. 每次补读前指出要确认**初稿中的哪条预期结果或事实缺口**；无法指出则停止扩展读取。默认不搭环境、不代跑、不全量审查、不检查发布；环境细节不是整理行为用例的前提。真正改变必过预期的缺口不能用猜测填补。
@@ -23,10 +25,13 @@
 
 ## 实施计划分支
 
-1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-rail/scripts/check-contract.sh <task-dir>` before broad exploration. For an existing task, read its contract and state first. If a model request times out, record a recovery summary in `audit/` before continuing.
+1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-rail/scripts/check-contract.sh &lt;task-dir&gt;` before broad exploration. For an existing task, read its contract and state first. If a model request times out, record a recovery summary in `audit/` before continuing.
 2. Copy the approved `objective`、`done_when`、`scope`、`forbidden`、`risk` and decision gates; do not broaden scope.
 3. If the contract uses the v2 format, copy every numbered `Acceptance` condition and preserve its verification type and layer.
 4. Split work into independently verifiable tasks. Each task names exact target files, allowed changes, required verification, expected evidence and fallback when blocked.
 5. Mark every verification and subtask `required` or `optional`; optional items need a written skip reason.
 6. Include the done gate, contract revision and circuit-breaker thresholds.
-7. Write the implementation plan to `.work-docs/tasks/<task-id>/outputs/` and state the first executable action.
+7. Write the implementation plan to `.work-docs/tasks/&lt;task-id&gt;/outputs/` and state the first executable action.</procedure>
+  <quality_check>固定方案、提交或明确未提交差异；先覆盖清单与初稿；补读只回答具体缺口。默认不搭环境、代跑、追踪别的会话。写方案按需 technical-writing 与 unslop。</quality_check>
+  <exit>输出新结论或目标产物版本、证据与未覆盖项。严格 check；候选完成走 task.py complete。阻塞保留状态，不放宽必需验收。</exit>
+</stage>

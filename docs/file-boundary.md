@@ -43,7 +43,7 @@ The `task_id` field in `contract.md` and `state.md` equals the full directory na
 - `audit/`: decisions, checkpoints, work-in-progress and failure records.
 - `tmp/`: reusable fixtures and disposable verification material.
 
-L1 可以只创建 `tasks/<task-id>/state.md`，`evidence/`、`outputs/`、`audit/`、`tmp/` 按需创建；L2/L3 保持完整结构。新任务前先读 `.work-docs/index.md`，范围相同且仍在进行时续用原 task id，不新建任务。
+明确只读分析时不创建任务文件，直接在回复交付。需要持久任务记录时，新任务均有 contract.md、state.md 和封存快照；evidence/、outputs/、tmp/ 按需创建。新任务前先读 `.work-docs/index.md`，范围相同且仍在进行时续用原 task id，不新建任务。
 
 No workflow-generated durable file may go to `.audit/`, `docs/handoff/`, `00-Inbox/`, a project docs directory, external `local://`, or an external `.audit/`.
 
@@ -57,7 +57,7 @@ Before and after invocation, record a file inventory. An unexpected path outside
 
 ## Contract validation and project code
 
-新任务的 `contract.md` 必须在执行前通过 `skills/x-rail/scripts/check-contract.sh <task-dir>`。契约字段必须从第 1 列写成 `key: value`，写成 `- key: value` 列表项会被报 `fields must use key: value at column 1`。检查器只读任务目录中的契约，不写入契约、不自动改验收标准；历史契约没有 `Acceptance` 时只走兼容路径。
+新任务的 `contract.md` 必须在执行前通过 `skills/x-rail/scripts/check-contract.sh <task-dir>`。契约字段必须从第 1 列写成 `key: value`，写成 `- key: value` 列表项会被报 `fields must use key: value at column 1`。默认检查只读契约，不自动改验收标准；显式 seal 才保存快照。历史契约必须用 `--legacy-readonly`，不得据此提交新完成，也不批量迁移历史。严格检查不因缺少 Acceptance 自动降级。
 
 契约中的 `Acceptance`、`Decision Gates` 和 `Contract Changes` 属于工作流记录，必须留在 `.work-docs/tasks/<task-id>/`。契约实质变化要提升 `contract_revision`，记录旧值、新值、原因、批准人和受影响证据。
 

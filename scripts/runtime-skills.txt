@@ -7,6 +7,7 @@
 x-rail
 x-rail-long
 x-handoff
+x-self-check
 
 # Companion skills. All set disable-model-invocation: true, so no task content auto-invokes them:
 # an entry skill reads the file it needs on purpose (see the reference-skill table in x-rail).
