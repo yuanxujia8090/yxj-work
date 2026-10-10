@@ -1,8 +1,10 @@
 # Ops Playbook
 
 <stage name="ops">
-  <inputs>当前用户授权、contract、state、当前阶段材料。明确只读时不落盘。输入与约束先核对。</inputs>
+  <inputs>先遵守主入口的交付分流与记录强度。普通任务使用当前目标、范围、待办和实际结果；严格任务读取 contract、state 和当前阶段材料。明确只读时不落盘。</inputs>
   <procedure>## 阶段入口
+
+普通任务按本阶段的业务步骤执行；下面的 contract/state、初始化、evidence/audit 和候选要求只适用于严格记录。用户授权的目标文档写指定位置。
 
 适用场景：需要整理平台操作、账户配置、凭据设置、部署切换或其他由人完成的步骤。
 输入：平台、账户/项目、操作目标、当前配置、回滚条件和允许范围。
@@ -16,5 +18,5 @@
 4. Store manuals in `outputs/` and user-returned screenshots or command evidence in `evidence/`.
 5. External failure is `blocked`, not success; distinguish configuration, credentials, permissions, rate limits and service health.</procedure>
   <quality_check>人工步骤、权限、风险、回滚前置明确；不代操作外部平台。</quality_check>
-  <exit>输出新结论或目标产物版本、证据与未覆盖项。严格 check；候选完成走 task.py complete。阻塞保留状态，不放宽必需验收。</exit>
+  <exit>普通任务交付实际结果、验证与限制，不创建状态文件。严格任务核对真实证据，用 task.py finish 或 complete 提交候选；阻塞保留状态，不放宽必需验收。</exit>
 </stage>

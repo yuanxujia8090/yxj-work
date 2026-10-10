@@ -1,8 +1,10 @@
 # Investigate Playbook
 
 <stage name="investigate">
-  <inputs>当前用户授权、contract、state、当前阶段材料。明确只读时不落盘。输入与约束先核对。</inputs>
+  <inputs>先遵守主入口的交付分流与记录强度。普通任务使用当前目标、范围、待办和实际结果；严格任务读取 contract、state 和当前阶段材料。明确只读时不落盘。</inputs>
   <procedure>## 阶段入口
+
+普通任务按本阶段的业务步骤执行；下面的 contract/state、初始化、evidence/audit 和候选要求只适用于严格记录。用户授权的目标文档写指定位置。
 
 适用场景：需要确认现状、定位原因、恢复工作，或问题还不能稳定复现。
 输入：用户描述、现象、报错、相关任务记录和可定位的代码/配置范围。
@@ -18,5 +20,5 @@
 6. Do not create a formal output unless the contract requires one; durable command results belong in `evidence/` and decisions in `audit/`.
 7. If evidence cannot resolve the question, set `blocked` with attempted paths, shared assumption, unblock condition and next action.</procedure>
   <quality_check>每次读取缩小未知；不能用环境扫描代替目标产出。</quality_check>
-  <exit>输出新结论或目标产物版本、证据与未覆盖项。严格 check；候选完成走 task.py complete。阻塞保留状态，不放宽必需验收。</exit>
+  <exit>普通任务交付实际结果、验证与限制，不创建状态文件。严格任务核对真实证据，用 task.py finish 或 complete 提交候选；阻塞保留状态，不放宽必需验收。</exit>
 </stage>

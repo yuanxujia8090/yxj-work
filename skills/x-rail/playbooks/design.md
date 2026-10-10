@@ -1,8 +1,10 @@
 # Design Playbook
 
 <stage name="design">
-  <inputs>当前用户授权、contract、state、当前阶段材料。明确只读时不落盘。输入与约束先核对。</inputs>
+  <inputs>先遵守主入口的交付分流与记录强度。普通任务使用当前目标、范围、待办和实际结果；严格任务读取 contract、state 和当前阶段材料。明确只读时不落盘。</inputs>
   <procedure>## 阶段入口
+
+普通任务按本阶段的业务步骤执行；下面的 contract/state、初始化、evidence/audit 和候选要求只适用于严格记录。用户授权的目标文档写指定位置。
 
 适用场景：需求方向已明确，但实现边界、模块职责、数据流或方案取舍尚未定型。
 输入：任务目标、研究证据、当前代码结构、约束和待决策问题。
@@ -19,5 +21,5 @@
 7. Do not modify project code in the design phase.
 8. If research evidence is insufficient, stop at `design_only` or `gather_more`; do not create an execution task.</procedure>
   <quality_check>同等验收下选择假设和组件更少的方案。原型仅用于回答关键未知。</quality_check>
-  <exit>输出新结论或目标产物版本、证据与未覆盖项。严格 check；候选完成走 task.py complete。阻塞保留状态，不放宽必需验收。</exit>
+  <exit>普通任务交付实际结果、验证与限制，不创建状态文件。严格任务核对真实证据，用 task.py finish 或 complete 提交候选；阻塞保留状态，不放宽必需验收。</exit>
 </stage>

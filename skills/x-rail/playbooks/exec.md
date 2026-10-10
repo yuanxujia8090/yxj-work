@@ -1,8 +1,10 @@
 # Execute Playbook
 
 <stage name="exec">
-  <inputs>当前用户授权、contract、state、当前阶段材料。明确只读时不落盘。输入与约束先核对。</inputs>
+  <inputs>先遵守主入口的交付分流与记录强度。普通任务使用当前目标、范围、待办和实际结果；严格任务读取 contract、state 和当前阶段材料。明确只读时不落盘。</inputs>
   <procedure>## 阶段入口
+
+普通任务按本阶段的业务步骤执行；下面的 contract/state、初始化、evidence/audit 和候选要求只适用于严格记录。用户授权的目标文档写指定位置。
 
 适用场景：已有通过校验的契约或实施计划，需要在允许范围内修改目标文件并完成验证。
 输入：contract、state、实施计划、目标文件、调用方、测试和当前工作区基线。
@@ -20,5 +22,5 @@
 8. Preserve real output in `evidence/`; decisions and checkpoints go to `audit/`.
 9. Apply the done gate. Never infer completion from exit code, build success, file existence or agent report alone.</procedure>
   <quality_check>先失败反例后最小实现；共同变化逻辑只维护一处，接口保持小。项目规范优先，非 TypeScript 不注入专用规则。</quality_check>
-  <exit>输出新结论或目标产物版本、证据与未覆盖项。严格 check；候选完成走 task.py complete。阻塞保留状态，不放宽必需验收。</exit>
+  <exit>普通任务交付实际结果、验证与限制，不创建状态文件。严格任务核对真实证据，用 task.py finish 或 complete 提交候选；阻塞保留状态，不放宽必需验收。</exit>
 </stage>

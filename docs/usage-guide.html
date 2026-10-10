@@ -140,13 +140,13 @@
     <li><a href="#install">2. 安装与调用</a></li>
     <li><a href="#flow">3. 核心流程：一次任务从头到尾</a></li>
     <li><a href="#basics">4. 五个必须先懂的机制</a></li>
-    <li class="sub"><a href="#route">4.1 路由：L0 与 L1/L2/L3</a></li>
-    <li class="sub"><a href="#contract">4.2 契约与状态</a></li>
+    <li class="sub"><a href="#route">4.1 路由：交付目标与记录强度</a></li>
+    <li class="sub"><a href="#contract">4.2 契约与状态（严格任务）</a></li>
     <li class="sub"><a href="#evidence">4.3 证据与证据新鲜度</a></li>
     <li class="sub"><a href="#donegate">4.4 完成判定</a></li>
     <li class="sub"><a href="#breaker">4.5 预算与熔断</a></li>
     <li class="sub"><a href="#skillrule">4.6 技能加载边界</a></li>
-    <li class="sub"><a href="#light-document">4.7 轻量文档整理</a></li>
+    <li class="sub"><a href="#light-document">4.7 普通与严格文档</a></li>
     <li><a href="#scenarios">5. 七类日常场景</a></li>
     <li class="sub"><a href="#s1">5.1 产品调研</a></li>
     <li class="sub"><a href="#s2">5.2 需求评估</a></li>
@@ -229,37 +229,34 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <h2 id="flow">3. 核心流程：一次任务从头到尾</h2>
 
-<p>流程环节变多了，但主线只有一条：先立规矩，再干活，最后拿证据交差。下面是一次正式任务从敲命令到交付的完整路径；每个环节的细节在 <a href="#basics">第 4 节</a> 展开，产物落盘位置在 <a href="#files">第 8 节</a>。</p>
+<p>先看交付目标，再决定流程强度：简单回答直接交付；低风险、可逆的小修改和文档走普通短流程；需要跨会话、外部等待、依赖汇总、敏感动作或明确要求留档时，才走严格流程。下面分别展示两条路径；细节在 <a href="#basics">第 4 节</a> 展开，产物位置在 <a href="#files">第 8 节</a>。</p>
 
 <pre><code>/x-rail &lt;任务说明&gt;
   │
-  ├─ L0 快问快答 ──────────────► 直接回答，不建任何目录（到此结束）
+  ├─ 简单回答 ─────────────────► 直接回答，不建目录
   │
-  └─ L1 / L2 / L3 正式任务
-       1 路由       按目标选阶段（单阶段，或开发 / 排查 / 调研三条链路）
-       2 建骨架     取 task-id → 建 .work-docs/tasks/&lt;task-id&gt;/ → 写最小 contract.md
-       3 契约校验   check-contract.sh 通过才开工（没过就改契约，不许先干后补）
-       4 启动摘要   9 行中文摘要：阶段 / 任务 / 风险 / 允许改动 / 禁止动作 /
-                    必过验收 / 已有证据 / 阻塞 / 下一步第一动作
-       5 阶段执行   读 playbook → 按映射表读参考技能 → 断言驱动读取 → 结果写进 evidence/
-       6 决策门     风险决定审查；不可逆、花钱、对外发布、改范围需要确认
-       7 固定收尾   写契约 → task.py seal（快照 audit/contract-r&lt;N&gt;.md）→ 实施与取证
-                    → 报告 → 候选 state → task.py complete --candidate
-                    → check-state.sh → index.md
-       8 完成门     必需验收 + 必需依赖 + 授权 + 契约快照 + 输入摘要 + 预算
-                    全部通过才允许 status: done
+  ├─ 普通短流程 ───────────────► 先读 → 最小修改/文档 → 实际验证 → 交付
+  │                               不建 contract/state，不封存，不写候选
+  │
+  └─ 严格流程（跨会话/外部等待/依赖汇总/敏感动作/明确要求留档）
+       1 路由       按交付目标选阶段
+       2 建契约     取 task-id → 写 contract.md
+       3 初始化     task.py start → 生成 state.md、封存并校验
+       4 阶段执行   读 playbook → 按映射表读参考技能 → 修改目标文件
+       5 取证       task.py run 自动验收；人工/消费端/外部验收显式记录
+       6 完成提交   task.py finish → 复用 complete 完成门 → 更新 index.md
   │
   └─ 任一环节熔断 ──► status: blocked + audit/ 失败记录 + checkpoint / handoff
                       下个会话只读文件恢复，且必须换一条实质不同的策略</code></pre>
 
 <ul>
-  <li><strong>2–4 是「先立规矩再干活」</strong>：契约没过校验就不广泛读取，更不动目标代码。细节见 <a href="#contract">4.2</a>；轻量文档分支（<a href="#light-document">4.7</a>）骨架最薄，但同样要过契约与状态校验；L0 完全不建目录。</li>
+  <li><strong>普通流程不建骨架</strong>：低风险、可逆的小任务直接先读、最小修改、实际验证；严格流程才按 <a href="#contract">4.2</a> 写契约和状态。轻量文档分支（<a href="#light-document">4.7</a>）默认也是普通流程；L0 直接回答。</li>
   <li><strong>4 的启动摘要不是第二套状态源</strong>：九行内容全部读自 contract、state 和最近 checkpoint，只告诉你当前边界和第一步动作；缺字段显示「未记录」，不另建文件。示例见 <code>skills/x-rail/playbooks/verification.md</code>。</li>
   <li><strong>5–6 是干活的主体</strong>：读哪些文件由入口的「阶段 → 参考技能」表写死（<a href="#stagetable">第 7 节</a>）；每轮读取都要回答一个断言、缩小一个未知项或留下一条证据。验证怎么做见 <a href="#evidence">4.3</a>。</li>
-  <li><strong>7–8 是出口</strong>：收尾顺序固定——先封存契约再开工，先落证据再写候选状态，最后用 <code>task.py complete --candidate</code> 提交，直接改 <code>state.md</code> 不算完成。完成条件见 <a href="#donegate">4.4</a>，熔断与恢复规则见 <a href="#breaker">4.5</a>。</li>
+  <li><strong>严格流程才有完成门</strong>：先用 <code>task.py start</code> 初始化；自动验收用 <code>task.py run</code>；最后用 <code>task.py finish</code> 生成候选并提交。人工、消费端、外部验收仍显式记录。完成条件见 <a href="#donegate">4.4</a>，熔断与恢复规则见 <a href="#breaker">4.5</a>。</li>
 </ul>
 
-<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）就是把第 5 步的阶段串起来：每个阶段各自重复 2–7，决策门放行才进下一阶段，<code>mixed</code> 同样不新增清单。长任务入口 <code>x-rail-long</code> 走同一条主线，只多两件事：每个阶段结束追加 <code>audit/checkpoint-&lt;序号&gt;.md</code> 并同步 state，暂停或跨天前先写 <code>handoff.md</code>；恢复时按 <code>index.md → contract.md → state.md → 最近 checkpoint → handoff.md → audit/runs.json → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
+<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）就是把阶段串起来。普通任务可直接完成当前阶段，不创建记录；严格任务才在各阶段保留契约和证据。长任务入口 <code>x-rail-long</code> 仅在跨会话、外部等待或必需依赖汇总时使用，追加 <code>audit/checkpoint-&lt;序号&gt;.md</code>、<code>state</code> 和 <code>handoff.md</code>；恢复时按 <code>index.md → contract.md → state.md → 最近 checkpoint → handoff.md → audit/runs.json → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
 
 <div class="note rule">
   <strong>判断流程走到哪，只看两个文件</strong>：<code>state.md</code> 的 <code>stage</code> 和 <code>status</code> 回答「现在在哪一步、还能不能继续」；<code>contract.md</code> 的 <code>Acceptance</code> 回答「做到什么才算完」。对话记忆不算数，文件里没有就是没发生。
@@ -267,11 +264,11 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <h2 id="basics">4. 五个必须先懂的机制</h2>
 
-<h3 id="route">4.1 路由：L0 与 L1/L2/L3</h3>
+<h3 id="route">4.1 路由：交付目标与记录强度</h3>
 
-<p>每次调用先分流。<code>fast-answer</code>（L0）是快问快答——术语解释、简单命令说明、单一事实确认——直接回答，<strong>不创建任何工作目录</strong>。</p>
+<p>每次调用先看交付目标。<code>fast-answer</code>（L0）是快问快答——术语解释、简单命令说明、单一事实确认——直接回答，<strong>不创建任何工作目录</strong>。低风险、可逆的小修改和文档使用普通短流程：先读、最小改动、实际验证、交付结果。调查、研究、设计和只读审查默认也不为流程落盘；只有跨会话、外部等待、必需依赖汇总、敏感动作或明确要求留档时，才进入严格记录。</p>
 
-<p>除此之外进正式任务，按层级记账：</p>
+<p>严格任务再按规模记账：</p>
 
 <table>
   <thead><tr><th>层级</th><th>典型规模</th><th>工具调用预算</th><th>无进展阈值</th></tr></thead>
@@ -282,7 +279,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
   </tbody>
 </table>
 
-<p>同时按目标路由到阶段：<code>investigate</code>（现状、定位、恢复）、<code>research</code>（外部事实、产品、市场、技术选型）、<code>design</code>（方案设计，不改代码）、<code>plan</code>（逐任务实施规格）、<code>exec</code>（按计划改并验证）、<code>bugfix</code>（复现、根因、最小修复、回归）、<code>review</code>（只读审查）、<code>ops</code>（平台操作手册，不代点网页）、<code>mixed</code>（研究 → 决策门 → 设计/计划 → 执行 → 验证）。</p>
+<p>普通和严格任务都按目标路由到阶段：<code>investigate</code>（现状、定位、恢复）、<code>research</code>（外部事实、产品、市场、技术选型）、<code>design</code>（方案设计，不改代码）、<code>plan</code>（逐任务实施规格）、<code>exec</code>（按计划改并验证）、<code>bugfix</code>（复现、根因、最小修复、回归）、<code>review</code>（只读审查）、<code>ops</code>（平台操作手册，不代点网页）、<code>mixed</code>（研究 → 决策门 → 设计/计划 → 执行 → 验证）。</p>
 
 <p>三条常用链路：</p>
 <ul>
@@ -293,7 +290,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <h3 id="contract">4.2 契约与状态</h3>
 
-<p>正式任务先创建任务骨架和最小契约，再动真东西：<code>contract.md</code>（这次任务做什么、范围到哪、怎么算做完）和 <code>state.md</code>（现在在哪一步、有哪些证据、被什么挡住）。先写契约并用 <code>task.py seal</code> 封存，再运行 <code>task.py check</code>。每种规模均有编号验收、风险、授权和版本。明确只读分析时在回复交付，不为骨架落盘。</p>
+<p>普通任务先列目标、范围、完成条件和验证动作，直接执行，不为流程创建文件。严格任务才创建 <code>contract.md</code>（这次任务做什么、范围到哪、怎么算做完）和 <code>state.md</code>（现在在哪一步、有哪些证据、被什么挡住）。严格任务写完契约后用 <code>task.py start</code> 自动生成状态、封存并校验；之后用 <code>task.py run</code> 记录自动验收，用 <code>task.py finish</code> 收口。每种规模均有编号验收、风险、授权和版本。明确只读分析时在回复交付，不为骨架落盘。</p>
 
 <p>新任务的契约在 <code>done_when</code> 摘要之外，还有带编号的 <code>Acceptance</code> 验收条件（<code>A1</code>、<code>A2</code>…），每条写 <code>outcome</code>（可观察结果）、<code>verification</code>（怎么验）、<code>verification_type</code>（automatic / manual / consumer / external）、<code>layer</code>（验证层级）和 <code>required</code>（是否必过）；顶层还要写 <code>risk</code>（low / medium / high）、<code>risk_reason</code>、<code>review_policy</code>（auto / user-confirm / full-review）、<code>contract_revision</code>、<code>Decision Gates</code> 和 <code>Contract Changes</code>。任务规模 <code>L1/L2/L3/long</code> 与影响风险是两回事：低风险自动核对，中高风险按策略审查。确认只针对不可逆、费用、对外发布和需求范围变化。独立委派必须有当前授权。</p>
 
@@ -301,7 +298,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <p>长任务另写 <code>## Dependencies</code> 段，一行一条 <code>dependency: &lt;键&gt;|task_id=&lt;子任务目录名&gt;|required=yes|acceptance=&lt;父契约里的验收编号&gt;</code>；<code>required=no</code> 的依赖同样要写 <code>skip_reason</code>。完成时递归检查子契约、快照、状态和证据，拒绝循环、重复、自引用和目录逃逸。状态文件本身不能是软链，也不能指向任务目录之外。</p>
 
-<p>动代码前先跑结构校验（只查字段、枚举和策略关系，不给文字打分；默认严格模式，历史明确 <code>--legacy-readonly</code>，不能据此提交新完成）：</p>
+<p>严格任务动代码前先跑结构校验（只查字段、枚举和策略关系，不给文字打分；默认严格模式，历史明确 <code>--legacy-readonly</code>，不能据此提交新完成）。普通任务不运行这些命令：</p>
 
 <pre><code>bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;        # 默认 --ready
 bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --draft  # 确认门未完成时只能起草
@@ -323,7 +320,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <p>每条证据记录 <code>acceptance</code>（绑定哪条验收条件，如 <code>A1</code>）、<code>command</code>、<code>run_at</code>、<code>result</code>、相关文件的 <code>last_edit_at</code>、<code>inputs</code>（输入摘要文件）和 <code>contract_revision</code>，证据文件本身必须真实存在。<strong>运行时间早于文件最后修改时间的证据作废</strong>——改了代码还引用旧跑出来的结果，等于没验证。</p>
 
-<p><code>inputs</code> 指向一个 JSON 摘要文件，记录 <code>version</code>、<code>contract_revision</code>、绝对 <code>workspace_root</code> 和 <code>files</code> 列表；每项写相对 <code>path</code>、<code>state: present</code>（已删除写 <code>absent</code>）和原字节 <code>sha256</code>。它只绑定与该条验收相关的材料，无关文件变化不受影响；状态文件、证据自身和契约快照不自我绑定，路径不能越出任务目录。</p>
+<p><code>inputs</code> 指向一个 JSON 摘要文件，记录 <code>version</code>、<code>contract_revision</code>、绝对 <code>workspace_root</code> 和 <code>files</code> 列表；每项写相对 <code>path</code>、<code>state: present</code>（已删除写 <code>absent</code>）和原字节 <code>sha256</code>。它只绑定与该条验收相关的材料，无关文件变化不受影响；状态文件、证据自身和契约快照不自我绑定，路径不能越出执行根目录，且不能绑定任务状态、证据、审计或临时目录。</p>
 
 <p>验证分五层，按契约要求从窄到宽跑：<code>syntax/config</code> → <code>static</code> → <code>runtime/local</code> → <code>external</code> → <code>consumer</code>。关键词搜索和 grep 属于 <code>static</code>，只能证明「字符串在那儿」，不能单独证明「行为生效」。</p>
 
@@ -340,7 +337,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 </ol>
 <p>出现 <code>failed</code>、<code>blocked</code>、<code>not_run</code>、未解决的决策门、仍在跑的 required 依赖，或输入摘要对不上，一律禁止标 <code>done</code>。可选（optional）项必须在契约里声明，并写明跳过原因。</p>
 
-<p>新任务必须写 <code>evidence_schema: 2</code>。passed 必需验收绑定唯一非空证据、时间、相关输入摘要和契约版本。审查绑定当前材料，必需依赖递归检查。完成只用任务内候选调用 <code>task.py complete --candidate</code>。失败保留正式状态与索引，历史不自动降级。</p>
+<p>严格新任务必须写 <code>evidence_schema: 2</code>。passed 必需验收绑定唯一非空证据、时间、相关输入摘要和契约版本。自动验收可用 <code>task.py run</code>，它只接受 required automatic 条件，不替代人工、消费端、外部服务或独立审查。完成优先用 <code>task.py finish</code>，它生成候选并调用原 <code>complete --candidate</code> 完成门。失败保留正式状态与索引，历史不自动降级。</p>
 
 <h3 id="breaker">4.5 预算与熔断</h3>
 
@@ -359,7 +356,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <p>恢复时，新策略指纹不能与已有指纹相同。模型请求首次超时后，不原样重试：先在 <code>audit/</code> 写恢复摘要，只保留「已确认事实、未决断言、下一步」三段内容；宿主允许时降低思考级别或切换更快模型，但不修改 Pi 全局配置。说不出新旧策略差在哪，就停下来交给人。</p>
 
-<p>为控制长会话耗时，采用断言驱动读取：先列断言，再按断言定位实现符号和局部代码，并立即写 evidence；低风险、只读、<code>review_policy: auto</code> 的审查使用轻量 review，跳过与验收无关的构建、测试和全量参考材料。固定顺序：写 contract → seal → 实施和取证 → 写报告 → 写候选 state → <code>task.py complete --candidate</code> → 更新索引。</p>
+<p>为控制长会话耗时，采用断言驱动读取：先列断言，再按断言定位实现符号和局部代码，并立即写 evidence；低风险、只读、<code>review_policy: auto</code> 的审查使用普通短流程，跳过与交付无关的构建、测试和全量参考材料。严格任务顺序：写 contract → <code>task.py start</code> → 实施和取证 → <code>task.py run</code> 自动验收或显式完成人工验收 → <code>task.py finish</code> → 更新索引。</p>
 
 <h3 id="skillrule">4.6 技能加载边界</h3>
 
@@ -367,9 +364,9 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <p>调用第三方技能前先按 <code>playbooks/third-party-skill.md</code> 分类：只读的可以直接跑；能指定输出根的必须传入本次任务目录；固定写入或写入不可知的，只能在隔离的临时目录里试跑，否则任务标 <code>blocked</code>。调用前后都要存目录清单，发现 <code>.work-docs</code> 之外的意外文件立即熔断，且<strong>未经授权不得移动、删除或覆盖</strong>那个文件。</p>
 
-<h3 id="light-document">4.7 轻量文档整理</h3>
+<h3 id="light-document">4.7 普通与严格文档整理</h3>
 
-<p>材料和目标已确定的测试用例、检查清单、变更说明默认 L1 / <code>plan</code>，不新增阶段。用 <code>skills/x-rail/templates/document-task.md</code> 填最小契约和状态，运行校验器后读固定主材料，立即写初稿，再只为具体缺口补读。默认不研究校验器源码，不加载实施计划的「做可重复工具」参考技能。</p>
+<p>材料和目标已确定的测试用例、检查清单、变更说明，普通情况下直接列目标、依据、范围和验收，读固定材料后写初稿并核对，不创建任务文件。只有需要跨会话、明确要求留档或其他严格条件时，才使用 <code>skills/x-rail/templates/document-task.md</code>，并用 <code>task.py start</code> 生成状态。默认不研究校验器源码，不加载实施计划的「做可重复工具」参考技能。</p>
 <pre>/x-rail 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下</pre>
 <p>「我要测试下」表示用户拿用例去测，不等于要求 Agent 代跑。默认不搭环境、不执行测试、不全量审查、不检查发布；未确定功能仍走 design，实施规格仍走原计划分支，实际执行另进 exec。</p>
 <ul>
@@ -377,7 +374,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
   <li><strong>20 次总工具调用</strong>检查点：验收齐全则交付；仅可选细节缺失则说明；关键必过事实缺失则保持非 done。不能降低必过项，不能把部分初稿标完成。</li>
   <li>补读前指出初稿中的哪条预期结果或事实缺口；单纯读取或查询环境不算进展。固定方案和提交；若纳入未提交差异先明确范围，合并状态通常只作执行前提。</li>
 </ul>
-<p>验收的是覆盖、事实和可理解性，不是运行环境；证据按原格式绑定，网站运行层保留 not_run。交付注明「用例已整理，测试未执行」。检查点是技能约束，<strong>不是宿主自动拦截或速度保证</strong>；是否减少空转需要实际模型会话验证。模板与流程回归可运行 <code>bash scripts/test-document-template.sh</code> 和 <code>bash scripts/test-flow.sh</code>。</p>
+<p>普通文档验收覆盖、事实和可理解性，直接交付核对结果；严格文档才按原格式绑定 evidence。明确未执行的测试不得写成已执行。6 次资料动作和 20 次总动作是技能约束，<strong>不是宿主自动拦截或速度保证</strong>；是否减少空转需要实际模型会话验证。模板与流程回归可运行 <code>bash scripts/test-document-template.sh</code> 和 <code>bash scripts/test-flow.sh</code>。</p>
 
 <h2 id="scenarios">5. 七类日常场景</h2>
 
@@ -1011,9 +1008,11 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 /x-technical-writing      # 技术写作标准</code></pre>
 
 <h3>严格完成与自检</h3>
-<pre><code>python3 &lt;skill-dir&gt;/scripts/task.py seal TASK_DIR
-python3 &lt;skill-dir&gt;/scripts/task.py check TASK_DIR
-python3 &lt;skill-dir&gt;/scripts/task.py complete TASK_DIR --candidate TASK_DIR/candidate.md
+<pre><code>python3 &lt;skill-dir&gt;/scripts/task.py start TASK_DIR
+python3 &lt;skill-dir&gt;/scripts/task.py run TASK_DIR --acceptance A1 --evidence check-1 \
+  --workspace EXECUTION_ROOT --input relevant/file \
+  --expect 'expected output' --used ACTUAL_COUNT --command 'verification command'
+python3 &lt;skill-dir&gt;/scripts/task.py finish TASK_DIR --used ACTUAL_COUNT
 bash &lt;skill-dir&gt;/scripts/check-state.sh TASK_DIR [--strict|--legacy-readonly]
 python3 &lt;self-check-dir&gt;/scripts/analyze_sessions.py --sessions-root DIR --days 7 --timezone Asia/Shanghai --format json
 python3 &lt;self-check-dir&gt;/scripts/analyze_sessions.py --sessions-root DIR --days 21 \
@@ -1099,7 +1098,7 @@ bash scripts/test-self-check.py                                # 自检脚本回
     <tr><td>实现功能</td><td><code>/x-rail 实现 …</code></td><td>计划与审查进 <code>outputs/</code>，验证输出进 <code>evidence/</code></td></tr>
     <tr><td>查一个问题</td><td><code>/x-rail 定位：…</code></td><td>证据在 <code>evidence/</code>，结论在 <code>audit/</code></td></tr>
     <tr><td>修一个 bug</td><td><code>/x-rail 修复 …：复现 → 根因 → 最小修复 → 回归</code></td><td>修复前后对比输出在 <code>evidence/</code></td></tr>
-    <tr><td>收口一个任务</td><td><code>task.py seal</code> → 写候选 <code>candidate.md</code> → <code>task.py complete --candidate</code></td><td>正式 <code>state.md</code> 与 <code>index.md</code> 同步更新</td></tr>
+    <tr><td>收口严格任务</td><td><code>task.py start</code> → <code>task.py run</code> → <code>task.py finish</code></td><td>自动记录证据；人工验收仍显式记录；正式 <code>state.md</code> 与 <code>index.md</code> 同步更新</td></tr>
     <tr><td>开一个隔离工作区</td><td><code>/x-worktree &lt;名称&gt;</code></td><td><code>.worktrees/&lt;名称&gt;</code> 新分支工作区，含复制的 <code>.env.local</code></td></tr>
     <tr><td>把主题或文档做成图文讲解</td><td><code>/x-html &lt;主题或文档路径&gt;</code></td><td>单文件 HTML 在 <code>outputs/</code>，检查器报告在 <code>evidence/</code></td></tr>
     <tr><td>跑长任务 / 过夜</td><td><code>/x-rail-long …</code></td><td>多出 <code>audit/checkpoint-*.md</code> 与 <code>handoff.md</code></td></tr>

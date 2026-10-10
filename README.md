@@ -15,6 +15,19 @@
 
 XML（Extensible Markup Language，可扩展标记语言）像组件标签，只分隔不同职责。它不授予权限。用户只要分析时只在回复交付，不创建任务或目标文件。用户要写文档时只写授权目录。
 
+## 任务分流
+
+先看要交付什么，再决定记录强度：
+
+| 交付目标 | 默认路径 | 默认记录 |
+|---|---|---|
+| 简单解释或单一事实 | `fast-answer` | 直接回答，不建任务目录 |
+| 调查、研究、方案或审查 | `investigate` / `research` / `design` / `review` | 只读任务默认直接交付；需要跨会话或用户明确要求时才建严格记录 |
+| 低风险、可逆的小修改或文档 | `bugfix` / `exec` / `plan` | 普通短流程：先读、最小改动、实际验证 |
+| 跨会话、外部等待、必需依赖汇总或敏感动作 | 对应阶段 + 严格记录 | 使用 `contract.md`、`state.md`、证据和完成门 |
+
+普通任务不创建 `contract.md`、`state.md`、封存快照、输入摘要或候选状态。严格任务仍保留完整证据链。任务规模 `L1/L2/L3` 是预算，不等于记录强度；复杂但当前会话可完成的任务不自动进入长模式。已有严格任务必须续接原契约，不得用普通流程降级。
+
 ## 安装
 
 需要 Bash 和 Python 3.10 或更新版本。只使用标准库，不新增第三方包。`zoneinfo` 使用系统时区数据。
@@ -52,15 +65,22 @@ bash scripts/check-workflow.sh --source "$PWD" --installed <隔离目录>
 
 ## 严格检查与完成
 
-从源或安装技能目录调用，不要求消费者项目含 `skills/`：
+普通任务不使用下面命令。严格任务从源或安装技能目录调用，不要求消费者项目含 `skills/`：
 
 ```bash
-python3 <skill-dir>/scripts/task.py seal <task-dir>
-python3 <skill-dir>/scripts/task.py check <task-dir>
-python3 <skill-dir>/scripts/task.py complete <task-dir> --candidate <task-dir>/candidate.md
+# 写好 contract.md 后：生成 state.md、封存契约并校验
+python3 <skill-dir>/scripts/task.py start <task-dir>
+# 自动验收：实际运行命令，生成输出、输入摘要和 evidence 行
+python3 <skill-dir>/scripts/task.py run <task-dir> --acceptance A1 --evidence check-1 \
+  --workspace <execution-root> --input <相关文件> --expect '<实际预期文本>' \
+  --used <实际累计工具动作> --command '<验证命令>'
+# 收口：生成候选并复用原有完成门
+python3 <skill-dir>/scripts/task.py finish <task-dir> --used <实际累计工具动作>
 ```
 
-顺序为写契约、封存、实施与取证、准备候选状态、检查并提交、更新索引。候选必须 `status: done`。失败保留正式状态、索引和候选。完成前再次核对契约、状态、候选字节和证据输入。单任务保持一个写入者。此机制防误操作，不抵御同等写权限的恶意执行者。
+`start` 拒绝覆盖已有状态；`run` 只接受 `required: yes` 且 `verification_type: automatic` 的验收，不替代人工、消费端、外部服务或独立审查；`finish` 不执行验证命令，只调用原有完成检查。每次 `run` 使用新的证据名，失败保留失败输出，旧证据不覆盖。已有 `seal`、`check`、`complete --candidate` 入口仍可用。
+
+严格任务顺序为：写契约、分配并登记 task-id、`start`、实施与取证、`run` 自动验证或显式完成人工验收、`finish`、更新索引。候选必须 `status: done`。失败保留正式状态、索引和候选。完成前再次核对契约、状态、候选字节和证据输入。单任务保持一个写入者。此机制防误操作，不抵御同等写权限的恶意执行者。
 
 两个 shell 检查入口默认严格模式：
 
@@ -84,13 +104,13 @@ evidence:check|acceptance=A1|command=实际命令或人工核对|run_at=2026-10-
 
 ## 取证与轻量文档
 
-[document-task.md](skills/x-rail/templates/document-task.md)提供已有材料的文档模板。默认不搭环境、不代跑、不全量审查、不追踪别的会话。先覆盖清单和初稿，再只补具体缺口。6 次资料动作、20 次总动作是交付检查点，不是宿主自动拦截。合并命令仍按实际动作计数。最终注明“用例已整理，测试未执行”。
+[document-task.md](skills/x-rail/templates/document-task.md)只供严格记录的既有材料整理使用。普通文档直接列目标、依据、范围和验收，先读后写，核对后交付，不为流程创建目录。严格文档先写契约，再用 `task.py start` 生成状态；只为具体缺口补读。6 次资料动作、20 次总动作是检查点，不是宿主自动拦截。合并命令仍按实际动作计数。明确未执行的测试不得写成已执行。
 
 大输出先工具内统计、筛选或索引。主会话默认直接执行。委派需当前用户或项目规则明确授权，使用 [child-task.md](skills/x-rail/templates/child-task.md)，先发现能力，正式绑定输出，回收原运行和实际产物。基础设施失败暂停原依赖，不换协议、不自动重发、不冒充独立审查。
 
 ## 预算与恢复
 
-L1/L2/L3 默认 60/150/400 次工具调用。无进展提醒为 20/60 次；长任务另有 30 分钟无进展和 8 小时总上限。used 小于 limit 可继续；相等须收口，合法完成候选可提交；超限只能保存有原因的 blocked、stopped 或 cancelled。离线脚本证明记录一致，不宣称宿主强制限额。暂停和等待用户分开记录。
+普通任务按实际完成条件验证，不创建预算状态。严格任务的 L1/L2/L3 默认 60/150/400 次工具调用。无进展提醒为 20/60 次；长任务另有 30 分钟无进展和 8 小时总上限。used 小于 limit 可继续；相等须收口，合法完成候选可提交；超限只能保存有原因的 blocked、stopped 或 cancelled。离线脚本证明记录一致，不宣称宿主强制限额。暂停和等待用户分开记录。
 
 恢复读取索引、contract、state、最近 checkpoint、handoff、audit/runs.json、相关 evidence；核对工作区、版本、未提交差异和输入。原外部运行先查再恢复，不可查时 unknown 或 blocked，不重复启动。[long-task.md](skills/x-rail/templates/long-task.md)给依赖和运行引用格式。
 

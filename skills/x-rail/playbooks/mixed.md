@@ -1,8 +1,10 @@
 # Mixed Playbook
 
 <stage name="mixed">
-  <inputs>当前用户授权、contract、state、当前阶段材料。明确只读时不落盘。输入与约束先核对。</inputs>
+  <inputs>先遵守主入口的交付分流与记录强度。普通任务使用当前目标、范围、待办和实际结果；严格任务读取 contract、state 和当前阶段材料。明确只读时不落盘。</inputs>
   <procedure>## 阶段入口
+
+普通任务按本阶段的业务步骤执行；下面的 contract/state、初始化、evidence/audit 和候选要求只适用于严格记录。用户授权的目标文档写指定位置。
 
 适用场景：一个任务同时包含研究、设计、实施或运维动作，且阶段之间有明确依赖。
 输入：总目标、各阶段边界、研究问题、决策门和不可逆操作清单。
@@ -16,5 +18,5 @@
 4. 每个阶段独立写 done_when、产物、验证层级和下一阶段依赖；阶段结束追加 checkpoint。
 5. 研究结论、设计决策和执行结果都落在同一任务目录，禁止只依赖聊天上下文交接。</procedure>
   <quality_check>当前阶段独立验收，不因阶段多升级为长模式。</quality_check>
-  <exit>输出新结论或目标产物版本、证据与未覆盖项。严格 check；候选完成走 task.py complete。阻塞保留状态，不放宽必需验收。</exit>
+  <exit>普通任务交付实际结果、验证与限制，不创建状态文件。严格任务核对真实证据，用 task.py finish 或 complete 提交候选；阻塞保留状态，不放宽必需验收。</exit>
 </stage>

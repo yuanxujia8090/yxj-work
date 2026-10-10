@@ -65,6 +65,127 @@ class TaskTests(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertEqual((self.task / 'state.md').read_text(), self.state)
 
+    def fresh_task(self):
+        directory = self.root / '.work-docs/tasks/new-task'
+        directory.mkdir()
+        contract = self.contract.replace('task_id: example', 'task_id: new-task').replace('verification_type: manual', 'verification_type: automatic')
+        (directory / 'contract.md').write_text(contract)
+        return directory
+
+    def test_start_generates_checked_state_and_refuses_existing_state(self):
+        directory = self.fresh_task()
+        p = self.run_cli('start', str(directory))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        fields = checks.check_state(directory)
+        self.assertEqual(fields['status'], 'in_progress')
+        self.assertEqual(fields['budget'], '0/60')
+        self.assertIn('A1 status=not_run', (directory / 'state.md').read_text())
+        original = (directory / 'state.md').read_bytes()
+        p = self.run_cli('start', str(directory))
+        self.assertEqual(p.returncode, 1)
+        self.assertEqual((directory / 'state.md').read_bytes(), original)
+
+    def run_verification(self, directory, command, expect='actual result', evidence='actual', *extra):
+        return self.run_cli('run', str(directory), '--acceptance', 'A1', '--evidence', evidence,
+                            '--workspace', str(self.root), '--input', 'input.txt', '--expect', expect,
+                            '--used', '1', '--command', command, *extra)
+
+    def test_run_and_finish_bind_actual_command_output(self):
+        directory = self.fresh_task()
+        self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+        p = self.run_verification(directory, "printf 'actual result\\n'")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        checks.check_state(directory)
+        self.assertIn('actual result', (directory / 'evidence/actual.txt').read_text())
+        manifest = json.loads((directory / 'evidence/actual.inputs.json').read_text())
+        self.assertEqual(manifest['files'][0]['sha256'], hashlib.sha256((self.root / 'input.txt').read_bytes()).hexdigest())
+        index = self.root / '.work-docs/index.md'
+        index.write_text('| new-task | run | in_progress |\n')
+        p = self.run_cli('finish', str(directory), '--used', '2')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(checks.check_state(directory)['status'], 'done')
+        self.assertIn('| done |', index.read_text())
+
+    def test_run_failed_output_does_not_pass_acceptance(self):
+        for command, expected in [("printf 'different result'", 'actual result'), ("printf 'actual result'; exit 2", 'actual result')]:
+            directory = self.fresh_task()
+            self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+            p = self.run_verification(directory, command, expected)
+            self.assertEqual(p.returncode, 1, p.stderr)
+            self.assertIn('A1 status=failed', (directory / 'state.md').read_text())
+            original = (directory / 'state.md').read_bytes()
+            p = self.run_cli('finish', str(directory), '--used', '2')
+            self.assertEqual(p.returncode, 1)
+            self.assertEqual((directory / 'state.md').read_bytes(), original)
+            directory.rename(directory.with_name('failed-'+str(len(list(directory.parent.iterdir())))))
+
+    def test_run_changed_input_and_finish_stale_evidence_preserve_state(self):
+        directory = self.fresh_task()
+        self.run_cli('start', str(directory))
+        original = (directory / 'state.md').read_bytes()
+        p = self.run_verification(directory, "printf 'changed' > input.txt; printf 'actual result'")
+        self.assertEqual(p.returncode, 1)
+        self.assertIn('input changed', p.stderr)
+        self.assertEqual((directory / 'state.md').read_bytes(), original)
+        p = self.run_verification(directory, "printf 'actual result'", evidence='second')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        original = (directory / 'state.md').read_bytes()
+        (self.root / 'input.txt').write_text('changed after verification')
+        p = self.run_cli('finish', str(directory), '--used', '2')
+        self.assertEqual(p.returncode, 1)
+        self.assertIn('input changed', p.stderr)
+        self.assertEqual((directory / 'state.md').read_bytes(), original)
+
+    def test_run_rejects_manual_and_escaping_paths_before_execution(self):
+        directory = self.fresh_task()
+        contract = (directory / 'contract.md').read_text().replace('verification_type: automatic', 'verification_type: manual')
+        (directory / 'contract.md').write_text(contract)
+        self.run_cli('start', str(directory))
+        p = self.run_verification(directory, 'touch must-not-run; printf "actual result"')
+        self.assertEqual(p.returncode, 1)
+        self.assertIn('automatic', p.stderr)
+        self.assertFalse((self.root / 'must-not-run').exists())
+        directory.rename(directory.with_name('manual-task'))
+        directory = self.fresh_task()
+        self.run_cli('start', str(directory))
+        for extra in [('--input', '../outside.txt'), ('--input', str(self.root / 'input.txt')),
+                      ('--input', '.work-docs/tasks/new-task/state.md')]:
+            p = self.run_verification(directory, 'touch must-not-run', 'x', 'unsafe', *extra)
+            self.assertEqual(p.returncode, 1, p.stderr)
+            self.assertFalse((self.root / 'must-not-run').exists())
+        outside = self.root / 'outside-evidence'
+        outside.mkdir()
+        (directory / 'evidence').symlink_to(outside)
+        p = self.run_verification(directory, 'touch must-not-run', 'x')
+        self.assertEqual(p.returncode, 1)
+        self.assertFalse((self.root / 'must-not-run').exists())
+
+    def test_run_pipeline_failure_timeout_and_budget(self):
+        directory = self.fresh_task()
+        self.run_cli('start', str(directory))
+        for name, command, extra in [
+            ('pipeline', "false | printf 'actual result'", ()),
+            ('timeout', "printf 'actual result'; sleep 5", ('--timeout', '0.05')),
+        ]:
+            p = self.run_verification(directory, command, 'actual result', name, *extra)
+            self.assertEqual(p.returncode, 1, p.stderr)
+            self.assertIn('A1 status=failed', (directory / 'state.md').read_text())
+        p = self.run_verification(directory, 'touch must-not-run', 'x', 'over-budget', '--used', '60')
+        self.assertEqual(p.returncode, 1)
+        self.assertFalse((self.root / 'must-not-run').exists())
+
+    def test_run_does_not_overwrite_receipt_and_quotes_pipe_command(self):
+        directory = self.fresh_task()
+        self.run_cli('start', str(directory))
+        p = self.run_verification(directory, "printf 'actual result' | cat")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        checks.check_state(directory)
+        receipt = (directory / 'evidence/actual.txt').read_bytes()
+        p = self.run_verification(directory, 'touch must-not-run')
+        self.assertEqual(p.returncode, 1)
+        self.assertEqual((directory / 'evidence/actual.txt').read_bytes(), receipt)
+        self.assertFalse((self.root / 'must-not-run').exists())
+
     def test_missing_schema_evidence_and_review(self):
         for line in ['evidence_schema: 2\n', next(x for x in self.state.splitlines(True) if x.startswith('evidence:'))]:
             with self.subTest(line=line):
