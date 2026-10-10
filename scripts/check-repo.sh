@@ -51,7 +51,7 @@ long_thresholds="$(grep -Eo '60 次工具调用或 30 分钟' "$ROOT/skills/x-ra
 if grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$ROOT/skills"; then
   fail 'forbidden external route in runtime skill'
 fi
-if grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL|~/.pi/agent/skills/yxj-work|yxj-work/SKILL|yxj-work-long/SKILL|yxj-work-handoff/SKILL' "$ROOT/skills"; then
+if grep -R -n -E '~/.pi/agent/skills/yxj-[a-z0-9-]+|yxj-[a-z0-9-]+/SKILL' "$ROOT/skills"; then
   fail 'old skill runtime dependency found'
 fi
 
