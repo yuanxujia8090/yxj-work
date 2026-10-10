@@ -72,7 +72,7 @@ grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inb
 [[ "$rc" -le 1 ]] || fail "boundary grep failed (rc=$rc)"
 [[ "$rc" -eq 1 ]] || fail 'forbidden external route in installed runtime skill'
 rc=0
-grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL' "$INSTALLED/x-rail" "$INSTALLED/x-rail-long" "$INSTALLED/x-handoff" || rc=$?
+grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL|~/.pi/agent/skills/yxj-work|yxj-work/SKILL|yxj-work-long/SKILL|yxj-work-handoff/SKILL' "$INSTALLED/x-rail" "$INSTALLED/x-rail-long" "$INSTALLED/x-handoff" || rc=$?
 [[ "$rc" -le 1 ]] || fail "old-name grep failed (rc=$rc)"
 [[ "$rc" -eq 1 ]] || fail 'old runtime dependency in installed skill'
 
