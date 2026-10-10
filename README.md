@@ -11,7 +11,7 @@
 - `/x-handoff`：用户明确调用时写当前任务交接。
 - `/x-self-check`：用户明确调用时只读分析七日或三周记录。
 
-`scripts/runtime-skills.txt` 是安装范围的唯一来源。当前为 4 个入口和 31 个辅助技能。所有技能设 `disable-model-invocation: true`，不会由任务内容自动唤起。主入口 XML 的 routing 模块维护阶段、说明文件和按需参考映射。TypeScript 规则仅在项目规范不足且当前代码使用该语言时读取。设计不默认读取全部参考技能，也不默认委派。
+`scripts/runtime-skills.txt` 是安装范围的唯一来源。当前为 4 个入口和 32 个辅助技能。所有技能设 `disable-model-invocation: true`，不会由任务内容自动唤起。主入口 XML 的 routing 模块维护阶段、说明文件和按需参考映射。TypeScript 规则仅在项目规范不足且当前代码使用该语言时读取。设计不默认读取全部参考技能，也不默认委派。
 
 XML（Extensible Markup Language，可扩展标记语言）像组件标签，只分隔不同职责。它不授予权限。用户只要分析时只在回复交付，不创建任务或目标文件。用户要写文档时只写授权目录。
 
@@ -102,6 +102,7 @@ python3 scripts/test-task-checks.py
 python3 scripts/test-skill-xml.py
 python3 scripts/test-self-check.py
 python3 scripts/test-html-check.py
+bash scripts/test-worktree.sh
 bash scripts/test-contract.sh --keep-artifacts
 bash scripts/test-fixtures.sh
 bash scripts/test-v2-lifecycle.sh

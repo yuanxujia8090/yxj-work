@@ -2,7 +2,7 @@
 
 ## 源码与安装
 
-源仓库是唯一事实源。`scripts/runtime-skills.txt` 决定安装范围：4 个入口与 31 个辅助技能，同级安装。入口是 `x-rail`、`x-rail-long`、`x-handoff`、`x-self-check`。全部禁用模型自动调用，只由用户点名或入口按条件读取。
+源仓库是唯一事实源。`scripts/runtime-skills.txt` 决定安装范围：4 个入口与 32 个辅助技能，同级安装。入口是 `x-rail`、`x-rail-long`、`x-handoff`、`x-self-check`。全部禁用模型自动调用，只由用户点名或入口按条件读取。
 
 使用 Bash 和 Python 3.10 以上版本，仅依赖标准库。安装副本中的脚本从自身目录定位模块，不要求消费者项目有 `skills/`。全局软链仍指向主仓库时，隔离分支不会改变其他会话。
 

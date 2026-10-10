@@ -1,5 +1,13 @@
 # 项目决策
 
+## 2026-10-10：新增 x-worktree 技能（用户主动调用）
+
+- 已按用户给定的三步做最小实现：识别主分支（main → master → origin/HEAD）→ 在主工作区的 `.worktrees/<名称>` 下建同名分支工作区 → 从主分支所在目录复制 `.env.local`。不新增依赖，用一段 bash 脚本完成。
+- 新工作区固定建在**主工作区**（`git worktree list` 第一条）而非当前目录，避免工作区互相嵌套；从子工作区运行时也回主仓库。`.env.local` 仍从签出主分支的那个工作区取。
+- 名称既作分支名也作目录名，所以拒绝 `/`、`..` 与首点；分支或目录已存在时退出 1，不覆盖、不 force、不删除。不改项目文件（包括 `.gitignore`），只在未忽略时提示。
+- 真实验证方式：`scripts/test-worktree.sh` 在临时仓库里实际执行 `git worktree add`（13 个用例）。保留既有 35 项，共 36 项；安装范围仍只由 `scripts/runtime-skills.txt` 决定。
+- 默认目录先写 `.worktree`，按用户 2026-10-10 确认改为 `.worktrees`，与本仓库 `.gitignore` 及已有的 `.worktrees/rename-y-rail`、`.worktrees/v2.1` 用法一致；块同名安装到 `~/.pi/agent/skills` 由用户点名授权。
+
 ## 2026-10-10：新增 x-html 技能（用户主动调用）
 
 - 已按推荐选了“一个自包含 HTML 文件 + 内联 SVG 图 + 受控短句”的最小形态，因为读者的目标是看懂，不需要建站、样式系统或外部图片依赖；不联网、不引入第三方包或图片 API。

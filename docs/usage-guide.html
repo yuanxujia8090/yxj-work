@@ -128,9 +128,9 @@
     一套把 AI 编程会话变成「有范围、有证据、能中断、能续接」的工作流。本文先用一节把当前核心流程从命令到交付逐步讲清
     （见第 3 节），再覆盖七类日常场景
     （产品调研、需求评估、方案设计、开发执行、问题定位排查、长任务执行、长任务次日状态检查），
-    另含既有材料的轻量文档分支，并逐个说明 <code>skills/</code> 目录下 35 个技能的作用与调用方式。
+    另含既有材料的轻量文档分支，并逐个说明 <code>skills/</code> 目录下 36 个技能的作用与调用方式。
   </p>
-  <div class="meta">源仓库 /Users/yuanxj/Documents/github/x-rail · 基线 main 6cfee64（2026-10-10）· 入口技能 4 个 · 辅助技能 31 个 · 全部默认不可被模型自动唤起</div>
+  <div class="meta">源仓库 /Users/yuanxj/Documents/github/x-rail · 基线 main d1507a8（2026-10-10）· 入口技能 4 个 · 辅助技能 32 个 · 全部默认不可被模型自动唤起</div>
 </header>
 
 <nav class="toc">
@@ -177,7 +177,7 @@
 </ul>
 
 <p>
-  它由四个<strong>入口技能</strong>（你自己敲命令触发）和三十一个<strong>辅助技能</strong>（入口按阶段主动读取，或你点名调用）组成。
+  它由四个<strong>入口技能</strong>（你自己敲命令触发）和<strong>三十二个辅助技能</strong>（入口按阶段主动读取，或你点名调用）组成。
   入口负责流程骨架，辅助技能是每个阶段的具体方法，十三条 <code>x-principle-*</code> 则是短小的单条工程原则，被其他技能引用。
 </p>
 
@@ -188,7 +188,7 @@
 
 <h2 id="install">2. 安装与调用</h2>
 
-<p>安装哪些技能由 <code>scripts/runtime-skills.txt</code> 决定：4 个入口 + 31 个辅助技能，一起复制到同一个技能目录。因为同级安装，入口里的相对读取路径 <code>../&lt;技能名&gt;/SKILL.md</code> 在源仓库和安装目标下都成立。</p>
+<p>安装哪些技能由 <code>scripts/runtime-skills.txt</code> 决定：4 个入口 + 32 个辅助技能，一起复制到同一个技能目录。因为同级安装，入口里的相对读取路径 <code>../&lt;技能名&gt;/SKILL.md</code> 在源仓库和安装目标下都成立。</p>
 
 <pre><code>cd /Users/yuanxj/Documents/github/x-rail
 
@@ -607,7 +607,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 <h2 id="skills">6. skills 目录逐个说明</h2>
 
-<p>35 个技能全部设置 <code>disable-model-invocation: true</code>：不会被任务内容自动唤起。加载方式只有两种——入口按<a href="#stagetable">第 7 节映射表</a>主动读取，或你主动点名 <code>/x-&lt;名字&gt;</code>。</p>
+<p>36 个技能全部设置 <code>disable-model-invocation: true</code>：不会被任务内容自动唤起。加载方式只有两种——入口按<a href="#stagetable">第 7 节映射表</a>主动读取，或你主动点名 <code>/x-&lt;名字&gt;</code>。</p>
 
 <div class="skill-group" id="sk-entry">
   <h3>6.1 四个入口技能</h3>
@@ -749,7 +749,13 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 </div>
 
 <div class="skill-group" id="sk-ops">
-  <h3>6.6 人工步骤与验证（ops 阶段读取）</h3>
+  <h3>6.6 环境准备、人工步骤与验证</h3>
+
+  <div class="skill">
+    <div class="name">x-worktree</div>
+    <div class="what">在当前项目里开一个隔离工作区：识别主分支（main 或 master）→ 在 <code>.worktrees/&lt;名称&gt;</code> 下建同名分支 → 把主分支目录的 <code>.env.local</code> 复制进去。重名或目录已存在一律拒绝，不覆盖、不删除。</div>
+    <div class="when">用：<code>/x-worktree &lt;名称&gt;</code>；不写名称时用 <code>feat-{YYYYMMDDHHmmss}</code>。并行开发、隔离试验、不想在主分支直改时。回归：<code>bash scripts/test-worktree.sh</code>。</div>
+  </div>
 
   <div class="skill">
     <div class="name">x-wizard</div>
@@ -907,7 +913,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <tr>
       <td>按需</td>
       <td>无固定 playbook</td>
-      <td><code>x-html</code>、<code>x-unslop</code>、<code>x-principle-guard-the-context-window</code>、<code>x-principle-encode-lessons-in-structure</code>、<code>x-principle-separate-before-serializing-shared-state</code>、<code>x-resolving-merge-conflicts</code>、<code>x-technical-writing</code>、<code>x-teach</code></td>
+      <td><code>x-html</code>、<code>x-worktree</code>、<code>x-unslop</code>、<code>x-principle-guard-the-context-window</code>、<code>x-principle-encode-lessons-in-structure</code>、<code>x-principle-separate-before-serializing-shared-state</code>、<code>x-resolving-merge-conflicts</code>、<code>x-technical-writing</code>、<code>x-teach</code></td>
     </tr>
   </tbody>
 </table>
@@ -999,6 +1005,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 /x-interrogate &lt;改动&gt;     # 多视角对抗评审
 /x-teach &lt;模块/改动&gt;      # 讲到人真的懂
 /x-html &lt;主题或文档&gt;      # 做成面向初中生的图文讲解页（单文件、离线可看）
+/x-worktree &lt;名称&gt;        # 建 .worktrees/&lt;名称&gt; 分支工作区并复制 .env.local
 /x-wizard &lt;目标&gt;          # 生成交互式 bash 向导
 /x-unslop                 # 去 AI 味
 /x-technical-writing      # 技术写作标准</code></pre>
@@ -1093,6 +1100,7 @@ bash scripts/test-self-check.py                                # 自检脚本回
     <tr><td>查一个问题</td><td><code>/x-rail 定位：…</code></td><td>证据在 <code>evidence/</code>，结论在 <code>audit/</code></td></tr>
     <tr><td>修一个 bug</td><td><code>/x-rail 修复 …：复现 → 根因 → 最小修复 → 回归</code></td><td>修复前后对比输出在 <code>evidence/</code></td></tr>
     <tr><td>收口一个任务</td><td><code>task.py seal</code> → 写候选 <code>candidate.md</code> → <code>task.py complete --candidate</code></td><td>正式 <code>state.md</code> 与 <code>index.md</code> 同步更新</td></tr>
+    <tr><td>开一个隔离工作区</td><td><code>/x-worktree &lt;名称&gt;</code></td><td><code>.worktrees/&lt;名称&gt;</code> 新分支工作区，含复制的 <code>.env.local</code></td></tr>
     <tr><td>把主题或文档做成图文讲解</td><td><code>/x-html &lt;主题或文档路径&gt;</code></td><td>单文件 HTML 在 <code>outputs/</code>，检查器报告在 <code>evidence/</code></td></tr>
     <tr><td>跑长任务 / 过夜</td><td><code>/x-rail-long …</code></td><td>多出 <code>audit/checkpoint-*.md</code> 与 <code>handoff.md</code></td></tr>
     <tr><td>第二天接着干</td><td><code>/x-rail-long 继续 &lt;task-id&gt;</code></td><td>先读 index → contract → state → checkpoint → handoff → runs → evidence</td></tr>

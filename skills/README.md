@@ -1,6 +1,6 @@
 # skills 目录说明
 
-本目录包含 x-rail 独立工作流的 4 个入口技能，以及 31 个随安装一起复制、由入口按阶段主动读取或由用户主动点名调用的辅助技能。
+本目录包含 x-rail 独立工作流的 4 个入口技能，以及 32 个随安装一起复制、由入口按阶段主动读取或由用户主动点名调用的辅助技能。
 
 ## 入口技能
 
@@ -11,18 +11,18 @@
 
 ## 辅助技能
 
-31 个辅助技能 = 18 个项目级技能 + 13 个 `x-principle-*`（单条工程原则，短小、由其他技能引用）。`x-self-check` 只读分析脚本不自动读取其他技能：
+32 个辅助技能 = 19 个项目级技能 + 13 个 `x-principle-*`（单条工程原则，短小、由其他技能引用）。`x-self-check` 只读分析脚本不自动读取其他技能：
 
 - `x-how`、`x-why`、`x-blast-radius`：理解代码与判断改动影响面。
 - `x-codebase-design`、`x-architect`、`x-arena`、`x-prototype`、`x-interrogate`：设计与对抗性审查。
 - `x-requesting-code-review`、`x-receiving-code-review`、`x-resolving-merge-conflicts`：代码审查与冲突处理。
 - `x-unslop`、`x-technical-writing`、`x-html`、`x-teach`、`x-typescript-best-practices`：写作、讲解与图解；`x-html` 把主题或文档做成面向初中生的图文网页。
-- `x-wizard`、`x-create-verification-skill`：人工步骤向导与项目验证技能生成。
+- `x-wizard`、`x-create-verification-skill`、`x-worktree`：人工步骤向导、项目验证技能生成，以及在 `.worktrees/<名称>` 下建分支工作区并复制 `.env.local`。
 - 13 个 `x-principle-*`：边界纪律、根因修复、最小改动、上下文窗口、类型系统等单条原则。
 
 ## 调用边界
 
-本目录下全部 35 个技能都设置了：
+本目录下全部 36 个技能都设置了：
 
 ```yaml
 disable-model-invocation: true

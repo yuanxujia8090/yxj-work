@@ -42,3 +42,4 @@ x-typescript-best-practices
 x-unslop
 x-why
 x-wizard
+x-worktree
