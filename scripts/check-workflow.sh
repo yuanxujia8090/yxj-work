@@ -66,13 +66,16 @@ done < <(runtime_skills)
 [[ -f "$INSTALLED/x-rail/scripts/check-contract.sh" ]] || fail 'missing installed contract checker'
 
 # Installed runtime files must preserve the same boundary checks.
+# The trailing slash on each path matters: `grep -R dir` does not descend into a
+# symlinked install directory (the --link deployment), so without it these two
+# assertions exit 1 on an empty scan and silently pass.
 # grep exit code: 0 = violation found, 1 = clean, >=2 = the check itself broke (never a pass).
 rc=0
-grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$INSTALLED/x-rail" "$INSTALLED/x-rail-long" "$INSTALLED/x-handoff" || rc=$?
+grep -R -n -E '(^|[^[:alnum:]_-])\.audit/|docs/handoff/|external local://|00-Inbox/|projects/<project>/docs/' "$INSTALLED/x-rail/" "$INSTALLED/x-rail-long/" "$INSTALLED/x-handoff/" || rc=$?
 [[ "$rc" -le 1 ]] || fail "boundary grep failed (rc=$rc)"
 [[ "$rc" -eq 1 ]] || fail 'forbidden external route in installed runtime skill'
 rc=0
-grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL|~/.pi/agent/skills/yxj-work|yxj-work/SKILL|yxj-work-long/SKILL|yxj-work-handoff/SKILL' "$INSTALLED/x-rail" "$INSTALLED/x-rail-long" "$INSTALLED/x-handoff" || rc=$?
+grep -R -n -E '~/.pi/agent/skills/yxj-mode|yxj-mode-long/SKILL|yxj-handoff/SKILL|~/.pi/agent/skills/yxj-work|yxj-work/SKILL|yxj-work-long/SKILL|yxj-work-handoff/SKILL' "$INSTALLED/x-rail/" "$INSTALLED/x-rail-long/" "$INSTALLED/x-handoff/" || rc=$?
 [[ "$rc" -le 1 ]] || fail "old-name grep failed (rc=$rc)"
 [[ "$rc" -eq 1 ]] || fail 'old runtime dependency in installed skill'
 
