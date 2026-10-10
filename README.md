@@ -73,14 +73,14 @@ python3 <skill-dir>/scripts/task.py start <task-dir>
 # 自动验收：实际运行命令，生成输出、输入摘要和 evidence 行
 python3 <skill-dir>/scripts/task.py run <task-dir> --acceptance A1 --evidence check-1 \
   --workspace <execution-root> --input <相关文件> --expect '<实际预期文本>' \
-  --used <实际累计工具动作> --command '<验证命令>'
+  --command '<验证命令>'
 # 收口：生成候选并复用原有完成门
-python3 <skill-dir>/scripts/task.py finish <task-dir> --used <实际累计工具动作>
+python3 <skill-dir>/scripts/task.py finish <task-dir>
 ```
 
-`start` 拒绝覆盖已有状态；`run` 只接受 `required: yes` 且 `verification_type: automatic` 的验收，不替代人工、消费端、外部服务或独立审查；`finish` 不执行验证命令，只调用原有完成检查。每次 `run` 使用新的证据名，失败保留失败输出，旧证据不覆盖。已有 `seal`、`check`、`complete --candidate` 入口仍可用。
+`start` 拒绝覆盖已有状态；`run` 只接受 `required: yes` 且 `verification_type: automatic` 的验收，不替代人工、消费端、外部服务或独立审查；`finish` 不执行验证命令，只调用原有完成检查。每次 `run` 使用新的证据名，失败保留失败输出，旧证据不覆盖。`--used` 仅为兼容旧调用的可选观察值，写入 `tool_count_note`，不参与预算、完成门或效率结论。已有 `seal`、`check`、`complete --candidate` 入口仍可用。
 
-严格任务顺序为：写契约、分配并登记 task-id、`start`、实施与取证、`run` 自动验证或显式完成人工验收、`finish`、更新索引。候选必须 `status: done`。失败保留正式状态、索引和候选。完成前再次核对契约、状态、候选字节和证据输入。单任务保持一个写入者。此机制防误操作，不抵御同等写权限的恶意执行者。
+严格任务顺序为：写契约、分配并登记 task-id、`start`、实施与取证、`run` 自动验证或显式完成人工验收、`finish`、更新索引。候选必须 `status: done`。失败保留正式状态、索引和候选。完成前再次核对契约、状态、候选字节和证据输入。解决当前未知的最短路径优先，不要求默认完整阶段链路；`review` 按风险、覆盖不足、需求分歧、用户要求或关键逻辑重改触发。单任务保持一个写入者。此机制防误操作，不抵御同等写权限的恶意执行者。
 
 两个 shell 检查入口默认严格模式：
 
@@ -110,7 +110,7 @@ evidence:check|acceptance=A1|command=实际命令或人工核对|run_at=2026-10-
 
 ## 预算与恢复
 
-普通任务按实际完成条件验证，不创建预算状态。严格任务的 L1/L2/L3 默认 60/150/400 次工具调用。无进展提醒为 20/60 次；长任务另有 30 分钟无进展和 8 小时总上限。used 小于 limit 可继续；相等须收口，合法完成候选可提交；超限只能保存有原因的 blocked、stopped 或 cancelled。离线脚本证明记录一致，不宣称宿主强制限额。暂停和等待用户分开记录。
+普通任务按实际完成条件验证，不创建预算状态。严格任务保留 L1/L2/L3 的 60/150/400 离线记录提示；未接入宿主真实计数时，不填写人工动作数，也不把提示当作效率证明或完成门。无进展提醒为 20/60 次；长任务另有 30 分钟无进展和 8 小时总上限。真实计数不可用时，依据连续无进展、重复错误、时间和验证失败判断是否暂停。暂停和等待用户分开记录。
 
 恢复读取索引、contract、state、最近 checkpoint、handoff、audit/runs.json、相关 evidence；核对工作区、版本、未提交差异和输入。原外部运行先查再恢复，不可查时 unknown 或 blocked，不重复启动。[long-task.md](skills/x-rail/templates/long-task.md)给依赖和运行引用格式。
 

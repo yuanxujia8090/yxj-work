@@ -78,7 +78,7 @@ class TaskTests(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stderr)
         fields = checks.check_state(directory)
         self.assertEqual(fields['status'], 'in_progress')
-        self.assertEqual(fields['budget'], '0/60')
+        self.assertEqual(fields['budget'], 'untracked/60')
         self.assertIn('A1 status=not_run', (directory / 'state.md').read_text())
         original = (directory / 'state.md').read_bytes()
         p = self.run_cli('start', str(directory))
@@ -88,7 +88,7 @@ class TaskTests(unittest.TestCase):
     def run_verification(self, directory, command, expect='actual result', evidence='actual', *extra):
         return self.run_cli('run', str(directory), '--acceptance', 'A1', '--evidence', evidence,
                             '--workspace', str(self.root), '--input', 'input.txt', '--expect', expect,
-                            '--used', '1', '--command', command, *extra)
+                            '--command', command, *extra)
 
     def test_run_and_finish_bind_actual_command_output(self):
         directory = self.fresh_task()
@@ -101,10 +101,38 @@ class TaskTests(unittest.TestCase):
         self.assertEqual(manifest['files'][0]['sha256'], hashlib.sha256((self.root / 'input.txt').read_bytes()).hexdigest())
         index = self.root / '.work-docs/index.md'
         index.write_text('| new-task | run | in_progress |\n')
-        p = self.run_cli('finish', str(directory), '--used', '2')
+        p = self.run_cli('finish', str(directory))
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertEqual(checks.check_state(directory)['status'], 'done')
         self.assertIn('| done |', index.read_text())
+
+    def test_finish_does_not_require_or_trust_manual_tool_count(self):
+        directory = self.fresh_task()
+        self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+        self.assertEqual(self.run_verification(directory, "printf 'actual result\\n'").returncode, 0)
+        p = self.run_cli('finish', str(directory))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(checks.check_state(directory)['status'], 'done')
+        self.assertIn('budget: untracked/', (directory / 'state.md').read_text())
+
+    def test_optional_used_is_metadata_only(self):
+        directory = self.fresh_task()
+        self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+        self.assertEqual(self.run_verification(directory, "printf 'actual result\\n'").returncode, 0)
+        p = self.run_cli('finish', str(directory), '--used', '999999')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        state = (directory / 'state.md').read_text()
+        self.assertIn('tool_count_note: 999999', state)
+        self.assertIn('budget: untracked/', state)
+
+    def test_run_requires_declared_input(self):
+        directory = self.fresh_task()
+        self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+        p = self.run_cli('run', str(directory), '--acceptance', 'A1', '--evidence', 'no-input',
+                         '--workspace', str(self.root), '--expect', 'actual result',
+                         '--command', "printf 'actual result\\n'")
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn('input', p.stderr.lower())
 
     def test_run_failed_output_does_not_pass_acceptance(self):
         for command, expected in [("printf 'different result'", 'actual result'), ("printf 'actual result'; exit 2", 'actual result')]:
@@ -170,9 +198,9 @@ class TaskTests(unittest.TestCase):
             p = self.run_verification(directory, command, 'actual result', name, *extra)
             self.assertEqual(p.returncode, 1, p.stderr)
             self.assertIn('A1 status=failed', (directory / 'state.md').read_text())
-        p = self.run_verification(directory, 'touch must-not-run', 'x', 'over-budget', '--used', '60')
-        self.assertEqual(p.returncode, 1)
-        self.assertFalse((self.root / 'must-not-run').exists())
+        p = self.run_verification(directory, 'touch optional-count-marker; printf x', 'x', 'optional-count', '--used', '999999')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue((self.root / 'optional-count-marker').exists())
 
     def test_run_does_not_overwrite_receipt_and_quotes_pipe_command(self):
         directory = self.fresh_task()

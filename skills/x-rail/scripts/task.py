@@ -100,7 +100,7 @@ def start(task_dir: Path) -> None:
     values = {'task_id': task_dir.name, 'level': fields['level'], 'stage': fields['task_type'],
               'status': 'in_progress', 'contract_revision': fields['contract_revision'],
               'contract_fingerprint': hashlib.sha256((task_dir / 'contract.md').read_bytes()).hexdigest(),
-              'evidence_schema': '2', 'done_when': fields['done_when'], 'budget': f'0/{limit}',
+              'evidence_schema': '2', 'done_when': fields['done_when'], 'budget': f'untracked/{limit}',
               'calls_since_progress': '0', 'last_progress_at': timestamp, 'updated_at': timestamp,
               'blocked_by': 'none', 'unblock_condition': 'none', 'next_action': fields['objective']}
     if fields['level'] in {'L3', 'long'}:
@@ -115,20 +115,15 @@ def start(task_dir: Path) -> None:
         output.write(text)
 
 
-def budget(fields: dict, used: int) -> str:
-    previous, limit = map(int, fields['budget'].split('/'))
-    if used < previous:
-        raise ValueError('used cannot decrease the recorded tool count')
-    return f'{used}/{limit}'
-
-
-def finish(task_dir: Path, used: int) -> None:
+def finish(task_dir: Path, used: int | None = None) -> None:
     fields = task_checks.check_state(task_dir)
     if fields['status'] != 'in_progress':
         raise ValueError('finish requires an in_progress task')
     original = (task_dir / 'state.md').read_bytes()
-    candidate = candidate_file(task_dir, state_text(original.decode(), {
-        'status': 'done', 'budget': budget(fields, used), 'updated_at': now()}))
+    updates = {'status': 'done', 'updated_at': now()}
+    if used is not None:
+        updates['tool_count_note'] = str(used)
+    candidate = candidate_file(task_dir, state_text(original.decode(), updates))
     if (task_dir / 'state.md').read_bytes() != original:
         raise ValueError('state changed while preparing completion')
     complete(task_dir, candidate)
@@ -177,9 +172,9 @@ def run_verification(task_dir: Path, args) -> None:
     for path in [receipt, inputs]:
         if path.exists() or path.is_symlink():
             raise ValueError('evidence already exists; use a new name for a new attempt')
-    current_budget = budget(fields, args.used)
-    if args.used >= int(fields['budget'].split('/')[1]):
-        raise ValueError('run needs remaining tool budget')
+    updates = {'budget': fields['budget'], 'updated_at': now()}
+    if args.used is not None:
+        updates['tool_count_note'] = str(args.used)
     original = (task_dir / 'state.md').read_bytes()
     contract_bytes = (task_dir / 'contract.md').read_bytes()
     with inputs.open('x', encoding='utf-8') as output:
@@ -206,7 +201,7 @@ def run_verification(task_dir: Path, args) -> None:
     task_checks._check_inputs(task_dir, str(inputs.relative_to(task_dir)), fields['contract_revision'])
     if (task_dir / 'state.md').read_bytes() != original or (task_dir / 'contract.md').read_bytes() != contract_bytes:
         raise ValueError('state or contract changed during verification')
-    updates = {'budget': current_budget, 'updated_at': timestamp}
+    updates['updated_at'] = timestamp
     if passed:
         updates.update({'calls_since_progress': '0', 'last_progress_at': timestamp})
     text = state_text(original.decode(), updates)
@@ -238,7 +233,7 @@ def main() -> int:
     p.add_argument('task_dir')
     p = sub.add_parser('finish', help='prepare a completion candidate and reuse strict checks')
     p.add_argument('task_dir')
-    p.add_argument('--used', type=int, required=True, help='actual total tool actions; never inferred')
+    p.add_argument('--used', type=int, help='optional executor observation; not a completion or budget gate')
     p = sub.add_parser('run', help='run an automatic verification against bound inputs')
     p.add_argument('task_dir')
     p.add_argument('--acceptance', required=True)
@@ -246,7 +241,7 @@ def main() -> int:
     p.add_argument('--workspace', required=True)
     p.add_argument('--input', action='append', required=True, help='relevant workspace-relative file; repeat as needed')
     p.add_argument('--expect', action='append', required=True, help='literal expected command output; repeat as needed')
-    p.add_argument('--used', type=int, required=True)
+    p.add_argument('--used', type=int, help='optional executor observation; not a completion or budget gate')
     p.add_argument('--command', dest='verification_command', required=True, help='explicit shell verification; check/complete never run this text')
     p.add_argument('--timeout', type=float, default=300)
     args = parser.parse_args()

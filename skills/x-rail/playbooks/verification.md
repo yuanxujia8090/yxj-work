@@ -10,15 +10,15 @@
 
 ```bash
 python3 <skill-dir>/scripts/task.py start <task-dir>
-python3 <skill-dir>/scripts/task.py run <task-dir> --acceptance A1 --evidence behavior-1 --workspace <execution-root> --input src/changed.py --input tests/test_changed.py --expect 'Tests 4 passed' --used 12 --command 'python3 tests/test_changed.py'
-python3 <skill-dir>/scripts/task.py finish <task-dir> --used 13
+python3 <skill-dir>/scripts/task.py run <task-dir> --acceptance A1 --evidence behavior-1 --workspace <execution-root> --input src/changed.py --input tests/test_changed.py --expect 'Tests 4 passed' --command 'python3 tests/test_changed.py'
+python3 <skill-dir>/scripts/task.py finish <task-dir>
 ```
 
-- `start`：从已写好的 contract.md 生成 state.md，使用当前时间、契约摘要、not_run 验收和预算，封存并校验。已有状态拒绝重建；不补过去快照。
+- `start`：从已写好的 contract.md 生成 state.md，使用当前时间、契约摘要、not_run 验收和离线记录提示，封存并校验。已有状态拒绝重建；不补过去快照。
 - `run`：仅处理 required=yes 且 verification_type=automatic 的验收。执行前生成相关输入摘要；在指定工作区实际执行命令，核对退出码和全部 `--expect` 文本。命令输出、完成时间、输入摘要和证据行由脚本写入；输入在执行期间改变则拒绝更新正式状态。人工、消费端、外部方式和独立审查仍单独核对，不能用此命令冒充。
-- `--input`：可重复，只绑定当前验收相关文件；确实缺失的文件记录 absent。目标文件、测试和必要依据应一起绑定，不能只选一个无关文件；不绑定状态、证据、快照和候选。程序校验摘要，不能替执行者判断材料是否完整。
-- `--expect`：可重复，必须是命令实际输出中的预期事实；不能只写“退出 0”。文本命中不能替代行为断言，命令应包含真正检查结果的测试或脚本。
-- `--used`：执行者提供实际累计工具动作，宿主没有自动计数时如实说明；不能减少已有计数。脚本不猜计数或假造进展。
+- `--input`：可重复，只绑定当前验收相关文件；必须至少声明一个文件；确实缺失的文件记录 absent。目标文件、测试和必要依据应一起绑定，不能只选一个无关文件；不绑定状态、证据、快照和候选。输入集合由执行者声明，程序校验摘要，不能替执行者判断材料是否完整。
+- `--expect`：可重复，必须是命令实际输出中的预期事实；不能只写“退出 0”。文本包含关系不能证明完整行为，命令应包含真正检查结果的测试或脚本。输入集合由执行者声明，不能自动证明完整；机器可读测试结果优先于宽泛文字匹配。
+- - `--used`：兼容旧调用的可选观察值。它只写入 `tool_count_note`，不参与预算、完成门或效率结论。没有宿主真实计数时不要填写。
 - `finish`：从当前状态生成唯一候选，调用原 complete 的全部检查。只生成完成时间，不刷新旧验证时间，不修改验收、审查或授权。失败保留正式状态与索引，候选留在 tmp/。
 
 证据文件名每次验证使用新名称；旧记录不覆盖。`run` 的默认超时为 300 秒，可用 `--timeout` 调整；超时保存失败输出并终止该命令进程组。check/complete/finish 只核对资料，不执行证据里的命令。初始化和完成不包含提交、发布或数据库操作。

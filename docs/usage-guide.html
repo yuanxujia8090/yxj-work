@@ -256,7 +256,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
   <li><strong>严格流程才有完成门</strong>：先用 <code>task.py start</code> 初始化；自动验收用 <code>task.py run</code>；最后用 <code>task.py finish</code> 生成候选并提交。人工、消费端、外部验收仍显式记录。完成条件见 <a href="#donegate">4.4</a>，熔断与恢复规则见 <a href="#breaker">4.5</a>。</li>
 </ul>
 
-<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）就是把阶段串起来。普通任务可直接完成当前阶段，不创建记录；严格任务才在各阶段保留契约和证据。长任务入口 <code>x-rail-long</code> 仅在跨会话、外部等待或必需依赖汇总时使用，追加 <code>audit/checkpoint-&lt;序号&gt;.md</code>、<code>state</code> 和 <code>handoff.md</code>；恢复时按 <code>index.md → contract.md → state.md → 最近 checkpoint → handoff.md → audit/runs.json → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
+<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）只是示例，不是默认必经链路。普通任务可直接完成当前阶段，不创建记录；严格任务才在各阶段保留契约和证据。长任务入口 <code>x-rail-long</code> 仅在跨会话、外部等待或必需依赖汇总时使用，追加 <code>audit/checkpoint-&lt;序号&gt;.md</code>、<code>state</code> 和 <code>handoff.md</code>；恢复时按 <code>index.md → contract.md → state.md → 最近 checkpoint → handoff.md → audit/runs.json → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
 
 <div class="note rule">
   <strong>判断流程走到哪，只看两个文件</strong>：<code>state.md</code> 的 <code>stage</code> 和 <code>status</code> 回答「现在在哪一步、还能不能继续」；<code>contract.md</code> 的 <code>Acceptance</code> 回答「做到什么才算完」。对话记忆不算数，文件里没有就是没发生。
@@ -268,22 +268,22 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
 
 <p>每次调用先看交付目标。<code>fast-answer</code>（L0）是快问快答——术语解释、简单命令说明、单一事实确认——直接回答，<strong>不创建任何工作目录</strong>。低风险、可逆的小修改和文档使用普通短流程：先读、最小改动、实际验证、交付结果。调查、研究、设计和只读审查默认也不为流程落盘；只有跨会话、外部等待、必需依赖汇总、敏感动作或明确要求留档时，才进入严格记录。</p>
 
-<p>严格任务再按规模记账：</p>
+<p>严格任务先回答两个问题：<code>failure_cost_high</code>（失败代价是否高）和 <code>recovery_or_handoff_needed</code>（是否需要恢复或交接）。任一为真时使用严格记录；两者都不是且当前会话可完成时使用普通流程。任务名称不单独触发严格记录。严格任务再按规模记录离线预算：</p>
 
 <table>
   <thead><tr><th>层级</th><th>典型规模</th><th>工具调用预算</th><th>无进展阈值</th></tr></thead>
   <tbody>
-    <tr><td>L1</td><td>一次读取 + 一个小改动</td><td>60</td><td>20 次工具调用</td></tr>
-    <tr><td>L2</td><td>多步骤、需要设计和计划</td><td>150</td><td>20 次工具调用</td></tr>
-    <tr><td>L3 / long</td><td>规模较大；long 另按跨会话、外部等待或依赖汇总判断</td><td>400，另有 8 小时上限</td><td>每个子任务 60 次工具调用或 30 分钟</td></tr>
+    <tr><td>L1</td><td>一次读取 + 一个小改动</td><td>60（离线记录提示）</td><td>20 次无进展提示</td></tr>
+    <tr><td>L2</td><td>多步骤、需要设计和计划</td><td>150（离线记录提示）</td><td>20 次无进展提示</td></tr>
+    <tr><td>L3 / long</td><td>规模较大；long 另按跨会话、外部等待或依赖汇总判断</td><td>400（离线记录提示），另有 8 小时上限</td><td>每个子任务 60 次无进展提示或 30 分钟</td></tr>
   </tbody>
 </table>
 
 <p>普通和严格任务都按目标路由到阶段：<code>investigate</code>（现状、定位、恢复）、<code>research</code>（外部事实、产品、市场、技术选型）、<code>design</code>（方案设计，不改代码）、<code>plan</code>（逐任务实施规格）、<code>exec</code>（按计划改并验证）、<code>bugfix</code>（复现、根因、最小修复、回归）、<code>review</code>（只读审查）、<code>ops</code>（平台操作手册，不代点网页）、<code>mixed</code>（研究 → 决策门 → 设计/计划 → 执行 → 验证）。</p>
 
-<p>三条常用链路：</p>
+<p>阶段按当前未知选择，优先解决当前未知的最短路径。三条常用链路只是示例，不是默认必经链路：</p>
 <ul>
-  <li>开发：<code>design → plan → exec → review</code>。需求明确且改动很小可跳过 <code>design</code>，但要在契约里写明原因。</li>
+  <li>开发：<code>design → plan → exec → review</code>。需求明确且改动很小可直接执行；review 按风险、覆盖不足、需求分歧、用户要求或关键逻辑重改触发。</li>
   <li>排查修复：<code>investigate → bugfix → review</code>。无法稳定复现就停在 <code>investigate</code>，不要假装进入修复。</li>
   <li>调研：<code>research → decision gate</code>。只有决策门判 <code>proceed</code> 才继续进开发和评审。</li>
 </ul>
@@ -320,7 +320,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <p>每条证据记录 <code>acceptance</code>（绑定哪条验收条件，如 <code>A1</code>）、<code>command</code>、<code>run_at</code>、<code>result</code>、相关文件的 <code>last_edit_at</code>、<code>inputs</code>（输入摘要文件）和 <code>contract_revision</code>，证据文件本身必须真实存在。<strong>运行时间早于文件最后修改时间的证据作废</strong>——改了代码还引用旧跑出来的结果，等于没验证。</p>
 
-<p><code>inputs</code> 指向一个 JSON 摘要文件，记录 <code>version</code>、<code>contract_revision</code>、绝对 <code>workspace_root</code> 和 <code>files</code> 列表；每项写相对 <code>path</code>、<code>state: present</code>（已删除写 <code>absent</code>）和原字节 <code>sha256</code>。它只绑定与该条验收相关的材料，无关文件变化不受影响；状态文件、证据自身和契约快照不自我绑定，路径不能越出执行根目录，且不能绑定任务状态、证据、审计或临时目录。</p>
+<p>输入集合由执行者声明，不能自动证明完整。<code>--expect</code> 的文本包含关系不能证明完整行为；关键测试优先使用明确退出状态、测试计数或机器可读结果。<code>inputs</code> 指向一个 JSON 摘要文件，记录 <code>version</code>、<code>contract_revision</code>、绝对 <code>workspace_root</code> 和 <code>files</code> 列表；每项写相对 <code>path</code>、<code>state: present</code>（已删除写 <code>absent</code>）和原字节 <code>sha256</code>。它只绑定与该条验收相关的材料，无关文件变化不受影响；状态文件、证据自身和契约快照不自我绑定，路径不能越出执行根目录，且不能绑定任务状态、证据、审计或临时目录。</p>
 
 <p>验证分五层，按契约要求从窄到宽跑：<code>syntax/config</code> → <code>static</code> → <code>runtime/local</code> → <code>external</code> → <code>consumer</code>。关键词搜索和 grep 属于 <code>static</code>，只能证明「字符串在那儿」，不能单独证明「行为生效」。</p>
 
@@ -352,7 +352,7 @@ blocked ──► in_progress           （阻塞解除 / 共同前提重新验�
 
 <p>熔断后必须：停止同策略重试 → 在 <code>audit/</code> 记录失败动作、错误摘要、策略指纹（<strong>修改文件 + 执行命令 + 错误首行</strong>）和证据 → 状态改为 <code>blocked</code> 并填 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code>、<code>next_action</code> → 写 checkpoint 或交接 → 父任务不得 <code>done</code>。</p>
 
-<p>预算上限按层级取值：L1/L2/L3 分别为 60/150/400 次工具调用，L3 另有 8 小时上限。开工后发现真实范围将超出当前 level 预算（例如复现或实测成本显著高于预估）时，在 <code>contract.md</code> 与 <code>state.md</code> 显式升级 level 并记录原因，预算上限同步调整，不允许静默超支。used 小于 limit 可继续；相等时合法候选可完成，否则暂停；超限只能有原因地暂停。离线检查不代表宿主自动计数或终止。</p>
+<p>预算提示按层级取值：L1/L2/L3 的离线记录提示分别为 60/150/400，L3 另有 8 小时上限；未接入宿主真实计数时不填写人工动作数，提示不作为效率证明或完成门。无真实计数时，依据连续无进展、重复错误、时间和验证失败决定是否暂停。离线检查不代表宿主自动计数或终止。</p>
 
 <p>恢复时，新策略指纹不能与已有指纹相同。模型请求首次超时后，不原样重试：先在 <code>audit/</code> 写恢复摘要，只保留「已确认事实、未决断言、下一步」三段内容；宿主允许时降低思考级别或切换更快模型，但不修改 Pi 全局配置。说不出新旧策略差在哪，就停下来交给人。</p>
 
@@ -502,7 +502,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
   </dl>
 </div>
 <div class="scenario" id="s5">
-  <h3>5.5 问题定位排查 <span class="tag native">原生阶段 investigate → bugfix → review</span></h3>
+  <h3>5.5 问题定位排查 <span class="tag native">按未知选择 investigate / bugfix / review</span></h3>
 
   <dl>
     <dt>什么时候用</dt>
@@ -1011,8 +1011,8 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 <pre><code>python3 &lt;skill-dir&gt;/scripts/task.py start TASK_DIR
 python3 &lt;skill-dir&gt;/scripts/task.py run TASK_DIR --acceptance A1 --evidence check-1 \
   --workspace EXECUTION_ROOT --input relevant/file \
-  --expect 'expected output' --used ACTUAL_COUNT --command 'verification command'
-python3 &lt;skill-dir&gt;/scripts/task.py finish TASK_DIR --used ACTUAL_COUNT
+  --expect 'expected output' --command 'verification command'
+python3 &lt;skill-dir&gt;/scripts/task.py finish TASK_DIR
 bash &lt;skill-dir&gt;/scripts/check-state.sh TASK_DIR [--strict|--legacy-readonly]
 python3 &lt;self-check-dir&gt;/scripts/analyze_sessions.py --sessions-root DIR --days 7 --timezone Asia/Shanghai --format json
 python3 &lt;self-check-dir&gt;/scripts/analyze_sessions.py --sessions-root DIR --days 21 \

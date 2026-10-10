@@ -72,7 +72,7 @@ unblock_condition: none
 next_action: 读取固定主材料，6 次资料读取检查点前形成初稿或列明具体缺口
 calls_since_progress: 0
 last_progress_at: {{NOW}}
-budget: 0/60
+budget: untracked/60
 strategy_fingerprints: no-modification + no-command + no-error
 updated_at: {{NOW}}
 ```
@@ -81,6 +81,6 @@ updated_at: {{NOW}}
 
 1. 建立任务子目录。not_run 不需要证据文件，不为存在检查制造空白通过证据。
 2. 填完契约，用 `python3 <skill-dir>/scripts/task.py start <task-dir>` 生成状态并封存校验；已手写状态时保留原 seal/check 路径，不重新 start。skill-dir 是源仓库或安装技能目录，不假设用户项目有 skills/。默认严格检查；历史只读必须明确 --legacy-readonly，不能用于新完成。
-3. 按 plan 轻量分支先写初稿，补读只服务具体缺口。更新真实工具计数、进展和 next_action；不能把模板中的 0/60 留到收尾。
+3. 按 plan 轻量分支先写初稿，补读只服务具体缺口。更新进展和 next_action；未接入宿主真实计数时保留 `budget: untracked/60`，不要填写估计动作数。
 4. 文档定稿后实际核对两条验收。每条 passed 指向非空证据，例如 required_verification: A1 status=passed evidence=evidence/coverage.txt。证据行例如 evidence:coverage|acceptance=A1|command=人工逐项核对固定材料与交付|run_at=实际带时区时间|result=passed|last_edit_at=相关材料最后修改时间|inputs=evidence/coverage.inputs.json|contract_revision=1。输入摘要使用 version: 1、contract_revision、绝对 workspace_root 与非空 files 列表；每项为相对 path、state: present 和原字节 sha256，删除文件用 absent。绑定材料和 outputs 文档，不绑定状态或证据自身。其他未执行层保留 not_run。
-5. 有关键缺口则 blocked 并说明原因、解除条件和下一步，不能降低验收。全部必过项通过时，优先运行 `python3 <skill-dir>/scripts/task.py finish <task-dir> --used 实际工具计数`，由脚本生成候选并完成严格检查；原 complete --candidate 仍可用。失败保留正式状态；成功后更新索引。交付注明「用例已整理，测试未执行」。
+5. 有关键缺口则 blocked 并说明原因、解除条件和下一步，不能降低验收。全部必过项通过时，运行 `python3 <skill-dir>/scripts/task.py finish <task-dir>`，由脚本生成候选并完成严格检查；`--used` 仅是可选观察值，不参与完成门。原 complete --candidate 仍可用。失败保留正式状态；成功后更新索引。交付注明「用例已整理，测试未执行」。

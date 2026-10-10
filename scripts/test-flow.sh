@@ -5,8 +5,19 @@ PYTHONDONTWRITEBYTECODE=1 python3 - "$ROOT" <<'PY'
 import importlib.util,pathlib,sys,xml.etree.ElementTree as E
 root=pathlib.Path(sys.argv[1]);spec=importlib.util.spec_from_file_location('xml',root/'scripts/check-skill-xml.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 result=m.check_root(root)
-core=m.parse_body((root/'skills/x-rail/SKILL.md').read_text(),'core')
+core_text=(root/'skills/x-rail/SKILL.md').read_text()
+core=m.parse_body(core_text,'core')
 authority=core.find('authority')
+assert 'failure_cost_high' in core_text
+assert 'recovery_or_handoff_needed' in core_text
+assert '任一为真' in core_text
+assert '任务名称' in core_text
+assert '最短路径' in core_text
+assert '不要求默认完整链路' in core_text
+assert '按风险触发' in core_text
+verification_text=(root/'skills/x-rail/playbooks/verification.md').read_text()
+assert '输入集合由执行者声明' in verification_text
+assert '文本包含关系不能证明完整行为' in verification_text
 assert authority.get('readonly-no-files')=='true'
 assert authority.get('delegation')=='explicit-only'
 assert authority.get('sensitive-actions')=='irreversible,cost,external-publish,scope-change'

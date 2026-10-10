@@ -405,14 +405,22 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
     calls = int(fields["calls_since_progress"])
     if calls >= threshold and fields["status"] not in {"blocked", "stopped", "cancelled"}:
         fail(f"calls_since_progress reached {threshold} while status is not paused")
-    match = re.fullmatch(r"(\d+)/(\d+)", fields["budget"])
-    if not match or int(match.group(2)) <= 0:
-        fail("invalid budget; expected used/limit")
-    used, limit = map(int, match.groups())
-    if used > limit and fields["status"] not in {"blocked", "stopped", "cancelled"}:
-        fail("budget exceeded; state must be paused")
-    if used == limit and fields["status"] == "in_progress":
-        fail("budget exhausted; state must be paused")
+    budget_value = fields["budget"]
+    untracked = re.fullmatch(r"untracked/(\d+)", budget_value)
+    match = re.fullmatch(r"(\d+)/(\d+)", budget_value)
+    if untracked:
+        if int(untracked.group(1)) <= 0:
+            fail("invalid budget; expected untracked/positive-limit")
+    elif match:
+        used, limit = map(int, match.groups())
+        if limit <= 0:
+            fail("invalid budget; expected used/positive-limit")
+        if used > limit and fields["status"] not in {"blocked", "stopped", "cancelled"}:
+            fail("budget exceeded; state must be paused")
+        if used == limit and fields["status"] == "in_progress":
+            fail("budget exhausted; state must be paused")
+    else:
+        fail("invalid budget; expected used/limit or untracked/limit")
     if fields.get('level') not in {'L1', 'L2', 'L3', 'long'}:
         fail('invalid level')
     if fields["status"] in {"blocked", "stopped", "cancelled"}:
