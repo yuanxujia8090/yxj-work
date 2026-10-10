@@ -33,6 +33,7 @@ created="$(ls "$repo/.worktrees")"
 git -C "$repo" show-ref --verify --quiet "refs/heads/$created" || bad "branch not created"
 cmp -s "$repo/.env.local" "$repo/.worktrees/$created/.env.local" || bad ".env.local not copied"
 git -C "$repo" worktree list --porcelain | grep -q "$repo/.worktrees/$created" || bad "worktree not registered"
+[[ ! -e "$repo/.worktrees/$created/node_modules" ]] || bad "unexpected node_modules in a non-pnpm worktree"
 ok
 
 # 2) 显式名称 + --dir 覆盖
@@ -102,6 +103,50 @@ set +e
 (cd "$repo" && bash "$SCRIPT" a b >/dev/null 2>&1); code=$?
 set -e
 [[ "$code" -eq 2 ]] || bad "extra positional argument should exit 2, got $code"
+ok
+
+# 12) pnpm 项目：必须在新工作区里装依赖，node_modules 必须是真目录
+prepo="$(new_repo main)"
+printf '{"name":"t","packageManager":"pnpm@11"}\n' > "$prepo/package.json"
+printf 'lockfileVersion: 9\n' > "$prepo/pnpm-lock.yaml"
+git -C "$prepo" add package.json pnpm-lock.yaml
+git -C "$prepo" -c user.email=t@example.com -c user.name=t commit -q -m pnpm
+shim="$TMP/shim-real"; mkdir -p "$shim"
+cat > "$shim/pnpm" <<'SHIM'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$PNPM_LOG"
+mkdir -p node_modules/.pnpm-shim
+SHIM
+chmod +x "$shim/pnpm"
+rm -f "$TMP/pnpm.log"
+(cd "$prepo" && PATH="$shim:$PATH" PNPM_LOG="$TMP/pnpm.log" bash "$SCRIPT" pnpm-case >/dev/null)
+[[ "$(cat "$TMP/pnpm.log" 2>/dev/null)" == "install" ]] || bad "pnpm install not invoked: $(cat "$TMP/pnpm.log" 2>/dev/null)"
+[[ -d "$prepo/.worktrees/pnpm-case/node_modules/.pnpm-shim" ]] || bad "dependencies not installed in the new worktree"
+[[ ! -L "$prepo/.worktrees/pnpm-case/node_modules" ]] || bad "node_modules must not be a symlink"
+[[ ! -e "$prepo/node_modules" ]] || bad "install must not touch the main worktree"
+ok
+
+# 13) 有 lockfile 但 PATH 上没有 pnpm -> 退出 2，工作区保留
+set +e
+out="$( (cd "$prepo" && PATH=/usr/bin:/bin bash "$SCRIPT" no-pnpm) 2>&1 )"; code=$?
+set -e
+[[ "$code" -eq 2 ]] || bad "missing pnpm should exit 2, got $code"
+[[ "$out" == *"pnpm is not on PATH"* ]] || bad "missing pnpm message: $out"
+[[ -d "$prepo/.worktrees/no-pnpm" ]] || bad "worktree should stay created when pnpm is missing"
+ok
+
+# 14) 安装留下符号链接 node_modules -> 退出 1
+shim2="$TMP/shim-link"; mkdir -p "$shim2"
+cat > "$shim2/pnpm" <<'SHIM'
+#!/usr/bin/env bash
+ln -sfn /tmp node_modules
+SHIM
+chmod +x "$shim2/pnpm"
+set +e
+out="$( (cd "$prepo" && PATH="$shim2:$PATH" bash "$SCRIPT" link-case) 2>&1 )"; code=$?
+set -e
+[[ "$code" -eq 1 ]] || bad "symlinked node_modules should exit 1, got $code"
+[[ "$out" == *"must not be a symlink"* ]] || bad "symlink message: $out"
 ok
 
 printf 'test-worktree: passed (%s cases)\n' "$cases"

@@ -17,7 +17,7 @@
 - `x-codebase-design`、`x-architect`、`x-arena`、`x-prototype`、`x-interrogate`：设计与对抗性审查。
 - `x-requesting-code-review`、`x-receiving-code-review`、`x-resolving-merge-conflicts`：代码审查与冲突处理。
 - `x-unslop`、`x-technical-writing`、`x-html`、`x-teach`、`x-typescript-best-practices`：写作、讲解与图解；`x-html` 把主题或文档做成面向初中生的图文网页。
-- `x-wizard`、`x-create-verification-skill`、`x-worktree`：人工步骤向导、项目验证技能生成，以及在 `.worktrees/<名称>` 下建分支工作区并复制 `.env.local`。
+- `x-wizard`、`x-create-verification-skill`、`x-worktree`：人工步骤向导、项目验证技能生成，以及在 `.worktrees/<名称>` 下建分支工作区、复制 `.env.local`、对有 `pnpm-lock.yaml` 的项目在新工作区里跑 `pnpm install`（禁止 `node_modules` 符号链接）。
 - 13 个 `x-principle-*`：边界纪律、根因修复、最小改动、上下文窗口、类型系统等单条原则。
 
 ## 调用边界

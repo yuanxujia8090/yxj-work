@@ -67,10 +67,22 @@ if [[ -f "$SOURCE_DIR/.env.local" ]]; then
   ENV_STATUS="已复制自 $SOURCE_DIR/.env.local"
 fi
 
+# 依赖：pnpm 项目必须在新工作区里真实安装，不复用也不链接主工作区的 node_modules。
+DEPS_STATUS="跳过（新工作区里没有 pnpm-lock.yaml）"
+if [[ -f "$TARGET/pnpm-lock.yaml" ]]; then
+  command -v pnpm >/dev/null 2>&1 || fail "pnpm-lock.yaml found but pnpm is not on PATH; worktree is ready at $TARGET" 2
+  ( cd "$TARGET" && pnpm install ) || fail "pnpm install failed; worktree is ready at $TARGET" 2
+  DEPS_STATUS="pnpm install 完成（node_modules 为真实目录）"
+fi
+if [[ -L "$TARGET/node_modules" ]]; then
+  fail "node_modules must not be a symlink: $TARGET/node_modules; remove it and run pnpm install" 1
+fi
+
 BASE="$(git -C "$TARGET" rev-parse --short HEAD)"
 printf 'worktree: %s\n' "$TARGET"
 printf 'branch:   %s (基点 %s, 来自 %s)\n' "$NAME" "$BASE" "$MAIN"
 printf 'env:      .env.local %s\n' "$ENV_STATUS"
+printf 'deps:     %s\n' "$DEPS_STATUS"
 if ! git -C "$ROOT" check-ignore -q "$TARGET" 2>/dev/null; then
   printf 'note:     %s/%s 没有被 .gitignore 忽略，主工作区的 git status 会看到它\n' "$DIR" "$NAME"
 fi

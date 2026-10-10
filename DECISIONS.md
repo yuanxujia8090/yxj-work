@@ -1,5 +1,11 @@
 # 项目决策
 
+## 2026-10-10：x-worktree 新增强制依赖安装
+
+- 已按用户要求：新工作区里存在 `pnpm-lock.yaml` 时必须在该工作区里跑 `pnpm install`；pnpm 不在 PATH 上或安装失败时退出 2 并保留已建好的工作区，不做回滚（删除他人目录属于敏感动作）。
+- 明确禁止 `node_modules` 符号链接：不链接、不复制、不共用主工作区的依赖目录；发现新工作区里的 `node_modules` 是符号链接时退出 1 交给用户处理。只处理 pnpm，npm／yarn／bun 不自动安装（无 lockfile 时也不猜）。
+- 测试用 PATH 上的 pnpm 替身覆盖四条路径（真安装且 `node_modules` 为真目录、无 lockfile 不产生 `node_modules`、pnpm 缺失退出 2、替身留下符号链接时退出 1），不联网。
+
 ## 2026-10-10：新增 x-worktree 技能（用户主动调用）
 
 - 已按用户给定的三步做最小实现：识别主分支（main → master → origin/HEAD）→ 在主工作区的 `.worktrees/<名称>` 下建同名分支工作区 → 从主分支所在目录复制 `.env.local`。不新增依赖，用一段 bash 脚本完成。

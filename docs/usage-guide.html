@@ -753,7 +753,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-worktree</div>
-    <div class="what">在当前项目里开一个隔离工作区：识别主分支（main 或 master）→ 在 <code>.worktrees/&lt;名称&gt;</code> 下建同名分支 → 把主分支目录的 <code>.env.local</code> 复制进去。重名或目录已存在一律拒绝，不覆盖、不删除。</div>
+    <div class="what">在当前项目里开一个隔离工作区：识别主分支（main 或 master）→ 在 <code>.worktrees/&lt;名称&gt;</code> 下建同名分支 → 把主分支目录的 <code>.env.local</code> 复制进去 → 新工作区里有 <code>pnpm-lock.yaml</code> 时跑 <code>pnpm install</code>。依赖只装在新工作区里，禁止 <code>node_modules</code> 符号链接。重名或目录已存在一律拒绝，不覆盖、不删除；pnpm 缺失或安装失败时报错停下。</div>
     <div class="when">用：<code>/x-worktree &lt;名称&gt;</code>；不写名称时用 <code>feat-{YYYYMMDDHHmmss}</code>。并行开发、隔离试验、不想在主分支直改时。回归：<code>bash scripts/test-worktree.sh</code>。</div>
   </div>
 
