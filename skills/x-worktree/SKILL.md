@@ -6,6 +6,19 @@ disable-model-invocation: true
 
 # x-worktree
 
+## 脚本优先于模型
+
+这个技能的真活全在 `scripts/create_worktree.sh`。下面「做什么」的四步是脚本里已有的判断，模型只做两件事：把你的话转成一条命令，再把输出念一遍。所以日常直接跑脚本，别经过模型：
+
+```bash
+wt 我的特性名                  # ~/.zshrc 里的函数，等价于下一条
+bash <skill-dir>/scripts/create_worktree.sh 我的特性名
+```
+
+只有两种情况值得走 `/x-worktree`：名称要从自然语言里推断，或本次在 x-rail 任务里需要 `.work-docs` 记录。
+
+理由（2026-10-10 实测）：脚本本身 5.1 秒；走模型一轮中位 10~13 秒，且偶发整轮卡死。同一天一次 `/x-worktree 1010-prod-fix` 会话共 5 分 39 秒，其中脚本 5.1 秒，304 秒是模型侧流卡死后报 `Stream ended without finish_reason`。
+
 ## File boundary
 
 The workflow root is the directory this skill runs in (`<execution-root>`). Every durable file this skill
