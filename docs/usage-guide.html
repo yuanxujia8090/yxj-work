@@ -47,7 +47,7 @@
     padding: 0 28px 120px;
   }
   @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; gap: 16px; padding: 0 18px 80px; }
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0 18px 80px; }
   }
   header.doc-head {
     grid-column: 1 / -1;
@@ -77,13 +77,13 @@
   nav.toc a { color: var(--ink-2); text-decoration: none; display: block; padding: 3px 0 3px 10px; border-left: 2px solid transparent; }
   nav.toc a:hover { color: var(--accent); border-left-color: var(--rule); }
   nav.toc .sub { padding-left: 22px; font-size: 12.5px; color: var(--ink-3); }
-  main { padding-top: 28px; max-width: 860px; }
+  main { padding-top: 28px; min-width: 0; max-width: 860px; }
   h2 { margin: 64px 0 16px; font-size: 23px; letter-spacing: -0.01em; border-top: 1px solid var(--rule); padding-top: 26px; }
   h2:first-child { margin-top: 22px; border-top: none; padding-top: 0; }
-  h3 { margin: 34px 0 10px; font-size: 17.5px; }
-  p { margin: 10px 0; }
-  ul, ol { margin: 10px 0; padding-left: 22px; }
-  li { margin: 5px 0; }
+  h3 { margin: 40px 0 12px; font-size: 17.5px; }
+  p { margin: 13px 0; }
+  ul, ol { margin: 13px 0; padding-left: 22px; }
+  li { margin: 7px 0; }
   code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.88em; background: var(--bg-2); padding: 1px 5px;
@@ -97,7 +97,7 @@
   a { color: var(--accent); }
   strong { font-weight: 650; }
   table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
-  th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+  th, td { text-align: left; vertical-align: top; padding: 11px 13px; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
   th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1.5px solid var(--ink-3); white-space: nowrap; }
   .note { margin: 18px 0; padding: 12px 16px; background: var(--bg-2); border-left: 3px solid var(--ink-3); font-size: 14.5px; color: var(--ink-2); }
   .note.warn { border-left-color: var(--warn); }
@@ -106,8 +106,13 @@
   .scenario dl { margin: 0; font-size: 14.5px; }
   .scenario dt { margin-top: 16px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
   .scenario dd { margin: 4px 0 0; }
-  .skill-group { margin-top: 30px; }
-  .skill-group h3 { border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
+  .skill-group { margin-top: 26px; border-top: 1px solid var(--rule); padding-top: 14px; }
+  .skill-group > h3, .skill-group > summary { font-size: 17.5px; font-weight: 700; margin: 0 0 6px; border-bottom: 1px solid var(--rule); padding: 0 26px 6px 0; position: relative; }
+  .skill-group > summary { cursor: pointer; list-style: none; }
+  .skill-group > summary::-webkit-details-marker { display: none; }
+  .skill-group > summary::after { content: "+"; position: absolute; right: 4px; top: 0; color: var(--accent); font-weight: 400; font-size: 18px; }
+  .skill-group[open] > summary::after { content: "\2013"; }
+  .skill-group > summary:hover { color: var(--accent); }
   .skill { padding: 10px 0; border-bottom: 1px dotted var(--rule); }
   .skill:last-child { border-bottom: none; }
   .skill .name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; font-weight: 600; color: var(--accent); }
@@ -117,6 +122,22 @@
   .tag.native { border-color: var(--accent); color: var(--accent); }
   .tag.combo { border-color: var(--warn); color: var(--warn); }
   footer { grid-column: 1 / -1; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-3); }
+  figure { margin: 26px 0; }
+  figure svg { display: block; width: 100%; height: auto; }
+  figure svg text { font-family: ui-sans-serif, system-ui, "PingFang SC", sans-serif; font-size: 13.5px; fill: var(--ink-2); }
+  figure svg .h { font-size: 15px; font-weight: 600; fill: var(--ink); }
+  figure svg .s { font-size: 12.5px; }
+  figure svg .k { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+  figure svg .m { font-size: 12.5px; fill: var(--ink-3); }
+  figure svg .fr { fill: var(--bg-2); stroke: var(--rule); }
+  figure svg .bx { fill: var(--bg); stroke: var(--rule); }
+  figure svg .ac { fill: var(--accent-soft); stroke: var(--accent); }
+  figure svg .ln { stroke: var(--ink-3); stroke-width: 1.4; fill: none; }
+  figure svg .dt { fill: var(--ink-3); stroke: none; }
+  details.qa p { margin: 0 0 14px; font-size: 14.5px; color: var(--ink-2); max-width: 720px; }
+  details.fold table { margin: 12px 0; }
+  details.skill-group > p { margin: 8px 0 0; }
+  figcaption { margin-top: 10px; font-size: 13px; color: var(--ink-3); text-align: center; }
 </style>
 </head>
 <body>
@@ -125,12 +146,9 @@
 <header class="doc-head">
   <h1>x-rail 使用说明</h1>
   <p class="lede">
-    一套把 AI 编程会话变成「有范围、有证据、能中断、能续接」的工作流。本文先用一节把当前核心流程从命令到交付逐步讲清
-    （见第 3 节），再覆盖七类日常场景
-    （产品调研、需求评估、方案设计、开发执行、问题定位排查、长任务执行、长任务次日状态检查），
-    另含既有材料的轻量文档分支，并逐个说明 <code>skills/</code> 目录下 36 个技能的作用与调用方式。
+    用于 AI(Artificial Intelligence，人工智能) 辅助编程的任务流程。普通任务先读、修改、验证并交付。严格任务保存范围、证据和恢复记录。本文说明两种流程、七类日常场景，以及 <code>skills/</code> 目录中 36 个技能的用法。
   </p>
-  <div class="meta">源仓库 /Users/yuanxj/Documents/github/x-rail · 基线 main d1507a8（2026-10-10）· 入口技能 4 个 · 辅助技能 32 个 · 全部默认不可被模型自动唤起</div>
+  <div class="meta">源仓库 /Users/yuanxj/Documents/github/x-rail · 校对基线 main 74d86b0 · 更新日期 2026-10-12 · 入口 4 个 · 辅助 32 个</div>
 </header>
 
 <nav class="toc">
@@ -139,12 +157,12 @@
     <li><a href="#what">1. 这是什么</a></li>
     <li><a href="#install">2. 安装与调用</a></li>
     <li><a href="#flow">3. 核心流程：一次任务从头到尾</a></li>
-    <li><a href="#basics">4. 五个必须先懂的机制</a></li>
+    <li><a href="#basics">4. 七个必须先懂的机制</a></li>
     <li class="sub"><a href="#route">4.1 路由：交付目标与记录强度</a></li>
     <li class="sub"><a href="#contract">4.2 契约与状态（严格任务）</a></li>
     <li class="sub"><a href="#evidence">4.3 证据与证据新鲜度</a></li>
     <li class="sub"><a href="#donegate">4.4 完成判定</a></li>
-    <li class="sub"><a href="#breaker">4.5 预算与熔断</a></li>
+    <li class="sub"><a href="#breaker">4.5 预算与暂停</a></li>
     <li class="sub"><a href="#skillrule">4.6 技能加载边界</a></li>
     <li class="sub"><a href="#light-document">4.7 普通与严格文档</a></li>
     <li><a href="#scenarios">5. 七类日常场景</a></li>
@@ -169,442 +187,609 @@
 
 <h2 id="what">1. 这是什么</h2>
 
-<p>x-rail 不是一个替人写代码的「大提示词」，而是一套<strong>会话管理制度</strong>。它管三件事：</p>
+<div class="note rule">
+  <p><strong>三种读法。</strong>第一次接触：先看第 3 节两张流程图，再扫第 4 节各节的配图，建立整体印象，不必逐字读。要干活：直接跳到第 5 节找对应场景，按命令抄。查规则：第 4 节看机制，第 9、10 节展开字段与命令，第 12 节是一页速查。</p>
+</div>
+
+
+<p>x-rail 管理编程任务的范围、验证和恢复。普通任务直接读材料、修改、验证并交付。严格任务还保存完整记录，供中断后继续使用。</p>
 <ul>
-  <li><strong>边界</strong>：这次任务允许改什么、不允许改什么，工作流文件写在哪，代码改到哪为止。</li>
-  <li><strong>证据</strong>：每个结论必须有可复现的命令输出或真实运行结果支撑，「编译过了」「agent 说完成了」都不算。</li>
-  <li><strong>续接</strong>：任务可以中断、过夜、换会话。第二天的新会话只读文件就能接着干，不依赖上一次对话的记忆。</li>
+  <li>先固定目标和允许改动的范围。用户已有修改必须保留。</li>
+  <li>先运行检查，再核对实际结果。每条结论只覆盖证据能证明的内容。</li>
+  <li>需要跨会话恢复时保存任务记录。新会话先核对记录和实际产物，再继续。</li>
 </ul>
 
-<p>
-  它由四个<strong>入口技能</strong>（你自己敲命令触发）和<strong>三十二个辅助技能</strong>（入口按阶段主动读取，或你点名调用）组成。
-  入口负责流程骨架，辅助技能是每个阶段的具体方法，十三条 <code>x-principle-*</code> 则是短小的单条工程原则，被其他技能引用。
-</p>
+<p>仓库有 4 个入口技能和 32 个辅助技能。技能是供模型读取的操作说明。入口决定流程，辅助技能提供具体方法。其中 13 个 <code>x-principle-*</code> 文件各说明一条工程原则。</p>
+
+<figure>
+  <svg viewBox="0 0 800 140" role="img" aria-labelledby="f-scope">
+    <title id="f-scope">x-rail 管三件事：范围、证据、恢复</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="139"/>
+    <rect class="bx" x="20" y="24" width="240" height="92"/>
+    <text class="h" x="140" y="54" text-anchor="middle">范围</text>
+    <text x="140" y="80" text-anchor="middle">允许改什么、改到哪止</text>
+    <text x="140" y="100" text-anchor="middle">记录写在哪里</text>
+    <rect class="bx" x="280" y="24" width="240" height="92"/>
+    <text class="h" x="400" y="54" text-anchor="middle">证据</text>
+    <text x="400" y="80" text-anchor="middle">实际运行得到的输出</text>
+    <text x="400" y="100" text-anchor="middle">不是自述或编译通过</text>
+    <rect class="bx" x="540" y="24" width="240" height="92"/>
+    <text class="h" x="660" y="54" text-anchor="middle">恢复</text>
+    <text x="660" y="80" text-anchor="middle">跨会话接着做</text>
+    <text x="660" y="100" text-anchor="middle">先核对记录再继续</text>
+  </svg>
+  <figcaption>普通任务只用前两项；严格任务三项都用。</figcaption>
+</figure>
 
 <div class="note">
-  <strong>谁在什么时候读哪份文件，是写死的</strong>：入口 <code>x-rail</code> 里有一张「阶段 → 参考技能」映射表（见 <a href="#stagetable">第 7 节</a>），
-  进入某阶段就先读该阶段的 playbook，再按表里的分支条件读取参考文件。plan 的实施计划读参考技能，轻量文档读模板；没有第二份清单。
+  <p>像前端按路由加载页面，x-rail 按当前问题选择阶段。<code>skills/x-rail/SKILL.md</code> 的 <code>routing</code> 模块是执行映射的唯一来源。它指定阶段说明和辅助技能的读取条件。</p>
+  <p>阶段说明称为 <code>playbook</code>。先读当前阶段说明，再按具体问题读取辅助技能。<a href="#stagetable">第 7 节</a>提供查阅表。</p>
 </div>
 
 <h2 id="install">2. 安装与调用</h2>
 
-<p>安装哪些技能由 <code>scripts/runtime-skills.txt</code> 决定：4 个入口 + 32 个辅助技能，一起复制到同一个技能目录。因为同级安装，入口里的相对读取路径 <code>../&lt;技能名&gt;/SKILL.md</code> 在源仓库和安装目标下都成立。</p>
+<p><code>scripts/runtime-skills.txt</code> 是安装清单的唯一来源。安装脚本将 36 个技能放到同一个目录。入口的相对路径 <code>../&lt;技能名&gt;/SKILL.md</code> 因此可以同时用于源码和安装副本。</p>
+<p>需要 Bash（命令脚本解释器）和 Python 3.10 或更新版本。项目脚本只使用标准库。先在新的隔离目录验证安装：</p>
 
 <pre><code>cd /Users/yuanxj/Documents/github/x-rail
-
-# 1) 先自检仓库
 bash scripts/check-repo.sh
+install_dir="$(mktemp -d "${TMPDIR:-/tmp}/x-rail-skills.XXXXXX")"
+bash scripts/install.sh --dest "$install_dir"
+bash scripts/check-workflow.sh --source "$PWD" --installed "$install_dir"</code></pre>
 
-# 2) 安装（默认拒绝覆盖已有目录）
+<p><code>check-repo.sh</code> 检查仓库结构和规则一致性。<code>check-workflow.sh</code> 对照源仓库与安装目标。两者通过只能证明结构和文件符合检查要求，不能证明模型会遵守全部规则。</p>
+
+<div class="note warn">
+  <p>全局安装会改变其他会话可用的技能。执行前确认目标路径和目录归属。复制安装默认拒绝覆盖已有目录。</p>
+  <p><code>--update</code> 会删除并替换已标记的技能目录，目录内的本地修改会丢失。仅处理带 <code>.x-rail-installed</code> 标记且来源匹配的副本。执行更新前必须取得明确同意。</p>
+  <p><code>--unlink</code> 会删除指向本仓库的技能链接。执行前必须取得明确清理授权。链接指向的源文件仍由源仓库保存。</p>
+</div>
+
+<p>确认全局安装后，可使用以下命令。按当前安装形态选一条，不要混用：</p>
+<pre><code># 新的复制安装
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills"
-
-# 3) 安装后校验：源仓库与安装目标逐项对照
-bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"</code></pre>
-
-<p>若要更新已安装副本，只覆盖带本仓库写入标记 <code>.x-rail-installed</code> 的目录：</p>
-
-<pre><code>bash scripts/check-repo.sh
-bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update</code></pre>
-
-<p>软链安装（开发模式）：技能目录直连源仓库，改动即时生效，与复制模式互斥；<code>--link</code> 拒绝接管目录、他处软链和断链，<code>--unlink</code> 只删除指向本仓库的链接：</p>
-
-<pre><code>bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link
+# 更新已标记的复制副本，需要覆盖授权
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update
+# 开发用链接安装：改源文件后，链接读取新内容
+bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link
+# 删除指向本仓库的链接，需要清理授权
 bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
-
-<p>日常执行用前三个入口；只读会话分析用 <code>/x-self-check</code>。所有入口仅由用户明确调用。</p>
+<p><code>--link</code> 保留已经正确指向本仓库的链接。它拒绝接管已有目录、外来链接和失效链接。链接指向主仓库时，隔离分支的修改不会影响安装内容。</p>
 
 <table>
   <thead><tr><th>命令</th><th>用途</th><th>对应场景</th></tr></thead>
   <tbody>
-    <tr><td><code>/x-rail &lt;任务说明&gt;</code></td><td>普通任务入口：调研、设计、计划、执行、修复、审查</td><td>本文 5.1 – 5.5</td></tr>
-    <tr><td><code>/x-rail-long &lt;长任务说明&gt;</code></td><td>跨会话、外部等待或独立依赖汇总。多个阶段本身不触发。</td><td>本文 5.6 – 5.7</td></tr>
-    <tr><td><code>/x-handoff &lt;补充说明&gt;</code></td><td>把当前任务写成交接文件，供新会话继续（只能你主动调用）</td><td>本文 5.7</td></tr>
+    <tr><td><code>/x-rail &lt;任务说明&gt;</code></td><td>处理普通任务，按需要启用严格记录</td><td>5.1 至 5.5</td></tr>
+    <tr><td><code>/x-rail-long &lt;任务说明&gt;</code></td><td>跨会话、外部等待或必需依赖汇总</td><td>5.6 至 5.7</td></tr>
+    <tr><td><code>/x-handoff &lt;补充说明&gt;</code></td><td>为当前任务保存交接</td><td>5.7</td></tr>
+    <tr><td><code>/x-self-check &lt;时间窗口&gt;</code></td><td>只读分析会话记录，默认最近七日</td><td>6.1</td></tr>
   </tbody>
 </table>
 
-<div class="note warn">
-  辅助技能全部设置了 <code>disable-model-invocation: true</code>，也就是<strong>模型不会因为任务内容自动唤起它们</strong>。
-  两种加载方式：入口按映射表主动读取，或你主动点名 <code>/x-why</code>、<code>/x-arena</code>。看不到它们被自动调用是设计如此，不是没生效。
+<div class="note">
+  所有技能都设置了 <code>disable-model-invocation: true</code>，意思是禁止模型按任务内容自动唤起。入口只能由用户明确调用。辅助技能由入口按条件读取，或由用户点名调用。
 </div>
 
 <h2 id="flow">3. 核心流程：一次任务从头到尾</h2>
 
-<p>先看交付目标，再决定流程强度：简单回答直接交付；低风险、可逆的小修改和文档走普通短流程；需要跨会话、外部等待、依赖汇总、敏感动作或明确要求留档时，才走严格流程。下面分别展示两条路径；细节在 <a href="#basics">第 4 节</a> 展开，产物位置在 <a href="#files">第 8 节</a>。</p>
+<p>先确定交付结果，再选择阶段和记录强度。只要分析，就在回复交付。要修改，就完成允许范围内的修改和必要验证。已有严格任务始终续接原记录。</p>
 
-<pre><code>/x-rail &lt;任务说明&gt;
-  │
-  ├─ 简单回答 ─────────────────► 直接回答，不建目录
-  │
-  ├─ 普通短流程 ───────────────► 先读 → 最小修改/文档 → 实际验证 → 交付
-  │                               不建 contract/state，不封存，不写候选
-  │
-  └─ 严格流程（跨会话/外部等待/依赖汇总/敏感动作/明确要求留档）
-       1 路由       按交付目标选阶段
-       2 建契约     取 task-id → 写 contract.md
-       3 初始化     task.py start → 生成 state.md、封存并校验
-       4 阶段执行   读 playbook → 按映射表读参考技能 → 修改目标文件
-       5 取证       task.py run 自动验收；人工/消费端/外部验收显式记录
-       6 完成提交   task.py finish → 复用 complete 完成门 → 更新 index.md
-  │
-  └─ 任一环节熔断 ──► status: blocked + audit/ 失败记录 + checkpoint / handoff
-                      下个会话只读文件恢复，且必须换一条实质不同的策略</code></pre>
+<figure>
+  <svg viewBox="0 0 800 250" role="img" aria-labelledby="f-route">
+    <title id="f-route">按交付结果分三条路</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="249"/>
+    <rect class="ac" x="16" y="90" width="150" height="70"/>
+    <text class="h" x="91" y="120" text-anchor="middle">任务说明</text>
+    <text class="m" x="91" y="142" text-anchor="middle">先看交付什么</text>
+    <path class="ln" d="M166 125 H196 V44 H226"/>
+    <path class="ln" d="M166 125 H226"/>
+    <path class="ln" d="M166 125 H196 V206 H226"/>
+    <polygon class="dt" points="230,44 221,40 221,48"/>
+    <polygon class="dt" points="230,125 221,121 221,129"/>
+    <polygon class="dt" points="230,206 221,202 221,210"/>
+    <rect class="bx" x="230" y="18" width="180" height="52"/>
+    <text class="h" x="320" y="50" text-anchor="middle">直接回答</text>
+    <rect class="bx" x="230" y="99" width="180" height="52"/>
+    <text class="h" x="320" y="131" text-anchor="middle">普通任务</text>
+    <rect class="ac" x="230" y="180" width="180" height="52"/>
+    <text class="h" x="320" y="212" text-anchor="middle">严格任务</text>
+    <text class="m" x="432" y="40">简单事实与解释</text>
+    <text class="m" x="432" y="58">不建目录，不写文件</text>
+    <text class="m" x="432" y="121">先读 → 最小改动 → 验证</text>
+    <text class="m" x="432" y="139">结论在回复里交付</text>
+    <text class="m" x="432" y="202">契约 + 状态 + 证据 + 完成门</text>
+    <text class="m" x="432" y="220">任务目录留完整记录</text>
+  </svg>
+  <figcaption>三条路的分界是失败代价和恢复需求，不是任务名称。</figcaption>
+</figure>
 
-<ul>
-  <li><strong>普通流程不建骨架</strong>：低风险、可逆的小任务直接先读、最小修改、实际验证；严格流程才按 <a href="#contract">4.2</a> 写契约和状态。轻量文档分支（<a href="#light-document">4.7</a>）默认也是普通流程；L0 直接回答。</li>
-  <li><strong>4 的启动摘要不是第二套状态源</strong>：九行内容全部读自 contract、state 和最近 checkpoint，只告诉你当前边界和第一步动作；缺字段显示「未记录」，不另建文件。示例见 <code>skills/x-rail/playbooks/verification.md</code>。</li>
-  <li><strong>5–6 是干活的主体</strong>：读哪些文件由入口的「阶段 → 参考技能」表写死（<a href="#stagetable">第 7 节</a>）；每轮读取都要回答一个断言、缩小一个未知项或留下一条证据。验证怎么做见 <a href="#evidence">4.3</a>。</li>
-  <li><strong>严格流程才有完成门</strong>：先用 <code>task.py start</code> 初始化；自动验收用 <code>task.py run</code>；最后用 <code>task.py finish</code> 生成候选并提交。人工、消费端、外部验收仍显式记录。完成条件见 <a href="#donegate">4.4</a>，熔断与恢复规则见 <a href="#breaker">4.5</a>。</li>
-</ul>
+<figure>
+  <svg viewBox="0 0 800 132" role="img" aria-labelledby="f-strict">
+    <title id="f-strict">严格任务的六个步骤</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="131"/>
+    <rect class="bx" x="8" y="26" width="118" height="58"/>
+    <text class="h s" x="67" y="51" text-anchor="middle">写契约</text>
+    <text class="m" x="67" y="70" text-anchor="middle">目标与验收</text>
+    <rect class="bx" x="138" y="26" width="118" height="58"/>
+    <text class="h s" x="197" y="51" text-anchor="middle">start</text>
+    <text class="m" x="197" y="70" text-anchor="middle">生成状态</text>
+    <rect class="bx" x="268" y="26" width="118" height="58"/>
+    <text class="h s" x="327" y="51" text-anchor="middle">实施取证</text>
+    <text class="m" x="327" y="70" text-anchor="middle">改并记录</text>
+    <rect class="bx" x="398" y="26" width="118" height="58"/>
+    <text class="h s" x="457" y="51" text-anchor="middle">run</text>
+    <text class="m" x="457" y="70" text-anchor="middle">自动验收</text>
+    <rect class="bx" x="528" y="26" width="118" height="58"/>
+    <text class="h s" x="587" y="51" text-anchor="middle">finish</text>
+    <text class="m" x="587" y="70" text-anchor="middle">生成候选</text>
+    <rect class="ac" x="658" y="26" width="118" height="58"/>
+    <text class="h s" x="717" y="51" text-anchor="middle">核对索引</text>
+    <text class="m" x="717" y="70" text-anchor="middle">替正式状态</text>
+    <polygon class="dt" points="134,55 126,51.5 126,58.5"/>
+    <polygon class="dt" points="264,55 256,51.5 256,58.5"/>
+    <polygon class="dt" points="394,55 386,51.5 386,58.5"/>
+    <polygon class="dt" points="524,55 516,51.5 516,58.5"/>
+    <polygon class="dt" points="654,55 646,51.5 646,58.5"/>
+  </svg>
+  <figcaption>人工核对、外部服务和使用者验收不在自动路径里，需要单独记录。</figcaption>
+</figure>
 
-<p>三条常用链路（<code>design → plan → exec → review</code>、<code>investigate → bugfix → review</code>、<code>research → 决策门</code>）只是示例，不是默认必经链路。普通任务可直接完成当前阶段，不创建记录；严格任务才在各阶段保留契约和证据。长任务入口 <code>x-rail-long</code> 仅在跨会话、外部等待或必需依赖汇总时使用，追加 <code>audit/checkpoint-&lt;序号&gt;.md</code>、<code>state</code> 和 <code>handoff.md</code>；恢复时按 <code>index.md → contract.md → state.md → 最近 checkpoint → handoff.md → audit/runs.json → evidence/</code> 只读续接（见 <a href="#s7">5.7</a>）。</p>
+<p>严格任务的文件只有两个：<code>contract.md</code> 是任务约定，<code>state.md</code> 是进度记录。<code>start</code>、<code>run</code>、<code>finish</code> 是 <code>task.py</code> 的三个子命令。</p>
+
+<p>严格任务的启动摘要来自契约、状态和最近的阶段记录。摘要说明当前阶段、目标、风险、允许改动、禁止动作、必过验收、证据、阻塞和下一步。缺字段写“未记录”。摘要不创建第二份状态文件。</p>
+<p>阶段按当前问题选择。已确认方案不重复设计，小修改可直接执行。审查只在风险、验证不足、需求分歧、用户要求或关键逻辑重改时触发。多个阶段本身不要求长模式。</p>
 
 <div class="note rule">
-  <strong>判断流程走到哪，只看两个文件</strong>：<code>state.md</code> 的 <code>stage</code> 和 <code>status</code> 回答「现在在哪一步、还能不能继续」；<code>contract.md</code> 的 <code>Acceptance</code> 回答「做到什么才算完」。对话记忆不算数，文件里没有就是没发生。
+  <p>普通任务用实际工具结果和最终回复交付。严格任务用契约确定边界，用状态定位进度，用证据证明结果。状态写了完成，仍需核对证据是否支持。</p>
 </div>
 
-<h2 id="basics">4. 五个必须先懂的机制</h2>
+<h2 id="basics">4. 七个必须先懂的机制</h2>
 
 <h3 id="route">4.1 路由：交付目标与记录强度</h3>
 
-<p>每次调用先看交付目标。<code>fast-answer</code>（L0）是快问快答——术语解释、简单命令说明、单一事实确认——直接回答，<strong>不创建任何工作目录</strong>。低风险、可逆的小修改和文档使用普通短流程：先读、最小改动、实际验证、交付结果。调查、研究、设计和只读审查默认也不为流程落盘；只有跨会话、外部等待、必需依赖汇总、敏感动作或明确要求留档时，才进入严格记录。</p>
-
-<p>严格任务先回答两个问题：<code>failure_cost_high</code>（失败代价是否高）和 <code>recovery_or_handoff_needed</code>（是否需要恢复或交接）。任一为真时使用严格记录；两者都不是且当前会话可完成时使用普通流程。任务名称不单独触发严格记录。严格任务再按规模记录离线预算：</p>
-
+<p>像处理前端页面需求，先区分解释页面、画方案和改组件。x-rail 的阶段表示当前要做哪类工作，不表示任务必须经过几步。</p>
 <table>
-  <thead><tr><th>层级</th><th>典型规模</th><th>工具调用预算</th><th>无进展阈值</th></tr></thead>
+  <thead><tr><th>阶段名</th><th>当前工作</th></tr></thead>
   <tbody>
-    <tr><td>L1</td><td>一次读取 + 一个小改动</td><td>60（离线记录提示）</td><td>20 次无进展提示</td></tr>
-    <tr><td>L2</td><td>多步骤、需要设计和计划</td><td>150（离线记录提示）</td><td>20 次无进展提示</td></tr>
-    <tr><td>L3 / long</td><td>规模较大；long 另按跨会话、外部等待或依赖汇总判断</td><td>400（离线记录提示），另有 8 小时上限</td><td>每个子任务 60 次无进展提示或 30 分钟</td></tr>
+    <tr><td><code>fast-answer</code></td><td>简单事实、术语或命令解释，直接回答</td></tr>
+    <tr><td><code>investigate</code></td><td>确认现状、定位问题或恢复任务</td></tr>
+    <tr><td><code>research</code></td><td>核对外部事实、产品或技术选型</td></tr>
+    <tr><td><code>design</code></td><td>确定方案、范围和取舍，不改代码</td></tr>
+    <tr><td><code>plan</code></td><td>拆实施步骤，或整理已确定材料</td></tr>
+    <tr><td><code>exec</code></td><td>按明确目标或计划修改并验证</td></tr>
+    <tr><td><code>bugfix</code></td><td>复现错误、查根因、修复并回归</td></tr>
+    <tr><td><code>review</code></td><td>只读检查变更和验收依据</td></tr>
+    <tr><td><code>ops</code></td><td>编写平台操作指引，不代点网页</td></tr>
+    <tr><td><code>mixed</code></td><td>组合当前目标所需的阶段</td></tr>
   </tbody>
 </table>
 
-<p>普通和严格任务都按目标路由到阶段：<code>investigate</code>（现状、定位、恢复）、<code>research</code>（外部事实、产品、市场、技术选型）、<code>design</code>（方案设计，不改代码）、<code>plan</code>（逐任务实施规格）、<code>exec</code>（按计划改并验证）、<code>bugfix</code>（复现、根因、最小修复、回归）、<code>review</code>（只读审查）、<code>ops</code>（平台操作手册，不代点网页）、<code>mixed</code>（研究 → 决策门 → 设计/计划 → 执行 → 验证）。</p>
+<figure>
+  <svg viewBox="0 0 800 200" role="img" aria-labelledby="f-stages">
+    <title id="f-stages">九个阶段按当前工作分组</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="199"/>
+    <text class="h" x="10" y="26">弄清</text>
+    <text class="h" x="208" y="26">定方案</text>
+    <text class="h" x="406" y="26">动手</text>
+    <text class="h" x="604" y="26">检查与组合</text>
+    <rect class="bx" x="10" y="42" width="186" height="32"/>
+    <text class="k" x="103" y="63" text-anchor="middle">investigate</text>
+    <rect class="bx" x="10" y="82" width="186" height="32"/>
+    <text class="k" x="103" y="103" text-anchor="middle">research</text>
+    <rect class="bx" x="208" y="42" width="186" height="32"/>
+    <text class="k" x="301" y="63" text-anchor="middle">design</text>
+    <rect class="bx" x="208" y="82" width="186" height="32"/>
+    <text class="k" x="301" y="103" text-anchor="middle">plan</text>
+    <rect class="bx" x="208" y="122" width="186" height="32"/>
+    <text class="k" x="301" y="143" text-anchor="middle">ops</text>
+    <rect class="bx" x="406" y="42" width="186" height="32"/>
+    <text class="k" x="499" y="63" text-anchor="middle">exec</text>
+    <rect class="bx" x="406" y="82" width="186" height="32"/>
+    <text class="k" x="499" y="103" text-anchor="middle">bugfix</text>
+    <rect class="bx" x="604" y="42" width="186" height="32"/>
+    <text class="k" x="697" y="63" text-anchor="middle">review</text>
+    <rect class="bx" x="604" y="82" width="186" height="32"/>
+    <text class="k" x="697" y="103" text-anchor="middle">mixed</text>
+    <text class="m" x="604" y="143">fast-answer 直接回答</text>
+    <text class="m" x="604" y="166">不进入任何阶段</text>
+  </svg>
+  <figcaption>阶段按当前问题选，不必按顺序走完。六个常用阶段组合见下节场景。</figcaption>
+</figure>
 
-<p>阶段按当前未知选择，优先解决当前未知的最短路径。三条常用链路只是示例，不是默认必经链路：</p>
+<p>记录强度先回答两个问题：<code>failure_cost_high</code>，失败代价是否高；<code>recovery_or_handoff_needed</code>，是否需要跨会话恢复或交接。</p>
 <ul>
-  <li>开发：<code>design → plan → exec → review</code>。需求明确且改动很小可直接执行；review 按风险、覆盖不足、需求分歧、用户要求或关键逻辑重改触发。</li>
-  <li>排查修复：<code>investigate → bugfix → review</code>。无法稳定复现就停在 <code>investigate</code>，不要假装进入修复。</li>
-  <li>调研：<code>research → decision gate</code>。只有决策门判 <code>proceed</code> 才继续进开发和评审。</li>
+  <li>两者都为否，且当前会话能完成时，走普通流程。</li>
+  <li>任一为是，走严格流程。敏感动作、外部等待、必需依赖汇总、独立审查要求或明确要求留档也使用严格记录。</li>
+  <li>明确只读分析时不为流程写文件。已有严格任务不能降级，也不能放宽原验收。</li>
+  <li>需要长模式时用 <code>x-rail-long</code>。进入条件是跨会话、外部等待或依赖汇总。规模大或高风险本身不触发长模式。</li>
 </ul>
 
-<h3 id="contract">4.2 契约与状态</h3>
+<figure>
+  <svg viewBox="0 0 800 212" role="img" aria-labelledby="f-strength">
+    <title id="f-strength">记录强度由两个问题决定</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="211"/>
+    <rect class="ac" x="16" y="30" width="280" height="110"/>
+    <text class="h" x="34" y="58">两个问题</text>
+    <text x="34" y="84">失败代价高吗？</text>
+    <text x="34" y="106">要跨会话恢复或交接吗？</text>
+    <text class="m" x="34" y="128">外部等待、依赖汇总、留档要求</text>
+    <path class="ln" d="M296 58 H470"/>
+    <polygon class="dt" points="474,58 465,54 465,62"/>
+    <text class="m" x="310" y="50">任一为是</text>
+    <path class="ln" d="M156 140 V146 H470"/>
+    <polygon class="dt" points="474,146 465,142 465,150"/>
+    <text class="m" x="310" y="164">都为否且当前会话能做完</text>
+    <rect class="ac" x="474" y="30" width="310" height="56"/>
+    <text class="h" x="494" y="56">严格任务</text>
+    <text class="m" x="494" y="76">契约 + 状态 + 证据 + 完成门</text>
+    <rect class="bx" x="474" y="118" width="310" height="56"/>
+    <text class="h" x="494" y="144">普通任务</text>
+    <text class="m" x="494" y="164">读 → 改 → 验证 → 交付，不建档</text>
+    <text class="m" x="16" y="200">跨会话、外部等待或必需依赖汇总：改用 /x-rail-long</text>
+  </svg>
+  <figcaption>规模大或高风险本身不触发长模式，只看是否需要跨会话恢复。</figcaption>
+</figure>
 
-<p>普通任务先列目标、范围、完成条件和验证动作，直接执行，不为流程创建文件。严格任务才创建 <code>contract.md</code>（这次任务做什么、范围到哪、怎么算做完）和 <code>state.md</code>（现在在哪一步、有哪些证据、被什么挡住）。严格任务写完契约后用 <code>task.py start</code> 自动生成状态、封存并校验；之后用 <code>task.py run</code> 记录自动验收，用 <code>task.py finish</code> 收口。每种规模均有编号验收、风险、授权和版本。明确只读分析时在回复交付，不为骨架落盘。</p>
+<p>规模等级只用于严格任务的预算提示。<code>L0</code> 表示直接回答；<code>L1</code>、<code>L2</code>、<code>L3</code> 分别表示小、中、大规模，<code>long</code> 表示长模式。</p>
+<table>
+  <thead><tr><th>规模</th><th>离线调用数提示</th><th>无进展提醒</th></tr></thead>
+  <tbody>
+    <tr><td><code>L1</code></td><td>60</td><td>20 次</td></tr>
+    <tr><td><code>L2</code></td><td>150</td><td>20 次</td></tr>
+    <tr><td><code>L3</code> 或 <code>long</code></td><td>400；新状态另有 8 小时截止时间</td><td>每子任务 60 次，或长任务 30 分钟</td></tr>
+  </tbody>
+</table>
+<p>未接入宿主真实计数时，调用数是提醒。宿主指运行模型和工具的程序。检查脚本不能据此证明效率，也不会自动终止会话。时间和已有数值预算的校验见 <a href="#breaker">4.5</a>。</p>
 
-<p>新任务的契约在 <code>done_when</code> 摘要之外，还有带编号的 <code>Acceptance</code> 验收条件（<code>A1</code>、<code>A2</code>…），每条写 <code>outcome</code>（可观察结果）、<code>verification</code>（怎么验）、<code>verification_type</code>（automatic / manual / consumer / external）、<code>layer</code>（验证层级）和 <code>required</code>（是否必过）；顶层还要写 <code>risk</code>（low / medium / high）、<code>risk_reason</code>、<code>review_policy</code>（auto / user-confirm / full-review）、<code>contract_revision</code>、<code>Decision Gates</code> 和 <code>Contract Changes</code>。任务规模 <code>L1/L2/L3/long</code> 与影响风险是两回事：低风险自动核对，中高风险按策略审查。确认只针对不可逆、费用、对外发布和需求范围变化。独立委派必须有当前授权。</p>
+<h3 id="contract">4.2 契约与状态（严格任务）</h3>
 
-<p>严格模式要求的顶层字段是 <code>task_id</code>、<code>level</code>、<code>task_type</code>、<code>objective</code>、<code>scope</code>、<code>forbidden</code>、<code>risk</code>、<code>risk_reason</code>、<code>review_policy</code>、<code>contract_revision</code>、<code>done_when</code>，另有三个必备小节：<code>Unknowns</code>、<code>Decision Gates</code>、<code>Contract Changes</code>。<code>task_type</code> 取阶段名之一；<code>Acceptance</code> 至少要有一条 <code>required: yes</code>，写成 <code>required: no</code> 的可选项必须同时写 <code>skip_reason</code>。契约实质变化要提升 <code>contract_revision</code>，并在 <code>audit/contract-change-r&lt;N&gt;.md</code> 记录新旧值、原因、批准来源和受影响证据；只改文字不升版本会被 <code>--seal</code>/<code>--locked</code> 拦下。</p>
+<p>像给组件写验收清单，契约先写可观察结果，再写检查方法。普通任务在回复里说明这些内容。严格任务才写成 <code>contract.md</code> 和 <code>state.md</code>。</p>
+<p><code>Acceptance</code> 是验收清单。<code>A1</code> 表示第一条验收条件，<code>A2</code> 表示第二条。<code>done_when</code> 是完成条件的文字摘要，不能替代逐条验收。</p>
+<table>
+  <thead><tr><th>每条验收字段</th><th>含义</th></tr></thead>
+  <tbody>
+    <tr><td><code>outcome</code></td><td>检查什么，以及通过时能看到什么</td></tr>
+    <tr><td><code>verification</code></td><td>在什么环境中，用哪个命令或操作核对</td></tr>
+    <tr><td><code>verification_type</code></td><td>验证方式，见 4.3</td></tr>
+    <tr><td><code>layer</code></td><td>验证环境或层级，见 4.3</td></tr>
+    <tr><td><code>required</code></td><td><code>yes</code> 表示必过，<code>no</code> 表示可选</td></tr>
+    <tr><td><code>skip_reason</code></td><td>可选项必须预先写明跳过原因</td></tr>
+  </tbody>
+</table>
 
-<p>长任务另写 <code>## Dependencies</code> 段，一行一条 <code>dependency: &lt;键&gt;|task_id=&lt;子任务目录名&gt;|required=yes|acceptance=&lt;父契约里的验收编号&gt;</code>；<code>required=no</code> 的依赖同样要写 <code>skip_reason</code>。完成时递归检查子契约、快照、状态和证据，拒绝循环、重复、自引用和目录逃逸。状态文件本身不能是软链，也不能指向任务目录之外。</p>
+<p>契约至少有一条必过验收。顶层字段还包括 <code>task_id</code>（任务编号）、<code>level</code>（规模）、<code>task_type</code>（任务阶段）、<code>objective</code>（目标）、<code>scope</code>（允许范围）、<code>forbidden</code>（禁止动作）。</p>
+<p><code>risk</code> 表示低、中、高风险，值为 <code>low</code>、<code>medium</code>、<code>high</code>。<code>risk_reason</code> 解释风险原因。<code>review_policy</code> 指定审查策略，值为 <code>auto</code>、<code>user-confirm</code>、<code>full-review</code>。策略名不授予操作权限。</p>
+<p><code>contract_revision</code> 是契约版本号。三个必备小节为 <code>Unknowns</code>（未知）、<code>Decision Gates</code>（授权记录）、<code>Contract Changes</code>（契约变更记录）。风险决定审查强度，确认只针对不可逆、费用、对外发布和需求范围变化。独立审查另需当前委派授权。</p>
 
-<p>严格任务动代码前先跑结构校验（只查字段、枚举和策略关系，不给文字打分；默认严格模式，历史明确 <code>--legacy-readonly</code>，不能据此提交新完成）。普通任务不运行这些命令：</p>
+<p>写契约时，每个字段都从第一列写成 <code>key: value</code>，意思是“字段名：值”。不要加列表符号。以下命令供严格任务使用：</p>
+<pre><code># 在源仓库运行；消费项目请换成实际安装技能目录
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;任务编号&gt; --draft
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;任务编号&gt; --ready
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;任务编号&gt; --seal
+bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;任务编号&gt; --locked</code></pre>
+<p><code>--draft</code> 检查草稿，允许授权仍待确认。<code>--ready</code> 检查能否执行，也是默认模式。<code>--seal</code> 保存原字节快照。<code>--locked</code> 核对快照和变更链。新任务用 <code>start</code> 自动执行初始化、封存和校验。</p>
+<p>契约变化时先提高版本号。在 <code>audit/contract-change-r&lt;版本号&gt;.md</code> 记录新旧值、原因、批准来源和受影响证据，再引用到变更小节。旧快照不能改写。历史任务只能显式用 <code>--legacy-readonly</code> 只读核对，不能据此提交新完成。</p>
 
-<pre><code>bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;        # 默认 --ready
-bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --draft  # 确认门未完成时只能起草
-bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --seal    # 固化契约快照到 audit/contract-r&lt;N&gt;.md
-bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt; --locked  # 交付前复核历史快照与变更记录</code></pre>
-
-<p>有敏感动作但确认仍为 <code>pending</code> 时，只有 <code>--draft</code> 能通过；契约字段必须从第 1 列写成 <code>key: value</code>，不能写成 Markdown 列表项 <code>- key: value</code>，检查器会直接提示格式错误。契约实质变化必须提升 <code>contract_revision</code> 并在 <code>Contract Changes</code> 记录原因、批准人和受影响证据，改了内容但没升版本号会被 <code>--seal</code>/<code>--locked</code> 拦下。</p>
-
-<p>状态只会按下面这条路走：</p>
-
-<pre><code>in_progress ──► done        （只能通过完成判定）
-                │
-                ├──► blocked       （工具、证据、依赖、边界问题，可恢复）
-                └──► stopped       （不可逆动作、等你拍板、生产变更、花钱、对外发布、改需求范围）
-
-blocked ──► in_progress           （阻塞解除 / 共同前提重新验证通过 / 有新证据的新策略）</code></pre>
+<p>父任务用 <code>Dependencies</code> 小节声明必需依赖。依赖像页面需要先拿到接口数据，子任务通过后，父任务仍需核对自己的结果：</p>
+<pre><code>dependency: build|task_id=&lt;子任务目录名&gt;|required=yes|acceptance=A1</code></pre>
+<p><code>build</code> 是依赖名称示例。可选依赖用 <code>required=no</code>，并写 <code>skip_reason</code>。完成检查递归核对子任务，拒绝循环、重复、自引用和越出目录的路径。</p>
 
 <h3 id="evidence">4.3 证据与证据新鲜度</h3>
 
-<p>每条证据记录 <code>acceptance</code>（绑定哪条验收条件，如 <code>A1</code>）、<code>command</code>、<code>run_at</code>、<code>result</code>、相关文件的 <code>last_edit_at</code>、<code>inputs</code>（输入摘要文件）和 <code>contract_revision</code>，证据文件本身必须真实存在。<strong>运行时间早于文件最后修改时间的证据作废</strong>——改了代码还引用旧跑出来的结果，等于没验证。</p>
+<p>像修改组件后重新跑测试，证据必须代表当前文件。运行时间早于相关文件最后修改时间时，证据过期。严格任务还比较文件内容摘要，避免仅凭时间放行。</p>
+<figure>
+  <svg viewBox="0 0 800 190" role="img" aria-labelledby="f-fresh">
+    <title id="f-fresh">证据新鲜度：验证必须晚于最后一次改动</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="189"/>
+    <text class="h s" x="16" y="66">可用</text>
+    <path class="ln" d="M90 62 H740"/>
+    <polygon class="dt" points="744,62 735,58 735,66"/>
+    <circle cx="170" cy="62" r="5" fill="var(--ink-2)"/>
+    <circle cx="420" cy="62" r="5" fill="var(--ink-2)"/>
+    <circle cx="670" cy="62" r="5" fill="var(--accent)"/>
+    <text class="m" x="170" y="44" text-anchor="middle">改文件</text>
+    <text class="m" x="420" y="44" text-anchor="middle">跑验证</text>
+    <text class="m" x="670" y="44" text-anchor="middle">交付</text>
+    <text class="m" x="90" y="90">验证晚于最后一次改动，证据代表当前文件</text>
+    <text class="h s" x="16" y="146">作废</text>
+    <path class="ln" d="M90 142 H740"/>
+    <polygon class="dt" points="744,142 735,138 735,146"/>
+    <circle cx="170" cy="142" r="5" fill="var(--ink-2)"/>
+    <circle cx="420" cy="142" r="5" fill="var(--accent)"/>
+    <circle cx="670" cy="142" r="5" fill="var(--ink-3)"/>
+    <text class="m" x="170" y="124" text-anchor="middle">跑验证</text>
+    <text class="m" x="420" y="124" text-anchor="middle">又改文件</text>
+    <text class="m" x="670" y="124" text-anchor="middle">交付</text>
+    <text class="m" x="90" y="170">改动在验证之后，旧输出不能代表当前状态</text>
+  </svg>
+  <figcaption>严格任务还比对文件内容摘要，避免只靠时间判断。</figcaption>
+</figure>
 
-<p>输入集合由执行者声明，不能自动证明完整。<code>--expect</code> 的文本包含关系不能证明完整行为；关键测试优先使用明确退出状态、测试计数或机器可读结果。<code>inputs</code> 指向一个 JSON 摘要文件，记录 <code>version</code>、<code>contract_revision</code>、绝对 <code>workspace_root</code> 和 <code>files</code> 列表；每项写相对 <code>path</code>、<code>state: present</code>（已删除写 <code>absent</code>）和原字节 <code>sha256</code>。它只绑定与该条验收相关的材料，无关文件变化不受影响；状态文件、证据自身和契约快照不自我绑定，路径不能越出执行根目录，且不能绑定任务状态、证据、审计或临时目录。</p>
+<p>每条证据绑定 <code>acceptance</code>（验收编号）、<code>command</code>（实际命令或核对动作）、<code>run_at</code>（运行时间）、<code>result</code>（实际结果）、<code>last_edit_at</code>（相关文件最后修改时间）、<code>inputs</code>（输入摘要路径）和契约版本。</p>
+<p>时间必须带时区和秒。检查器换算成 UTC(Coordinated Universal Time，协调世界时) 后比较。命令文本是记录数据，状态校验器不会执行它。</p>
+<p><code>inputs</code> 指向 JSON(JavaScript Object Notation，结构化文本格式) 文件。它记录摘要格式版本、契约版本、绝对工作根路径和相关文件清单。每个文件有相对路径、存在状态和 SHA-256(Secure Hash Algorithm 256-bit，256 位安全散列算法) 内容摘要。摘要像文件指纹，文件字节变化后，摘要也会变化。</p>
+<p>存在文件写 <code>present</code>，删除文件写 <code>absent</code>。输入摘要不包含任务状态、契约、证据、审计或临时目录。路径不能越出工作根。输入集合由执行者声明，检查器不能证明材料选得完整。</p>
 
-<p>验证分五层，按契约要求从窄到宽跑：<code>syntax/config</code> → <code>static</code> → <code>runtime/local</code> → <code>external</code> → <code>consumer</code>。关键词搜索和 grep 属于 <code>static</code>，只能证明「字符串在那儿」，不能单独证明「行为生效」。</p>
+<table>
+  <thead><tr><th><code>layer</code></th><th>证据能证明什么</th></tr></thead>
+  <tbody>
+    <tr><td><code>syntax/config</code></td><td>语法、类型或配置结构符合要求</td></tr>
+    <tr><td><code>static</code></td><td>文件内容或静态规则符合要求</td></tr>
+    <tr><td><code>runtime/local</code></td><td>本机实际运行符合预期</td></tr>
+    <tr><td><code>external</code></td><td>外部服务、账号或权限的实际结果</td></tr>
+    <tr><td><code>consumer</code></td><td>用户或下游使用产物时能达到目标</td></tr>
+  </tbody>
+</table>
+<p>验证方式独立于环境。<code>automatic</code> 是自动命令或断言，<code>manual</code> 是人工核对，<code>consumer</code> 是最终使用者验收，<code>external</code> 是依赖外部服务或权限的验证方式。自动调用外部服务可写 <code>automatic + external</code>。本地用户流程可写 <code>consumer + runtime/local</code>。</p>
+<p>按完成条件选择必要层级。文本搜索只能证明字符串出现。<code>--expect</code> 只核对输出包含指定文字，验证命令本身仍需检查真实结果。优先用断言、明确测试计数或机器可读结果。</p>
 
 <h3 id="donegate">4.4 完成判定</h3>
 
-<p>下面六项同时成立才能写 <code>status: done</code>：</p>
+<p>普通任务核对实际结果与完成条件后交付。严格任务还通过完成门。完成门是提交状态前的检查，以下要求必须同时满足：</p>
 <ol>
-  <li>所有 required（必需）验收为 <code>passed</code>，每条绑定唯一非空证据，且证据比相关文件新；</li>
-  <li>所有 required 依赖已结束（<code>## Dependencies</code> 里 <code>required=yes</code> 的子任务，递归检查）；</li>
-  <li>授权齐备：决策门允许交付，敏感动作已确认或已豁免；</li>
-  <li>契约快照链完整：<code>audit/contract-r&lt;N&gt;.md</code> 与每次变更的 <code>audit/contract-change-r&lt;N&gt;.md</code> 都在；</li>
-  <li>输入摘要一致：<code>inputs</code> 列出的相关文件原字节未变；</li>
-  <li>预算未超限，且没有未处理的越界文件。</li>
+  <li>全部必过验收通过，每条绑定唯一非空证据。证据覆盖规定的方式和层级，时间与当前输入匹配。</li>
+  <li>全部必需依赖通过递归检查。父任务自己的验收也通过。</li>
+  <li>授权记录允许交付，敏感动作有匹配的确认来源。审查满足当前风险策略。</li>
+  <li>契约版本、内容摘要、快照链和变更记录一致。</li>
+  <li>适用的数值预算和时间限制通过。调用数未跟踪时，不制造人工计数。</li>
+  <li>已处理文件边界问题，当前正式状态和候选在提交前保持一致。</li>
 </ol>
-<p>出现 <code>failed</code>、<code>blocked</code>、<code>not_run</code>、未解决的决策门、仍在跑的 required 依赖，或输入摘要对不上，一律禁止标 <code>done</code>。可选（optional）项必须在契约里声明，并写明跳过原因。</p>
+<figure>
+  <svg viewBox="0 0 800 200" role="img" aria-labelledby="f-gate">
+    <title id="f-gate">完成门的六个条件</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="199"/>
+    <rect class="bx" x="16" y="26" width="120" height="62"/>
+    <text class="h s" x="76" y="52" text-anchor="middle">必过验收</text>
+    <text class="m" x="76" y="72" text-anchor="middle">都有证据</text>
+    <rect class="bx" x="148" y="26" width="120" height="62"/>
+    <text class="h s" x="208" y="52" text-anchor="middle">必需依赖</text>
+    <text class="m" x="208" y="72" text-anchor="middle">已经结束</text>
+    <rect class="bx" x="280" y="26" width="120" height="62"/>
+    <text class="h s" x="340" y="52" text-anchor="middle">授权审查</text>
+    <text class="m" x="340" y="72" text-anchor="middle">齐备</text>
+    <rect class="bx" x="412" y="26" width="120" height="62"/>
+    <text class="h s" x="472" y="52" text-anchor="middle">契约快照</text>
+    <text class="m" x="472" y="72" text-anchor="middle">一致</text>
+    <rect class="bx" x="544" y="26" width="120" height="62"/>
+    <text class="h s" x="604" y="52" text-anchor="middle">预算时间</text>
+    <text class="m" x="604" y="72" text-anchor="middle">未超限</text>
+    <rect class="bx" x="676" y="26" width="120" height="62"/>
+    <text class="h s" x="736" y="52" text-anchor="middle">文件边界</text>
+    <text class="m" x="736" y="72" text-anchor="middle">无遗留</text>
+    <path class="ln" d="M400 88 V128"/>
+    <polygon class="dt" points="400,132 396,123 404,123"/>
+    <text class="m" x="412" y="114">六项同时成立</text>
+    <rect class="ac" x="280" y="136" width="240" height="46"/>
+    <text class="h" x="400" y="164" text-anchor="middle">status: done</text>
+  </svg>
+  <figcaption>任何一项不成立，状态只能保持进行中、阻塞或停止。</figcaption>
+</figure>
 
-<p>严格新任务必须写 <code>evidence_schema: 2</code>。passed 必需验收绑定唯一非空证据、时间、相关输入摘要和契约版本。自动验收可用 <code>task.py run</code>，它只接受 required automatic 条件，不替代人工、消费端、外部服务或独立审查。完成优先用 <code>task.py finish</code>，它生成候选并调用原 <code>complete --candidate</code> 完成门。失败保留正式状态与索引，历史不自动降级。</p>
+<p>验收结果为 <code>passed</code>（通过）、<code>failed</code>（结果不符）、<code>not_run</code>（尚未执行）或 <code>blocked</code>（被权限或依赖挡住）。必过项只有 <code>passed</code> 可以完成。可选项需提前声明和说明原因。</p>
+<p>新状态必须写 <code>evidence_schema: 2</code>，表示使用第二版证据格式。<code>run</code> 只处理必过且自动的验收。<code>finish</code> 生成候选，再复用 <code>complete --candidate</code> 检查和提交。失败保留正式状态、索引和候选。</p>
+<p>任务状态有 <code>in_progress</code>（进行中）、<code>done</code>（完成）、<code>blocked</code>（可恢复阻塞）、<code>stopped</code>（等待授权或主动停止）、<code>cancelled</code><figure>
+  <svg viewBox="0 0 800 200" role="img" aria-labelledby="f-states">
+    <title id="f-states">任务状态和允许的转移</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="199"/>
+    <rect class="ac" x="40" y="60" width="160" height="50"/>
+    <text class="h s" x="120" y="90" text-anchor="middle">in_progress</text>
+    <rect class="bx" x="610" y="16" width="150" height="44"/>
+    <text class="h s" x="685" y="44" text-anchor="middle">done</text>
+    <rect class="bx" x="610" y="112" width="150" height="44"/>
+    <text class="h s" x="685" y="140" text-anchor="middle">blocked</text>
+    <path class="ln" d="M200 85 H300 V38 H610"/>
+    <polygon class="dt" points="606,38 597,34 597,42"/>
+    <text class="m" x="310" y="30">完成门全部通过</text>
+    <path class="ln" d="M200 85 H610"/>
+    <polygon class="dt" points="606,85 597,81 597,89"/>
+    <text class="m" x="310" y="106">工具失败、证据不足、共同前提被否定</text>
+    <path class="ln" d="M685 156 V176 H20 V85 H40" stroke-dasharray="5 4"/>
+    <polygon class="dt" points="44,85 35,81 35,89"/>
+    <text class="m" x="310" y="192">阻塞解除后先核对证据再恢复</text>
+  </svg>
+  <figcaption>stopped 等待授权，cancelled 表示取消。两者都不等于完成。</figcaption>
+</figure>
 
-<h3 id="breaker">4.5 预算与熔断</h3>
+（取消）。阻塞解除后先核对证据再恢复。取消和停止都不等于完成。</p>
 
-<p>熔断的触发条件（每个子任务独立计数）：</p>
+<h3 id="breaker">4.5 预算与暂停</h3>
+
+<p>失败后先读准确报错，再换方法。第一次失败就不原样重复。以下累计情况要求暂停当前策略：</p>
 <ul>
-  <li>同一命令 + 同一错误首行出现 2 次；</li>
-  <li>错误各不相同时，required 验证连续失败 3 次；</li>
-  <li>L1/L2 连续 20 次工具调用无进展；L3/long 每子任务 60 次工具调用或 30 分钟无进展；</li>
-  <li>第三方技能越界写入 <code>.work-docs</code> 之外的路径；</li>
-  <li>共同前提被证据否定。</li>
+  <li>同一命令和同一错误首行出现两次。</li>
+  <li>必过验证连续失败三次，即使错误不同。</li>
+  <li>小规模任务连续 20 次无进展；大规模或长任务每子任务 60 次，或长任务 30 分钟无进展。</li>
+  <li>第三方技能意外写到允许记录目录之外。</li>
+  <li>实际证据否定多个步骤共同依赖的假设。</li>
 </ul>
+<p>有证据的新结论、目标产物新版本或必过验收通过属于有效进展。创建目录、改时间和重复读取不算。只读结论可以直接在回复交付。</p>
+<p>普通任务说明失败、影响和下一步。严格任务还保存失败动作、准确错误和证据。<code>strategy_fingerprints</code> 记录策略指纹，内容是“修改文件、执行命令、错误首行”。新策略必须有实质变化。</p>
+<p>严格任务设为阻塞时，填写 <code>blocked_by</code>（阻塞原因）、<code>attempted_paths</code>（已试路径）、<code>shared_assumption</code>（共同假设）、<code>unblock_condition</code>（解除条件）和 <code>next_action</code>（下一步）。长任务再保存阶段记录和交接。</p>
 
-<p>熔断后必须：停止同策略重试 → 在 <code>audit/</code> 记录失败动作、错误摘要、策略指纹（<strong>修改文件 + 执行命令 + 错误首行</strong>）和证据 → 状态改为 <code>blocked</code> 并填 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code>、<code>next_action</code> → 写 checkpoint 或交接 → 父任务不得 <code>done</code>。</p>
-
-<p>预算提示按层级取值：L1/L2/L3 的离线记录提示分别为 60/150/400，L3 另有 8 小时上限；未接入宿主真实计数时不填写人工动作数，提示不作为效率证明或完成门。无真实计数时，依据连续无进展、重复错误、时间和验证失败决定是否暂停。离线检查不代表宿主自动计数或终止。</p>
-
-<p>恢复时，新策略指纹不能与已有指纹相同。模型请求首次超时后，不原样重试：先在 <code>audit/</code> 写恢复摘要，只保留「已确认事实、未决断言、下一步」三段内容；宿主允许时降低思考级别或切换更快模型，但不修改 Pi 全局配置。说不出新旧策略差在哪，就停下来交给人。</p>
-
-<p>为控制长会话耗时，采用断言驱动读取：先列断言，再按断言定位实现符号和局部代码，并立即写 evidence；低风险、只读、<code>review_policy: auto</code> 的审查使用普通短流程，跳过与交付无关的构建、测试和全量参考材料。严格任务顺序：写 contract → <code>task.py start</code> → 实施和取证 → <code>task.py run</code> 自动验收或显式完成人工验收 → <code>task.py finish</code> → 更新索引。</p>
+<p>规模预算为 <code>60/150/400</code>。新状态写 <code>budget: untracked/60</code> 等格式，表示调用数未跟踪。旧的 <code>used/limit</code> 数值格式仍受校验。兼容参数 <code>--used</code> 只写 <code>tool_count_note</code>，即执行者观察值，不参与预算或完成门。</p>
+<p>新大规模和长模式状态记录 8 小时截止时间。无真实计数时，依据时间、连续无进展和验证失败决定暂停。暂停和等待用户分开说明。换会话或换一天不自动重置已有预算。</p>
+<p>模型请求超时后保留“已确认事实、未决问题、下一步”摘要。宿主允许时调整本次模型设置，不能修改全局配置。原外部运行先查询再恢复。工具或运行基础设施失败时，保留准确错误和运行引用，不切换执行协议重发。</p>
 
 <h3 id="skillrule">4.6 技能加载边界</h3>
 
-<p>辅助技能加载后仍受当前任务的契约、<code>.work-docs</code> 文件边界、预算、熔断和验证要求约束。如果技能自带规则与当前契约冲突，<strong>以契约为准</strong>，并把差异记到 <code>audit/</code>。</p>
-
-<p>调用第三方技能前先按 <code>playbooks/third-party-skill.md</code> 分类：只读的可以直接跑；能指定输出根的必须传入本次任务目录；固定写入或写入不可知的，只能在隔离的临时目录里试跑，否则任务标 <code>blocked</code>。调用前后都要存目录清单，发现 <code>.work-docs</code> 之外的意外文件立即熔断，且<strong>未经授权不得移动、删除或覆盖</strong>那个文件。</p>
+<p>当前用户授权决定允许动作。辅助技能加载后仍受任务范围、验证和文件边界约束。技能说明不能扩大范围，也不能授权委派。</p>
+<p>独立委派像请另一位开发者接手明确的一项检查。启动前需要当前用户或项目规则明确授权。先确认可用能力，再固定任务、输入、输出位置和验收。默认由主会话直接执行。</p>
+<p>调用第三方技能前读 <code>playbooks/third-party-skill.md</code>，即第三方技能的文件边界说明。只读技能可使用；可指定输出目录的技能必须传入本任务目录；固定或未知写入的技能只能在隔离目录验证，否则保持阻塞。</p>
+<p>调用前后保存文件清单。发现越界文件后立即暂停并保留现场。未经明确同意，不移动、删除或覆盖文件。独立审查所需工具不可用时单列阻塞，不能把作者自查写成独立审查。</p>
 
 <h3 id="light-document">4.7 普通与严格文档整理</h3>
 
-<p>材料和目标已确定的测试用例、检查清单、变更说明，普通情况下直接列目标、依据、范围和验收，读固定材料后写初稿并核对，不创建任务文件。只有需要跨会话、明确要求留档或其他严格条件时，才使用 <code>skills/x-rail/templates/document-task.md</code>，并用 <code>task.py start</code> 生成状态。默认不研究校验器源码，不加载实施计划的「做可重复工具」参考技能。</p>
-<pre>/x-rail 结合 plans/0.0.15/ 和提交 9db0dcf 整理手工测试用例，我要测试下</pre>
-<p>「我要测试下」表示用户拿用例去测，不等于要求 Agent 代跑。默认不搭环境、不执行测试、不全量审查、不检查发布；未确定功能仍走 design，实施规格仍走原计划分支，实际执行另进 exec。</p>
+<p>材料和目标已确定时，测试用例、检查清单和变更说明走轻量文档分支。普通文档直接固定目标、依据、范围和验收，读取材料后写初稿并核对。用户指定文件是任务目标，可以在原位置修改。</p>
+<p>需要严格记录时才使用 <code>skills/x-rail/templates/document-task.md</code> 模板，并用 <code>start</code> 生成状态。模板不负责判断意图。普通文档不为流程创建任务目录。</p>
+<pre><code>/x-rail 根据 plans/&lt;版本&gt;/ 和提交 &lt;固定提交&gt; 整理手工测试用例。我要测试下。</code></pre>
+<p>“我要测试下”表示用户拿用例去测试。它不授权模型代跑。整理用例默认不搭环境、不执行测试、不做全量审查、不检查发布。</p>
 <ul>
-  <li><strong>6 次资料工具调用</strong>检查点：材料足够就写初稿，不足先写已有条目与具体缺口。批量读取按实际动作计数，不能靠包裹命令绕过。</li>
-  <li><strong>20 次总工具调用</strong>检查点：验收齐全则交付；仅可选细节缺失则说明；关键必过事实缺失则保持非 done。不能降低必过项，不能把部分初稿标完成。</li>
-  <li>补读前指出初稿中的哪条预期结果或事实缺口；单纯读取或查询环境不算进展。固定方案和提交；若纳入未提交差异先明确范围，合并状态通常只作执行前提。</li>
+  <li>到 6 次资料动作时检查材料是否足够。足够就写初稿；不足就写已确认内容和具体缺口。</li>
+  <li>补读前指出要确认初稿中的哪条事实或预期结果。批量调用仍按实际动作计数。</li>
+  <li>到 20 次总动作时判断能否交付。必过事实缺失就说明阻塞，不能把部分初稿标为完成。</li>
 </ul>
-<p>普通文档验收覆盖、事实和可理解性，直接交付核对结果；严格文档才按原格式绑定 evidence。明确未执行的测试不得写成已执行。6 次资料动作和 20 次总动作是技能约束，<strong>不是宿主自动拦截或速度保证</strong>；是否减少空转需要实际模型会话验证。模板与流程回归可运行 <code>bash scripts/test-document-template.sh</code> 和 <code>bash scripts/test-flow.sh</code>。</p>
+<p>这些是执行提醒，不是宿主自动拦截。文档验证覆盖、事实和可理解性。严格文档才将核对结果绑定到证据。未执行的测试必须写“测试未执行”。</p>
 
 <h2 id="scenarios">5. 七类日常场景</h2>
 
-<p>下面每节按同一模板写：什么情况下用它、怎么敲、内部走什么、你会拿到什么产物、验收看什么、常见坑。标 <span class="tag native">原生阶段</span> 的是工作流本来就有这个阶段；标 <span class="tag combo">组合用法</span> 的是用现有阶段拼出来的用法。</p>
+<figure>
+  <svg viewBox="0 0 800 290" role="img" aria-labelledby="f-scenes">
+    <title id="f-scenes">七类场景和对应命令</title>
+    <rect class="fr" x="0.5" y="0.5" width="799" height="289"/>
+    <rect class="bx" x="16" y="26" width="768" height="32"/>
+    <text class="m" x="30" y="46.5">5.1</text>
+    <text class="h s" x="64" y="46.5">产品调研</text>
+    <text class="k" x="200" y="46.5">/x-rail 调研 &lt;对象&gt;：&lt;问题&gt;</text>
+    <rect class="bx" x="16" y="63" width="768" height="32"/>
+    <text class="m" x="30" y="83.5">5.2</text>
+    <text class="h s" x="64" y="83.5">需求评估</text>
+    <text class="k" x="200" y="83.5">/x-rail 评估需求：&lt;描述&gt;</text>
+    <rect class="bx" x="16" y="100" width="768" height="32"/>
+    <text class="m" x="30" y="120.5">5.3</text>
+    <text class="h s" x="64" y="120.5">方案设计</text>
+    <text class="k" x="200" y="120.5">/x-rail 设计 &lt;目标&gt;</text>
+    <rect class="bx" x="16" y="137" width="768" height="32"/>
+    <text class="m" x="30" y="157.5">5.4</text>
+    <text class="h s" x="64" y="157.5">开发执行</text>
+    <text class="k" x="200" y="157.5">/x-rail 按方案实现 &lt;功能&gt;</text>
+    <rect class="bx" x="16" y="174" width="768" height="32"/>
+    <text class="m" x="30" y="194.5">5.5</text>
+    <text class="h s" x="64" y="194.5">问题排查</text>
+    <text class="k" x="200" y="194.5">/x-rail 定位：&lt;症状&gt; ｜ 修复 &lt;症状&gt;</text>
+    <rect class="bx" x="16" y="211" width="768" height="32"/>
+    <text class="m" x="30" y="231.5">5.6</text>
+    <text class="h s" x="64" y="231.5">长任务执行</text>
+    <text class="k" x="200" y="231.5">/x-rail-long &lt;目标&gt;</text>
+    <rect class="bx" x="16" y="248" width="768" height="32"/>
+    <text class="m" x="30" y="268.5">5.7</text>
+    <text class="h s" x="64" y="268.5">次日恢复</text>
+    <text class="k" x="200" y="268.5">/x-rail-long 继续 &lt;任务编号&gt;</text>
+  </svg>
+  <figcaption>每个场景的细节在对应小节：内部步骤、交付位置和验收标准。</figcaption>
+</figure>
+
+<p>每个场景说明使用时机、命令、执行方法、交付位置和验收。只读结论默认在回复交付。用户要文档时写指定位置。严格任务的内部报告和证据才写入任务目录。</p>
 
 <div class="scenario" id="s1">
   <h3>5.1 产品调研 <span class="tag native">原生阶段 research</span></h3>
-
   <dl>
     <dt>什么时候用</dt>
-    <dd>要摸外部事实：某个产品/竞品/市场情况、技术选型对比、用户反馈、某个方向值不值得做。和「代码里怎么跑的」无关——那属于 <code>investigate</code>。</dd>
-
+    <dd>需要外部事实、替代方案、成本或技术选型依据时。代码运行链路属于调查阶段。</dd>
     <dt>怎么敲</dt>
-    <dd>
-<pre><code>/x-rail 调研 &lt;产品/技术&gt;：现在有哪些替代方案，各自的能力边界和真实使用成本，给出是否值得投入的判断</code></pre>
-      想强制收敛到结论，就把停止条件一起写进去：
-<pre><code>/x-rail 调研 X。要求：隐含假设显式列出，结论必须能落到 proceed / do_not_build，每条附证据出处</code></pre>
-    </dd>
-
+    <dd><pre><code>/x-rail 调研 &lt;产品或技术&gt;：替代方案、能力边界、真实成本和投入建议。每条结论附来源和日期。</code></pre></dd>
     <dt>内部走什么</dt>
-    <dd>读 <code>playbooks/research.md</code>，价值未知时读 <code>x-why</code>，实现未知时读 <code>x-how</code>。要点：先把对象、术语、版本、环境确认清楚（身份不明就阻塞，禁止直接下结论）→ 把请求改写成可证伪的问题，拆成 1–5 条断言 → 证据按优先级取：官方文档/API、官方仓库/发布说明、一手数据或用户原话、可复现测量，最后才是二手来源 → 维护证据台账（<code>claim / source / date / fact_or_inference / confidence / reproducible / contradiction / scope</code>）→ 事实、推断、未知分开写 → 只有当一个测量可能改变决策时，才真去跑它。</dd>
-
-    <dt>产物落在哪</dt>
-    <dd>最终报告写 <code>.work-docs/tasks/&lt;task-id&gt;/outputs/</code>；证据台账和运行记录写 <code>evidence/</code> 或 <code>audit/</code>。报告结尾必须给 <code>decision_gate: proceed | design_only | gather_more | do_not_build</code>，并附开发交接：范围、证据指针、验收方向、仍需人拍板的不可逆决策。</dd>
-
-    <dt>验收看什么</dt>
-    <dd>每条结论有没有来源和日期；事实与推断有没有混在一起；失败路径有没有记（「搜不到」不等于「不存在」）；决策门有没有给，而不是留一句「供参考」。</dd>
-
-    <dt>常见坑</dt>
-    <dd>把「查到了几篇文章」当结论；把不可复现的一次性体验当数据；没确认版本就开始横向对比。以上三种都会被 research playbook 挡回 <code>gather_more</code>。</dd>
+    <dd>先确认对象、版本和环境，再拆成能由证据回答的问题。优先官方资料、一手数据和可复现测量。事实、推断、未知分别说明。价值原因不明时读 <code>x-why</code>；实现不明时读 <code>x-how</code>。只有测量能改变决策时才运行。</dd>
+    <dt>交付与位置</dt>
+    <dd>默认回复交付结论。要求报告时写授权位置；严格记录的报告写 <code>outputs/</code>，来源和运行记录写 <code>evidence/</code> 或 <code>audit/</code>。结尾写 <code>decision_gate</code>，即下一步决策：<code>proceed</code>（可继续）、<code>design_only</code>（只设计）、<code>gather_more</code>（继续取证）或 <code>do_not_build</code>（不做）。可继续不等于自动授权开发。</dd>
+    <dt>验收与常见问题</dt>
+    <dd>每条判断有来源、日期和适用范围。结论能解释下一步。搜索摘要不当作一手事实，单次体验不当作稳定数据。搜索失败只说明当前取证结果。</dd>
   </dl>
 </div>
 
 <div class="scenario" id="s2">
   <h3>5.2 需求评估 <span class="tag combo">组合用法</span></h3>
-
   <dl>
     <dt>什么时候用</dt>
-    <dd>需求来了，要先判断：这事该不该做、做到哪一层、边界在哪、有没有隐含的不可逆代价。工作流没有单独的「需求评估」阶段，它由三块拼成：<code>research</code> 的决策门 + <code>design</code> 的范围与不可逆决策清单 + <code>x-interrogate</code> 的对抗评审。</dd>
-
+    <dd>需要判断该不该做、最小范围和代价时。按未知组合研究与设计阶段，不默认走完整开发流程。</dd>
     <dt>怎么敲</dt>
-    <dd>
-<pre><code>/x-rail 评估需求：&lt;需求描述&gt;。产出：（1）该需求解决的真实问题，不做会怎样；
-（2）最小可用范围 vs 完整范围；（3）涉及的不可逆决策；（4）有证据支撑的结论：
-proceed / design_only / do_not_build。不要改代码。</code></pre>
-      需要更强的对抗时点名它：
-<pre><code>/x-interrogate 刚才的需求评估结论，找出我漏掉的前提和盲点</code></pre>
-    </dd>
-
+    <dd><pre><code>/x-rail 评估需求：&lt;描述&gt;。说明真实问题、最小范围、代价、风险和有证据的建议。只分析，不改文件。</code></pre>
+    需要多个独立视角且已授权委派时，可点名 <code>/x-interrogate</code> 挑战结论。</dd>
     <dt>内部走什么</dt>
-    <dd>先按 <code>research</code> 建立事实（现状、已有能力、外部约束）并给决策门；<code>design</code> playbook 要求写出当前链路、可复用能力、边界、假设与备选方案，并显式定义 <code>done_when</code>、带编号的 <code>Acceptance</code> 验收条件、<code>risk</code>/<code>review_policy</code>、验证层级、文件边界和<strong>不可逆决策</strong>，定稿前跑 <code>check-contract.sh</code> 过结构校验；证据不足就停在 <code>design_only</code> 或 <code>gather_more</code>，不建执行任务。对抗评审阶段读 <code>x-interrogate</code>，用多个独立视角挑战同一批改动或结论。</dd>
-
-    <dt>产物落在哪</dt>
-    <dd><code>outputs/</code> 下的一份评估报告（含范围切分与决策门）；研究证据与台账在 <code>evidence/</code>；决策记录在 <code>audit/</code>。</dd>
-
-    <dt>验收看什么</dt>
-    <dd>「最小范围」是否写清了不做什么；不可逆决策是否单列（例如数据结构定型、对外发布、花钱）；决策门是不是四选一而不是「都可以」；每条判断有没有证据指针。</dd>
-
-    <dt>常见坑</dt>
-    <dd>把需求评估做成方案设计（越界改代码或提前定实现）；结论是「可以做」但没说清做到哪停；漏掉不可逆项，等执行到一半才发现退不回来。</dd>
+    <dd>先核对现有能力和约束，再比较做与不做的结果。列出假设、最小范围、替代方案和敏感动作。证据不足时继续取证，不提前进入实施。</dd>
+    <dt>交付与位置</dt>
+    <dd>只分析就在回复交付。要求评估文档时写指定位置；严格任务的内部报告写 <code>outputs/</code>。不会为了结构校验而创建只读任务文件。</dd>
+    <dt>验收与常见问题</dt>
+    <dd>建议明确且有依据。范围说明具体。不把需求评估当作修改代码的授权，不把“可以做”当作开发已通过验收。</dd>
   </dl>
 </div>
 
 <div class="scenario" id="s3">
   <h3>5.3 方案设计 <span class="tag native">原生阶段 design</span></h3>
-
   <dl>
     <dt>什么时候用</dt>
-    <dd>需求已经明确，要定结构和接缝：模块怎么切、接口长什么样、数据怎么流、放在哪一层。这个阶段<strong>明确不改项目代码</strong>。</dd>
-
+    <dd>目标已明确，但模块职责、接口、数据流或取舍未确定时。只设计不改项目代码。</dd>
     <dt>怎么敲</dt>
-    <dd>
-<pre><code>/x-rail 设计 &lt;要做的东西&gt; 的实现方案：模块边界、接口、数据流、验证方式和不可逆决策</code></pre>
-      想先探形状，再定稿：
-<pre><code>/x-prototype 用一次性脚本验证「状态这样设计是否够用」，结论写回设计</code></pre>
-      方案有分叉、想同时看多个答案：
-<pre><code>/x-arena 同一个接口设计给我 3 个独立候选，选出底稿，并把其余的优点嫁接进来</code></pre>
-    </dd>
-
+    <dd><pre><code>/x-rail 设计 &lt;目标&gt; 的方案：当前链路、可复用能力、模块边界、数据流、验证方式和风险。只在回复交付。</code></pre>
+    需要写方案文件时，补充明确输出路径。</dd>
     <dt>内部走什么</dt>
-    <dd>读 <code>playbooks/design.md</code>，并主动读取：<code>x-codebase-design</code>（深层模块的共同词汇：接口、接缝、可测试性）、<code>x-architect</code>（先画类型、签名、模块骨架）、<code>x-arena</code>（并行候选 + 嫁接）、<code>x-prototype</code>（一次性原型回答设计问题），以及三条原则 <code>x-principle-redesign-from-first-principles</code>、<code>x-principle-foundational-thinking</code>、<code>x-principle-outcome-oriented-execution</code>。</dd>
-
-    <dt>产物落在哪</dt>
-    <dd>设计写 <code>.work-docs/tasks/&lt;task-id&gt;/outputs/</code>。设计阶段不碰项目代码；如果研究证据不够，就停在 <code>design_only</code> 或 <code>gather_more</code>，不创建执行任务。</dd>
-
-    <dt>验收看什么</dt>
-    <dd>有没有写清当前链路和可复用能力；有没有备选方案与取舍；<code>done_when</code>、验证层级、文件边界、不可逆决策是否齐全；接口是否让下游代码变简单，而不是把复杂度搬了个位置。</dd>
-
-    <dt>常见坑</dt>
-    <dd>把设计写成实现清单（跳过「为什么」直接排任务）；新需求硬塞进旧结构而不重新审视整体形状（<code>redesign-from-first-principles</code> 就是针对这个）；类型和数据结构没定就先写逻辑（<code>foundational-thinking</code> 的适用点）。</dd>
+    <dd>先读当前结构，再选择组件和假设更少的方案。架构取舍时读 <code>x-codebase-design</code>，跨模块分析时读 <code>x-architect</code>。已授权竞争方案时才读 <code>x-arena</code>。原型能回答关键未知时才读 <code>x-prototype</code>。</dd>
+    <dt>交付与位置</dt>
+    <dd>只设计在回复交付。指定文档写授权位置。严格任务的内部设计写 <code>outputs/</code>。写原型或并行生成候选需符合当前授权和输出边界。</dd>
+    <dt>验收与常见问题</dt>
+    <dd>方案说明当前链路、替代方案、取舍和验收方向。关键假设有证据或明确标为未知。多个候选不是默认要求，设计说明不能冒充实现结果。</dd>
   </dl>
 </div>
 
 <div class="scenario" id="s4">
-  <h3>5.4 开发执行 <span class="tag native">原生阶段 plan → exec → review</span></h3>
-
+  <h3>5.4 开发执行 <span class="tag native">按需选择 plan / exec / review</span></h3>
   <dl>
     <dt>什么时候用</dt>
-    <dd>方案定了，要真正动代码（也可以是文档、配置、脚本）。</dd>
-
+    <dd>需要修改代码、配置、脚本或文档时。明确小修改可以直接执行。</dd>
     <dt>怎么敲</dt>
-    <dd>
-<pre><code>/x-rail 按上面的设计实现 &lt;功能名&gt;。范围：&lt;文件/模块&gt;，其他文件不动</code></pre>
-      需求明确、改动很小，可以一句走完全程：
-<pre><code>/x-rail 给 &lt;模块&gt; 加上 &lt;行为&gt;，跑通现有测试，给出改动前后的对比输出</code></pre>
-      想在同一任务里连着走完：
-<pre><code>/x-rail 实现 &lt;功能&gt;：先计划、再执行、最后只读审查一遍</code></pre>
-    </dd>
-
+    <dd><pre><code>/x-rail 按已确认方案实现 &lt;功能&gt;。范围：&lt;文件或模块&gt;。保留已有修改，运行必要检查，给出实际结果。</code></pre></dd>
     <dt>内部走什么</dt>
-    <dd>
-      读 <code>playbooks/plan.md</code>：抄下已批准的 <code>done_when</code> 和边界（<strong>不得扩大范围</strong>），把工作拆成可独立验证的任务，每个任务写清目标文件、允许改动、必需验证、期望证据、被阻塞时的退路；每个验证和子任务都标 <code>required</code> 或 <code>optional</code>，optional 必须写跳过原因。计划写 <code>outputs/</code>，并给出第一个可执行动作。<br>
-      然后读 <code>playbooks/exec.md</code>：先读契约、计划、状态、目标文件、调用方、测试和当前差异 → 新格式契约先跑 <code>check-contract.sh</code> 过结构校验 → 动手前先写下「本次逻辑改动 + 它需要什么验证」→ 只改任务边界内的文件（用户项目文件是<strong>目标</strong>，工作流记录留在 <code>.work-docs</code>）→ 由窄到宽跑验证 → 验证失败就记录策略指纹，换一条实质不同的路 → 真实输出存 <code>evidence/</code>，决策和检查点进 <code>audit/</code>。对应的参考技能是 <code>x-typescript-best-practices</code>（读写 TS 时）、<code>x-principle-type-system-discipline</code>（让非法状态不可表示）、<code>x-principle-boundary-discipline</code>（校验集中在系统边界）、<code>x-principle-laziness-protocol</code>（偏删除、最小改动）。<br>
-      最后读 <code>playbooks/review.md</code>（只读）：对照契约、改动集、证据和未验证项，检查正确性、安全边界、可维护性、完成条件覆盖、工作流文件边界，把发现分成 must-fix / consider / note / rejected，并说明<strong>哪些没审</strong>；审查结果按契约的 <code>review_policy</code> 写到 <code>review_evidence</code> 指向的路径（如 <code>outputs/review.md</code>），中/高风险任务缺这条审查证据不能标 done。参考技能：<code>x-requesting-code-review</code>、<code>x-receiving-code-review</code>、<code>x-interrogate</code>、<code>x-principle-prove-it-works</code>。
-    </dd>
-
-    <dt>产物落在哪</dt>
-    <dd>计划与审查报告进 <code>outputs/</code>；命令真实输出进 <code>evidence/</code>；决策、checkpoint、失败记录进 <code>audit/</code>；可复用的临时夹具进 <code>tmp/</code>。项目代码按契约修改，但不被当成工作流产物。</dd>
-
-    <dt>验收看什么</dt>
-    <dd>required 验证是否全 <code>passed</code> 且证据比代码新；改动是否越出契约范围；计划里的 optional 项是否写了跳过原因；审查是否说清了未覆盖部分，中/高风险任务是否留下匹配 <code>review_policy</code> 的审查证据；退出码、文件存在、编译通过、agent 自报完成，<strong>都不能单独满足完成条件</strong>。</dd>
-
-    <dt>常见坑</dt>
-    <dd>把「可以顺手改」当授权，范围外顺手改了别的文件；验证只跑关键词 grep 就宣称行为生效（只能算 <code>static</code>）；改了代码还引用改动前的旧结果。</dd>
+    <dd>先固定目标、范围、完成条件和验证动作。读目标文件、调用方、相关测试和当前差异。需要拆解才进入计划阶段。按范围做最小修改，再核对实际结果。风险或验证不足时追加审查。项目规范优先，当前语言是 TypeScript（带类型检查的 JavaScript）且规范不足时才读语言专用技能。</dd>
+    <dt>交付与位置</dt>
+    <dd>普通任务直接交付改动、验证和限制，目标文件写原位置。严格任务的内部计划和审查写 <code>outputs/</code>，真实输出写 <code>evidence/</code>，决策和阶段记录写 <code>audit/</code>。</dd>
+    <dt>验收与常见问题</dt>
+    <dd>完成条件有对应结果，相关证据代表当前文件，改动符合允许范围。审查按策略执行。只看退出码、编译通过或模型自报完成，不能证明行为符合要求。</dd>
   </dl>
 </div>
-<div class="scenario" id="s5">
-  <h3>5.5 问题定位排查 <span class="tag native">按未知选择 investigate / bugfix / review</span></h3>
 
+<div class="scenario" id="s5">
+  <h3>5.5 问题定位排查 <span class="tag native">investigate / bugfix</span></h3>
   <dl>
     <dt>什么时候用</dt>
-    <dd>出现异常行为、报错、结果不对、线上症状；或者只是想知道「现在到底是什么状态」。分两步：先定位（<code>investigate</code>），能稳定复现才进修复（<code>bugfix</code>）。</dd>
-
+    <dd>出现报错、结果错误或需要确认现状时。原因和复现不清楚就先调查。</dd>
     <dt>怎么敲</dt>
-    <dd>
-<pre><code>/x-rail 定位：&lt;症状描述&gt;。给出最小复现、受影响范围和证据，先不改代码</code></pre>
-      复现稳定后再修：
-<pre><code>/x-rail 修复 &lt;症状&gt;：先复现，追根因，最小改动，跑回归，给出修复前后的对比输出</code></pre>
-      想知道「这块代码改动会波及哪里」时点名：
-<pre><code>/x-blast-radius 我要改 &lt;函数/模块&gt;，列出可能被影响的其他地方，并用真实运行证明安全前提</code></pre>
-    </dd>
-
+    <dd><pre><code>/x-rail 定位：&lt;症状&gt;。说明现状、问题、影响和证据。只分析，不改文件。
+/x-rail 修复 &lt;症状&gt;：先复现，查根因，最小修改，重跑原复现和相关检查。</code></pre></dd>
     <dt>内部走什么</dt>
-    <dd>
-      <code>playbooks/investigate.md</code>：先读任务状态、契约和近期证据，再大范围探索 → 说清可观察的问题和 <code>done_when</code>，找出能回答它的最小读取或运行检查 → 先缩小文件、配置、服务、版本范围再跑命令 → 结论分「事实 / 推断 / 未知」并带证据指针 → 说明命中的验证层级 → 契约没要求就不产出正式报告，命令结果进 <code>evidence/</code>、决策进 <code>audit/</code> → 证据不足以回答就设 <code>blocked</code>，填清尝试路径、共同前提、解除条件和下一步。<br>
-      <code>playbooks/bugfix.md</code>：用「期望 vs 实际」复现，优先一条失败命令或行为测试 → 复现失败就记录尝试路径并停止猜测 → 定位根因和那个错误假设（带文件/日志证据）→ 做最小的根因修复，只治症状的缓解措施必须显式标注 → 重跑原复现面和相关既有检查 → 连续三次 required 验证失败就停止修改、记录策略指纹、重新验证共同前提 → 保留「修复前失败、修复后通过」两段证据，可复现的任务缺任一段都不能算完成。<br>
-      参考技能：<code>x-principle-fix-root-causes</code>、<code>x-principle-attack-the-premise</code>（多个共享同一前提的修复都失败时，先普查失衡方，再质疑前提）；<code>investigate</code> 阶段还会读 <code>x-how</code>（这块怎么跑的）和 <code>x-blast-radius</code>（改动波及面）。
-    </dd>
-
-    <dt>产物落在哪</dt>
-    <dd>复现命令与前后输出进 <code>evidence/</code>；根因结论、绕过方案、失败策略指纹进 <code>audit/</code>；需要交付的分析写 <code>outputs/</code>。</dd>
-
-    <dt>验收看什么</dt>
-    <dd>「修复前失败 / 修复后通过」是否都有真实输出；根因是否指到具体文件和日志；缓解措施有没有被标成「只治症状」；回归是否跑了原来那条复现命令，而不是换了条更容易过的命令。</dd>
-
-    <dt>常见坑</dt>
-    <dd>复现不了就开始猜着改；用空值判断把崩溃盖住（<code>fix-root-causes</code> 明确反对「让崩溃闭嘴的空值保护」）；同一命令同一错误重复试（第二次就熔断，必须换方法）；把「搜不到相关代码」当成「问题不存在」。</dd>
+    <dd>先核对目录、分支、版本和当前差异，再比较期望与实际。能稳定复现后沿共同入口和全部相关调用方查根因。修复后重跑原复现。运行链路不明时读 <code>x-how</code>；影响不明时读 <code>x-blast-radius</code>；需要深入核对根因时读对应原则。</dd>
+    <dt>交付与位置</dt>
+    <dd>普通任务在回复给出根因、改动和修复前后结果。严格任务把真实输出写 <code>evidence/</code>，根因和失败策略写 <code>audit/</code>。</dd>
+    <dt>验收与常见问题</dt>
+    <dd>可复现问题要有修复前失败与修复后通过的证据。复现不了就说明限制，不猜着改。失败后换方法。只缓解症状的措施必须明确标注。</dd>
   </dl>
 </div>
 
 <div class="scenario" id="s6">
   <h3>5.6 长任务执行 <span class="tag native">入口 x-rail-long</span></h3>
-
   <dl>
     <dt>什么时候用</dt>
-    <dd>满足以下任一条就进长任务（否则用普通 <code>/x-rail</code>）：跨两个以上阶段、跨会话或过夜、多个子任务、长时间外部运行（等训练、等构建、等第三方批处理）、研究→决策→开发的交接、证据量明显超出普通阈值。</dd>
-
+    <dd>需要跨会话或过夜、等待外部运行，或汇总必需子任务时。多个阶段、大规模或高风险本身不触发长模式。</dd>
     <dt>怎么敲</dt>
-    <dd>
-<pre><code>/x-rail-long &lt;长任务说明&gt;。预算：400 次工具调用或 8 小时；每个阶段结束写 checkpoint</code></pre>
-      建议把「分几个阶段、每阶段验证什么」写清楚，后面的 checkpoint 就按这个切。
-    </dd>
-
+    <dd><pre><code>/x-rail-long &lt;目标&gt;。需要跨会话继续；每阶段结束保存记录，暂停前保存恢复第一步。</code></pre></dd>
     <dt>内部走什么</dt>
-    <dd>
-      在当前命令执行目录初始化唯一的 <code>.work-docs</code>，建 L3 契约和状态；父任务和每个子任务都用唯一 task id，格式 <code>{YYYYMMDD}-{NN}-{slug}</code>（当天日期 + 当日两位自增序号，从 01 起、不回收空号）。取号前先读 <code>.work-docs/index.md</code>：同范围且进行中的任务续用原 id，否则取当天最大序号 +1 并追加索引行。<br>
-      <strong>每个阶段结束</strong>追加一个 <code>audit/checkpoint-&lt;序号&gt;.md</code>，写明状态、本阶段 <code>done_when</code>、真实验证输出、证据路径、下一阶段依赖、阻塞和下一步第一动作；同时更新 <code>state.md</code> 的 <code>stage</code>、<code>status</code>、<code>next_action</code>、<code>calls_since_progress</code>、<code>last_progress_at</code>、<code>updated_at</code>。阶段结束<strong>不等于</strong>任务完成。<br>
-      <strong>准备暂停、过夜、等外部运行或结束会话前</strong>，必须更新 <code>state.md</code> 和 <code>handoff.md</code>。<code>handoff.md</code> 是第二天的入口，标准是「新会话只读它就能执行第一步」。<br>
-      长任务熔断阈值：每子任务 60 次工具调用或 30 分钟无进展；同一命令同一错误首行 2 次；required 验证连续失败 3 次；越界写入；共同前提被否定。总预算默认 400 次工具调用或 8 小时，耗尽写最终 checkpoint，<strong>不标 done</strong>。
-    </dd>
-
-    <dt>产物落在哪</dt>
-    <dd>除常规的 <code>outputs/ evidence/ audit/ tmp/</code> 外，长任务多了两个关键文件：阶段记录 <code>audit/checkpoint-&lt;序号&gt;.md</code>（只追加，不覆盖旧记录）和恢复入口 <code>handoff.md</code>（只保留当前恢复所需内容）。</dd>
-
-    <dt>验收看什么</dt>
-    <dd>每个阶段是否有对应 checkpoint 且带真实验证输出；<code>state.md</code> 的阶段与状态是否和最新 checkpoint 一致；父任务是否在 required 子任务还 in_progress/blocked/stopped 时被标了 done（应当禁止）。</dd>
-
-    <dt>常见坑</dt>
-    <dd>把「阶段做完了」写成任务完成；过夜前忘了写 handoff，第二天只能靠聊天记录回忆；checkpoint 覆盖旧文件导致历史丢失；预算耗尽后强行标 done。</dd>
+    <dd>续用同范围进行中任务，或创建新的严格记录。每个阶段结束追加 <code>audit/checkpoint-&lt;序号&gt;.md</code>，即阶段检查记录，并同步状态。暂停、过夜或等待前保存 <code>handoff.md</code> 交接摘要。外部运行引用保存在 <code>audit/runs.json</code>，包含原运行标识、提供方、工作区、观察时间和输出位置，不保存密钥。</dd>
+    <dt>交付与位置</dt>
+    <dd>记录写当前执行目录的 <code>.work-docs/tasks/&lt;任务编号&gt;/</code>。父契约声明必需依赖。阶段结束不等于任务完成，子任务完成不自动通过父验收。</dd>
+    <dt>验收与常见问题</dt>
+    <dd>阶段记录与当前状态一致。必需子任务、父验收和证据都通过才完成。预算无真实计数时保留未跟踪格式；到时间或无进展限制就保存事实并暂停。</dd>
   </dl>
 </div>
 
 <div class="scenario" id="s7">
-  <h3>5.7 长任务次日状态检查（恢复） <span class="tag native">恢复流程 + x-handoff</span></h3>
-
+  <h3>5.7 长任务次日状态检查（恢复） <span class="tag native">恢复与交接</span></h3>
   <dl>
     <dt>什么时候用</dt>
-    <dd>过夜、换会话、外部运行等完了，或者你只是想确认昨天那件事现在到哪了、下一步第一动作是什么。</dd>
-
+    <dd>换会话、过夜或外部运行结束后继续。只看状态时保持只读。</dd>
     <dt>怎么敲</dt>
-    <dd>
-<pre><code>/x-rail-long 继续 &lt;task-id&gt;：先给恢复摘要（当前状态、已完成、下一步第一动作、阻塞、证据位置），再执行下一步</code></pre>
-      不确定 task-id 时直接问：
-<pre><code>/x-rail-long 检查 &lt;项目目录&gt;/.work-docs 下有哪些未完成任务，每个给一行状态摘要</code></pre>
-    </dd>
-
+    <dd><pre><code>/x-rail-long 继续 &lt;任务编号&gt;：先核对状态、证据和原运行，再给恢复摘要并执行下一步。
+/x-rail-long 检查 &lt;项目目录&gt;/.work-docs 下的未完成任务。只在回复给状态摘要。
+/x-handoff 保存当前任务的真实状态、约束、证据和下一会话第一步。</code></pre></dd>
     <dt>内部走什么</dt>
-    <dd>
-      新会话<strong>不依赖上一次对话记忆</strong>。启动已有任务时先依次读取：<code>.work-docs/index.md</code> → 任务 <code>state.md</code> → <code>audit/</code> 下最近的 <code>checkpoint-*.md</code> → <code>handoff.md</code> → <code>evidence/</code>；然后在回复开头给出恢复摘要，至少包含：当前状态、已完成、下一步第一动作、阻塞、证据位置；之后才动任务。<br>
-      <strong>恢复时重新读一次 checkpoint 和证据</strong>。如果状态与证据不一致，<strong>以证据为准</strong>，并先把状态退回 <code>in_progress</code> 或 <code>blocked</code>，不得直接宣称完成。恢复只能来自三种理由：阻塞解除、共同前提重新验证通过、有新证据的新策略；且新策略指纹不能与已有指纹相同。
-    </dd>
-
-    <dt>想主动补一份交接时</dt>
-    <dd>
-      你点名 <code>/x-handoff</code>（入口不会自动触发它）。它只写当前任务的 <code>.work-docs/tasks/&lt;task-id&gt;/handoff.md</code>，不得写到工作区外。步骤：读 <code>state.md</code>、<code>contract.md</code>、最近 checkpoint 和 evidence → 检查每条证据的 <code>run_at</code> 是否不早于相关文件的 <code>last_edit_at</code>，新鲜的就直接引用，过期的重跑并记真实结果 → 更新 <code>handoff.md</code>，内容含背景、<code>done_when</code>、当前阶段与状态、验证输出、已完成、下一步第一动作、卡点与已尝试策略、约束、待拍板、关键文件和证据路径 → 熔断过的任务还要写 <code>blocked_by</code>、<code>attempted_paths</code>、<code>shared_assumption</code>、<code>unblock_condition</code> 和禁止重复的策略指纹 → 自检「新会话只读这份文件能否直接执行下一步」。
-    </dd>
-
-    <dt>产物落在哪</dt>
-    <dd><code>handoff.md</code>（恢复入口）、<code>state.md</code>（当前状态）、<code>audit/checkpoint-*.md</code>（阶段记录，只追加）。</dd>
-
-    <dt>验收看什么</dt>
-    <dd>恢复摘要里有没有「下一步第一动作」和「证据位置」两项；引用的证据是否仍然新鲜；有没有出现「状态说 done、证据却不支持」的情况（出现就该退回 in_progress/blocked）。</dd>
-
-    <dt>常见坑</dt>
-    <dd>拿上一会话的记忆当事实；把 handoff 当完成证明（它只是状态入口）；状态与证据冲突时顺着状态走。</dd>
+    <dd>按顺序读索引、契约、状态、最近阶段记录、交接、原运行记录和相关证据。核对工作区、代码版本、未提交差异和输入摘要。原运行先查询，再恢复；无法查询就说明未知或阻塞，不重复启动。</dd>
+    <dt>交接与恢复</dt>
+    <dd><code>x-handoff</code> 只能由用户点名，写当前任务的交接文件。它运行严格状态检查，核对证据和原运行。过期证据需要实际重验。末尾“下一会话第一步”与状态的 <code>next_action</code> 第一条一致。长模式在暂停前保存交接是自身规则，不自动唤起该技能。</dd>
+    <dt>验收与常见问题</dt>
+    <dd>摘要包含当前状态、已完成、阻塞、证据位置和可执行第一步。状态与证据冲突时先核对证据，不能直接宣布完成。交接摘要不能扩大授权，也不能代替完成证明。</dd>
   </dl>
 </div>
+
 <h2 id="skills">6. skills 目录逐个说明</h2>
 
-<p>36 个技能全部设置 <code>disable-model-invocation: true</code>：不会被任务内容自动唤起。加载方式只有两种——入口按<a href="#stagetable">第 7 节映射表</a>主动读取，或你主动点名 <code>/x-&lt;名字&gt;</code>。</p>
+<p>36 个技能都禁止模型自动唤起。入口按<a href="#stagetable">第 7 节映射表</a>中的条件读取辅助技能，用户也可主动点名。单条工程原则的适用阶段说明，不表示主入口会自动加载它。</p>
 
 <div class="skill-group" id="sk-entry">
   <h3>6.1 四个入口技能</h3>
@@ -629,13 +814,13 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-self-check</div>
-    <div class="what">只读分析 Pi 会话记录，默认看最近七日，<code>--days 21</code> 看三周，也可用成对带时区的 <code>--start</code>/<code>--end</code> 指定窗口（结束不包含）。统计入口调用、执行片段、工具动作、等待、错误和覆盖缺口，不联网、不执行日志里的指令。显式给 <code>--task-root</code> 与 <code>--task-mode strict|legacy-readonly</code> 时，复用检查器核对关联任务记录，只输出检查器版本摘要与原字节一致性；不给就不读任务记录。</div>
-    <div class="when">用：<code>/x-self-check &lt;时间窗口或任务&gt;</code>。保存报告时写当前任务的 <code>outputs/</code> 和 <code>evidence/</code>。</div>
+    <div class="what">只读分析 Pi（运行本地模型和工具的程序）的会话记录。默认看最近七日，<code>--days 21</code> 看三周。指定窗口时成对使用 <code>--start</code> 和 <code>--end</code>，不包含结束时刻。统计入口、执行片段、工具动作、等待、错误和覆盖缺口，不联网、不执行日志指令。显式给任务根与检查模式时才核对关联任务记录，输出检查器内容摘要和原字节一致性。</div>
+    <div class="when">用：<code>/x-self-check &lt;时间窗口或任务&gt;</code>。默认在回复交付。用户要求保存时，才写当前授权任务的 <code>outputs/</code> 和 <code>evidence/</code>。</div>
   </div>
 </div>
 
-<div class="skill-group" id="sk-understand">
-  <h3>6.2 理解代码（investigate / research 阶段读取）</h3>
+<details class="skill-group" id="sk-understand">
+  <summary>6.2 理解代码（investigate / research 阶段读取）</summary>
 
   <div class="skill">
     <div class="name">x-how</div>
@@ -645,19 +830,19 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-why</div>
-    <div class="what">回答「当初为什么这么定」。覆盖设计缘由、回归原因、事后复盘、有数据支撑的阈值。它会自己发现可用的 MCP 数据源，<strong>并行</strong>查询各类证据：源码版本库、issue 跟踪、长文档、实时聊天、基础设施可观测、错误跟踪、产品分析数仓，最后给出带引用的决策与取舍读解。</div>
+    <div class="what">回答「当初为什么这么定」。覆盖设计缘由、回归原因、事后复盘、有数据支撑的阈值。它按可用权限发现 MCP(Model Context Protocol，模型上下文协议) 数据源。这类接口让模型读取外部工具数据。它并行查询版本库、问题记录、文档和运行数据，再给出有引用的取舍说明。并行查询不等于授权启动子代理。</div>
     <div class="when">用：<code>/x-why 为什么当初选了 X</code>；复盘「这次回归是谁引入的」。问运行时行为用 <code>x-how</code>。</div>
   </div>
 
   <div class="skill">
     <div class="name">x-blast-radius</div>
-    <div class="what">找出一次改动在 diff 之外可能波及的地方，并<strong>用真实运行</strong>证明「它之所以安全的那个关键事实」，而不是写一篇分析交差。</div>
-    <div class="when">用：<code>/x-blast-radius 改 &lt;函数&gt; 会影响谁</code>；或审查一个你不太放心的小 diff。</div>
+    <div class="what">找出一次改动在已修改文件之外可能影响的地方。用真实运行验证改动所依赖的安全条件，说明证据和限制。</div>
+    <div class="when">用：<code>/x-blast-radius 改 &lt;函数&gt; 会影响谁</code>；或审查一组影响不明的小改动。</div>
   </div>
-</div>
+</details>
 
-<div class="skill-group" id="sk-design">
-  <h3>6.3 设计与对抗评审（design / review 阶段读取）</h3>
+<details class="skill-group" id="sk-design">
+  <summary>6.3 设计与对抗评审（design / review 阶段读取）</summary>
 
   <div class="skill">
     <div class="name">x-codebase-design</div>
@@ -673,7 +858,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-arena</div>
-    <div class="what">同一任务并行生成 N 个候选方案，选一个当底稿，再把落选者里更强的部分嫁接到它上面。</div>
+    <div class="what">已获委派授权时，为同一任务并行生成多个候选。选一个作为底稿，再合入其他候选的有效部分。设计阶段不默认使用。</div>
     <div class="when">用：<code>/x-arena &lt;任务&gt;</code>。一次尝试就会锁死形状、而你不确定该选哪种形状时。</div>
   </div>
 
@@ -685,12 +870,12 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-interrogate</div>
-    <div class="what">让多个 LLM 评审者从互相独立的角度挑战同一批改动，找盲点。对应「对抗评审」「多模型评审」「压力测试这段代码」「把它撕开看看」。</div>
+    <div class="what">已获委派授权时，让多个 LLM(Large Language Model，大语言模型) 审查者独立检查同一批改动或结论。目标是找遗漏的假设和风险。</div>
     <div class="when">用：<code>/x-interrogate &lt;改动或结论&gt;</code>。需求评估、方案定稿、重要改动合入前的第二双眼睛。</div>
   </div>
-</div>
-<div class="skill-group" id="sk-review">
-  <h3>6.4 代码审查与冲突处理（review 阶段读取）</h3>
+</details>
+<details class="skill-group" id="sk-review">
+  <summary>6.4 代码审查与冲突处理（review 阶段读取）</summary>
 
   <div class="skill">
     <div class="name">x-requesting-code-review</div>
@@ -706,13 +891,13 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-resolving-merge-conflicts</div>
-    <div class="what">解决正在进行的 git 合并 / 变基冲突的标准做法。</div>
+    <div class="what">处理 Git（保存代码版本的工具）的合并或变基冲突。变基会将分支提交重新放到另一条基线上。</div>
     <div class="when">用：<code>/x-resolving-merge-conflicts</code>，仓库正处于 merge 或 rebase 冲突中时。</div>
   </div>
-</div>
+</details>
 
-<div class="skill-group" id="sk-writing">
-  <h3>6.5 写作与语言规范</h3>
+<details class="skill-group" id="sk-writing">
+  <summary>6.5 写作与语言规范</summary>
 
   <div class="skill">
     <div class="name">x-unslop</div>
@@ -722,14 +907,14 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-technical-writing</div>
-    <div class="what">分层技术写作标准：Diátaxis 结构（教程 / 操作 / 参考 / 解释四类文档各司其职）、Google 开发者写作风格的句子、STE 指令写法、Global English 语法。</div>
-    <div class="when">用：<code>/x-technical-writing</code>；写或审文档、RFC、README、PR 描述、提交信息时。</div>
+    <div class="what">先选择教程、操作、参考或解释的文档类型，再用短句和明确动作表达。使用 ASD-STE100(ASD Simplified Technical English，简化技术英语规范) 的指令表达原则。中文优先，不声称中文符合其英语词典。</div>
+    <div class="when">用：<code>/x-technical-writing</code>；写或审文档、方案说明、仓库说明、合并请求描述和提交信息时。</div>
   </div>
 
   <div class="skill">
     <div class="name">x-html</div>
-    <div class="what">把一个主题或一份文档做成<strong>一个</strong>自包含的中文 HTML 讲解：面向初中生阅读水平，以图为主（内联 SVG 与 CSS，不联网、不外链），文字遵循受控短句写法（一句一个意思、不超过 20 字、一段最多 3 句）。自带检查器 <code>scripts/check_html.py</code>，机器核对离线、标签闭合、图有名称、每节有图、句子不过长。</div>
-    <div class="when">用：<code>/x-html &lt;主题或文档路径&gt;</code>；要“讲给不懂的人听”、给文章配图、做网页图册时。不写 API 参考（用 <code>x-technical-writing</code>），不联网查资料（先让 <code>research</code> 出结论）。</div>
+    <div class="what">把一个主题或一份文档做成一个 HTML(HyperText Markup Language，超文本标记语言) 讲解文件，双击可离线阅读。面向初中生，以图为主。图使用 SVG(Scalable Vector Graphics，可缩放矢量图形)，样式使用 CSS(Cascading Style Sheets，层叠样式表)，都写在文件内。文字一句一个意思，不超过 20 字，一段最多 3 句。自带检查器 <code>scripts/check_html.py</code>，核对离线、标签闭合、图有名称、每节有图或表格、句子长度。</div>
+    <div class="when">用：<code>/x-html &lt;主题或文档路径&gt;</code>；要“讲给不懂的人听”、给文章配图、做网页图册时。接口参考用 <code>x-technical-writing</code>。外部事实先在研究阶段核对。用户指定路径时写该路径。</div>
   </div>
 
   <div class="skill">
@@ -741,34 +926,34 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
   <div class="skill">
     <div class="name">x-typescript-best-practices</div>
     <div class="what">TypeScript 最佳实践，声明了文件匹配范围 <code>**/*.ts</code>、<code>**/*.tsx</code>。</div>
-    <div class="when">用：读或改任何 .ts / .tsx 时（exec 阶段的参考技能）。</div>
+    <div class="when">用：用户点名，或当前代码使用 TypeScript 且项目规范不足时。主入口不因文件后缀而自动加载。</div>
   </div>
-</div>
+</details>
 
-<div class="skill-group" id="sk-ops">
-  <h3>6.6 环境准备、人工步骤与验证</h3>
+<details class="skill-group" id="sk-ops">
+  <summary>6.6 环境准备、人工步骤与验证</summary>
 
   <div class="skill">
     <div class="name">x-worktree</div>
     <div class="what">在当前项目里开一个隔离工作区：识别主分支（main 或 master）→ 在 <code>.worktrees/&lt;名称&gt;</code> 下建同名分支 → 把主分支目录的 <code>.env.local</code> 复制进去 → 新工作区里有 <code>pnpm-lock.yaml</code> 时跑 <code>pnpm install</code>。依赖只装在新工作区里，禁止 <code>node_modules</code> 符号链接。重名或目录已存在一律拒绝，不覆盖、不删除；pnpm 缺失或安装失败时报错停下。</div>
-    <div class="when">用：<code>/x-worktree &lt;名称&gt;</code>；不写名称时用 <code>feat-{YYYYMMDDHHmmss}</code>。并行开发、隔离试验、不想在主分支直改时。回归：<code>bash scripts/test-worktree.sh</code>。</div>
+    <div class="when">用：优先直接调用 <code>scripts/create_worktree.sh</code>，本机已配置时可用 <code>wt &lt;名称&gt;</code>。名称需要推断或已有任务需留档时才用 <code>/x-worktree &lt;名称&gt;</code>。不写名称用 <code>feat-{YYYYMMDDHHmmss}</code>。回归：<code>bash scripts/test-worktree.sh</code>。</div>
   </div>
 
   <div class="skill">
     <div class="name">x-wizard</div>
-    <div class="what">生成一个交互式 bash 向导，一步步带人做那些只有人能做的事：开基础设施、配密钥或 CI secrets、走一个陌生的第三方后台、跑一次性迁移或切换。</div>
+    <div class="what">生成交互式 Bash 向导，带操作者完成需要人工参与的步骤，例如配置账号和密钥、设置自动检查所用的凭据、操作第三方后台或执行迁移。</div>
     <div class="when">用：<code>/x-wizard &lt;目标&gt;</code>。agent 自己能做的步骤不要用它。</div>
   </div>
 
   <div class="skill">
     <div class="name">x-create-verification-skill</div>
-    <div class="what">生成一个项目本地验证技能，让它像用户那样驱动你的应用——不挑语言、框架或平台。适合「这个项目没有脚本化手段证明 UI / CLI / 服务行为」。它属于 ops 阶段的参考技能。</div>
+    <div class="what">生成项目本地验证技能，按用户路径操作应用。适合缺少脚本检查的界面、命令行或服务行为。需要建立项目验证技能时，它是 <code>ops</code> 阶段的参考技能。</div>
     <div class="when">用：<code>/x-create-verification-skill</code>，或「给这个仓库做一个控制技能」。</div>
   </div>
-</div>
+</details>
 
-<div class="skill-group" id="sk-principle">
-  <h3>6.7 十三条工程原则（x-principle-*）</h3>
+<details class="skill-group" id="sk-principle">
+  <summary>6.7 十三条工程原则（x-principle-*）</summary>
 
   <p>这些是短小的单条原则，多数由其他技能引用，也可以在你自己卡住时点名。格式统一为：一句话是什么 → 什么时候用。</p>
 
@@ -786,7 +971,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-principle-prove-it-works</div>
-    <div class="what">完成之后、宣布完成之前，对着真实产物验证：跑功能、读实际值、看 diff。不接受代理指标、自述或「编译通过」。</div>
+    <div class="what">宣布完成前，运行真实功能，核对实际值和文件差异。结论必须对应实际观察结果，不能只靠自述或编译通过。</div>
     <div class="when">用在：<code>review</code> 阶段，以及你自己的完成判定时刻。</div>
   </div>
 
@@ -798,19 +983,19 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-principle-type-system-discipline</div>
-    <div class="what">让非法状态无法被表示、给语义化的基础类型打标记、在边界解析外部数据、不向编译器撒谎、穷尽所有变体、从权威 schema 派生类型。</div>
+    <div class="what">让类型只表示有效状态，在系统入口解析外部数据。处理全部状态分支，从唯一的数据结构定义派生类型。</div>
     <div class="when">用在：<code>exec</code> 阶段，任何静态类型语言的类型设计或签名评审。</div>
   </div>
 
   <div class="skill">
     <div class="name">x-principle-boundary-discipline</div>
-    <div class="what">把校验、错误处理、框架适配集中在系统边界（命令行、配置、网络、外部 API）；内部信任类型，业务逻辑留在纯函数里。</div>
+    <div class="what">把校验、错误处理和框架适配集中在命令行、配置、网络和外部接口的入口。内部逻辑使用已核对的类型，避免重复检查。</div>
     <div class="when">用在：<code>exec</code> 阶段接线校验、错误处理或框架适配时。</div>
   </div>
 
   <div class="skill">
     <div class="name">x-principle-laziness-protocol</div>
-    <div class="what">重构或评估 diff 大小时，偏向删除和「能解决问题的最小改动」；对新增抽象、分层、信号透传保持警惕。</div>
+    <div class="what">重构或评估改动量时，选择能解决问题的最小修改。新增抽象、分层和参数传递必须有当前需求依据。</div>
     <div class="when">用在：<code>exec</code> 阶段。</div>
   </div>
 
@@ -828,8 +1013,8 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-principle-build-the-lever</div>
-    <div class="what">任何非平凡工作（不只是批量工作：编辑、迁移、分析、检查），优先造出「做它或证明它」的工具——codemod、脚本、生成器，或子代理照着走的技能。工具才是审阅者能重跑的产物。</div>
-    <div class="when">用在：<code>plan</code> 阶段。</div>
+    <div class="what">需要可重复执行的编辑、迁移、分析或检查时，优先复用或建立工具。工具可以是代码批量修改脚本、检查脚本或生成器。保留别人能重跑的验证方式。</div>
+    <div class="when">用在：确实需要可重复工具的计划工作。轻量文档整理不默认加载。</div>
   </div>
 
   <div class="skill">
@@ -840,7 +1025,7 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
 
   <div class="skill">
     <div class="name">x-principle-encode-lessons-in-structure</div>
-    <div class="what">当你第二次写同一条指令，或发现同一个纠正反复出现时，把规则编码成 lint、元数据标记、运行时检查或脚本，而不是再写一段文字。</div>
+    <div class="what">同一纠正反复出现时，把规则写成静态检查、元数据标记、运行时检查或脚本。让工具直接检查重复问题。</div>
     <div class="when">用在：按需读取——发现重复纠正、想固化流程时。</div>
   </div>
 
@@ -849,272 +1034,270 @@ proceed / design_only / do_not_build。不要改代码。</code></pre>
     <div class="what">并发各方可能写同一份文件、分支、键或状态对象时，先消除共享；只有「一个共享写入方」是真实不变量时，才从结构上串行化。</div>
     <div class="when">用在：按需读取——并行任务、共享文件或共享状态设计时。</div>
   </div>
-</div>
+</details>
 <h2 id="stagetable">7. 阶段 → 参考技能全表</h2>
 
-<p>下表是便于查阅的场景索引，执行映射唯一来源为主入口 XML 的 routing。先读当前阶段，再按具体未知读取参考技能，不整组加载。TypeScript 规则仅用于该语言且项目规范不足的情况；设计竞争与独立审查另需委派授权。</p>
-
+<p>执行映射以主入口的 <code>routing</code> 为准。该模块用 XML(Extensible Markup Language，可扩展标记语言) 标签分隔职责，像组件标签一样。先读当前阶段说明，再按以下条件读取参考技能，不整组加载。</p>
 <table>
-  <thead><tr><th>阶段</th><th>playbook</th><th>主动读取的参考技能</th></tr></thead>
+  <thead><tr><th>阶段</th><th>阶段说明</th><th>读取条件与技能</th></tr></thead>
   <tbody>
-    <tr>
-      <td><code>investigate</code><br>现状 / 定位 / 恢复</td>
-      <td><code>playbooks/investigate.md</code></td>
-      <td><code>x-how</code>、<code>x-blast-radius</code></td>
-    </tr>
-    <tr>
-      <td><code>research</code><br>外部事实 / 选型</td>
-      <td><code>playbooks/research.md</code></td>
-      <td><code>x-why</code>、<code>x-how</code></td>
-    </tr>
-    <tr>
-      <td><code>design</code><br>方案设计，不改代码</td>
-      <td><code>playbooks/design.md</code></td>
-      <td>架构取舍读 x-codebase-design；跨模块分析读 x-architect；已授权竞争方案读 x-arena；原型能解决关键未知时读 x-prototype。</td>
-    </tr>
-    <tr>
-      <td><code>plan</code><br>实施规格 / 轻量文档</td>
-      <td><code>playbooks/plan.md</code></td>
-      <td>写方案读 x-technical-writing，写文档读 x-unslop；轻量文档使用 templates/document-task.md。</td>
-    </tr>
-    <tr>
-      <td><code>exec</code><br>按计划改并验证</td>
-      <td><code>playbooks/exec.md</code></td>
-      <td>TypeScript 项目规范不足才读 x-typescript-best-practices；深入边界审查才读 x-principle-boundary-discipline。</td>
-    </tr>
-    <tr>
-      <td><code>bugfix</code><br>复现 / 根因 / 回归</td>
-      <td><code>playbooks/bugfix.md</code></td>
-      <td>需要深入根因核对时读 x-principle-fix-root-causes；先检查共同入口及全部调用方。</td>
-    </tr>
-    <tr>
-      <td><code>review</code><br>只读审查</td>
-      <td><code>playbooks/review.md</code></td>
-      <td>授权独立审查读 x-requesting-code-review；处理审查反馈读 x-receiving-code-review。</td>
-    </tr>
-    <tr>
-      <td><code>ops</code><br>平台操作手册</td>
-      <td><code>playbooks/ops.md</code></td>
-      <td><code>x-wizard</code>、<code>x-create-verification-skill</code></td>
-    </tr>
-    <tr>
-      <td><code>mixed</code><br>研究 → 门 → 开发</td>
-      <td><code>playbooks/mixed.md</code></td>
-      <td>按实际阶段读取上表，不新增第二套清单</td>
-    </tr>
-    <tr>
-      <td><code>fast-answer</code><br>快问快答</td>
-      <td>不读 playbook</td>
-      <td>不读取任何技能</td>
-    </tr>
-    <tr>
-      <td>按需</td>
-      <td>无固定 playbook</td>
-      <td><code>x-html</code>、<code>x-worktree</code>、<code>x-unslop</code>、<code>x-principle-guard-the-context-window</code>、<code>x-principle-encode-lessons-in-structure</code>、<code>x-principle-separate-before-serializing-shared-state</code>、<code>x-resolving-merge-conflicts</code>、<code>x-technical-writing</code>、<code>x-teach</code></td>
-    </tr>
+    <tr><td><code>investigate</code></td><td><code>playbooks/investigate.md</code></td><td>运行链路不明读 <code>x-how</code>；影响不明读 <code>x-blast-radius</code>。</td></tr>
+    <tr><td><code>research</code></td><td><code>playbooks/research.md</code></td><td>价值原因不明读 <code>x-why</code>；实现不明读 <code>x-how</code>。</td></tr>
+    <tr><td><code>design</code></td><td><code>playbooks/design.md</code></td><td>架构取舍读 <code>x-codebase-design</code>；跨模块分析读 <code>x-architect</code>；已授权竞争方案读 <code>x-arena</code>；原型能解决关键未知时读 <code>x-prototype</code>。</td></tr>
+    <tr><td><code>plan</code></td><td><code>playbooks/plan.md</code></td><td>写计划读 <code>x-technical-writing</code>；写文档读 <code>x-unslop</code>。严格轻量文档使用 <code>templates/document-task.md</code>。</td></tr>
+    <tr><td><code>exec</code></td><td><code>playbooks/exec.md</code></td><td>当前语言是 TypeScript 且项目规范不足，读 <code>x-typescript-best-practices</code>；深入审查系统边界时读 <code>x-principle-boundary-discipline</code>。</td></tr>
+    <tr><td><code>bugfix</code></td><td><code>playbooks/bugfix.md</code></td><td>需要深入核对根因时读 <code>x-principle-fix-root-causes</code>。</td></tr>
+    <tr><td><code>review</code></td><td><code>playbooks/review.md</code></td><td>已授权独立审查读 <code>x-requesting-code-review</code>；处理反馈读 <code>x-receiving-code-review</code>。</td></tr>
+    <tr><td><code>ops</code></td><td><code>playbooks/ops.md</code></td><td>需要人工平台步骤读 <code>x-wizard</code>；需要项目验证技能读 <code>x-create-verification-skill</code>。</td></tr>
+    <tr><td><code>mixed</code></td><td><code>playbooks/mixed.md</code></td><td>按实际阶段引用上表，不新增一套清单。</td></tr>
+    <tr><td><code>fast-answer</code></td><td>不读阶段说明</td><td>直接回答，不加载辅助技能。</td></tr>
   </tbody>
 </table>
-
-<p>第三方技能按 <code>playbooks/third-party-skill.md</code> 处理，不因为它被列在仓库里就自动调用。技能自带规则与当前契约冲突时，以契约为准，并把差异记录到 <code>audit/</code>。</p>
+<p>其他辅助技能由用户点名，或在当前授权范围内按具体问题读取。不能因“按需”清单而自动唤起 <code>x-html</code> 或 <code>x-worktree</code>。设计竞争和独立审查需要委派授权。</p>
 
 <h2 id="files">8. 文件边界与目录结构</h2>
 
-<p>以命令实际执行的目录为工作根，创建或复用一个 <code>.work-docs/</code>：</p>
-
+<p>普通任务直接交付结果，目标文件写授权位置。下面目录只用于严格记录。工作根是命令实际执行的目录。</p>
 <pre><code>&lt;执行目录&gt;/.work-docs/
-├── index.md                     任务索引（task-id / scope / status / updated_at）
-└── tasks/&lt;task-id&gt;/
-    ├── contract.md              这次做什么、范围、done_when、Acceptance 验收条件与 risk/review_policy
-    ├── state.md                 当前阶段、状态、证据、阻塞、预算
-    ├── handoff.md               恢复入口（新会话只读它就能开工）
-    ├── evidence/                命令真实输出、来源指针、可复现测量、失败证据
-    ├── outputs/                 最终报告、设计、计划、操作手册
-    ├── audit/                   决策、checkpoint-&lt;序号&gt;.md、失败记录、策略指纹、contract-r&lt;N&gt;.md、contract-change-r&lt;N&gt;.md、runs.json
-    └── tmp/                     可复用夹具、一次性验证材料</code></pre>
+├── index.md                     任务索引
+└── tasks/&lt;任务编号&gt;/
+    ├── contract.md              目标、范围、验收、风险和授权
+    ├── state.md                 当前阶段、状态、证据和阻塞
+    ├── handoff.md               当前恢复摘要
+    ├── evidence/                实际输出、来源和输入摘要
+    ├── outputs/                 内部报告、设计、计划和手册
+    ├── audit/                   决策、阶段记录、失败、契约快照、原运行
+    └── tmp/                     临时验证材料和候选状态</code></pre>
 
-<p><code>&lt;task-id&gt;</code> 就是任务目录名，格式 <code>{YYYYMMDD}-{NN}-{slug}</code>，例如 <code>20260928-01-yxj-work-independent-workflow</code>。日期是任务首次创建当天的本地日期；<code>{NN}</code> 是当日两位自增序号，从 <code>01</code> 起、不回收空号；<code>{slug}</code> 是小写短名。</p>
-
-<p>取号规则（按顺序执行）：</p>
+<p>任务编号格式是 <code>{YYYYMMDD}-{NN}-{slug}</code>。日期取首次创建日；<code>NN</code> 是当天序号，从 <code>01</code> 起；<code>slug</code> 是小写短名。例如 <code>20261012-01-doc-check</code>。</p>
 <ol>
-  <li>读 <code>.work-docs/index.md</code>。若有覆盖同一范围且仍在进行中的任务，<strong>续用原 id</strong>，不新建。</li>
-  <li>否则列出 <code>.work-docs/tasks/</code>，取当天日期目录中最大的 <code>{NN}</code>，加 1。</li>
-  <li>已完成或已删除的任务号<strong>不得重用或重编</strong>。</li>
-  <li>把新任务追加到 <code>.work-docs/index.md</code>。</li>
+  <li>先读索引。同范围任务仍进行中时续用原编号。</li>
+  <li>否则查看当天任务目录，取最大序号加一。</li>
+  <li>已完成或已删除的编号不重用、不重编。</li>
+  <li>追加索引后复查目录和索引。并发占号时保留先创建者，后来者顺延并记录原因。</li>
 </ol>
-
-<p>契约与状态里的 <code>task_id</code> 字段等于完整目录名，这样从任务自己的记录就能定位回目录。完成时任务目录里会出现临时的 <code>candidate.md</code>，它只是提交给 <code>task.py complete</code> 的候选状态，提交成功后不再需要。<code>docs/file-boundary.md</code> 只存在于源仓库、不随安装复制，所以运行时技能把需要的规则内联在自己文件里——不要指向那个路径。</p>
-
+<p>契约和状态的 <code>task_id</code> 都等于完整目录名。一个任务只保留一个写入者。<code>finish</code> 生成 <code>tmp/state-&lt;随机值&gt;.md</code> 候选。通过后候选替换正式状态；失败时保留候选，原正式状态和索引保持原值。</p>
 <div class="note rule">
-  工作流生成的持久文件只能落在上面这个目录树里。禁止写到 <code>.audit/</code>、<code>docs/handoff/</code>、<code>00-Inbox/</code>、项目的 docs 目录、外部 <code>local://</code> 或外部 <code>.audit/</code>。用户指定的项目代码是<strong>任务目标</strong>，不是工作流产物：在契约和证据里记录它的路径，但不要把它复制进 <code>.work-docs</code>（除非你要求）。
+  <p>工作流生成的持久记录只能写该目录树。用户授权的项目代码、文档和配置是任务目标，可以原位修改。不要把目标文件复制成工作流记录。</p>
+  <p><code>docs/file-boundary.md</code> 只在源仓库中，不随安装复制。运行时技能使用自身内联的规则。</p>
 </div>
 
 <h2 id="statefile">9. state.md 字段速查</h2>
 
-<p><code>state.md</code> 用「每行一个 <code>key: value</code>」的简单格式，方便脚本校验。固定字段：</p>
-
+<p>状态每行写 <code>字段名: 值</code>。新严格任务由 <code>start</code> 生成初始内容；不要手工制造过去的运行时间或计数。</p>
+<details class="fold">
+  <summary>展开字段说明（19 项）</summary>
 <table>
-  <thead><tr><th>字段</th><th>含义</th></tr></thead>
+  <thead><tr><th>字段</th><th>含义与要求</th></tr></thead>
   <tbody>
-    <tr><td><code>task_id</code></td><td>等于任务目录名</td></tr>
-    <tr><td><code>level</code></td><td><code>L1</code> / <code>L2</code> / <code>L3</code>（long 模式按 L3/long 计阈值）</td></tr>
-    <tr><td><code>stage</code></td><td>当前阶段（investigate / research / design / plan / exec / bugfix / review / ops / mixed）</td></tr>
-    <tr><td><code>status</code></td><td><code>in_progress</code> / <code>done</code> / <code>blocked</code> / <code>stopped</code> / <code>cancelled</code></td></tr>
-    <tr><td><code>done_when</code></td><td>什么算做完（可逐条，摘要自 Acceptance）</td></tr>
-    <tr><td><code>contract_revision</code> / <code>contract_fingerprint</code></td><td>新格式任务必填：必须与契约的版本号和内容指纹一致</td></tr>
-    <tr><td><code>evidence_schema</code></td><td>新任务必填 <code>2</code>；历史明确只读模式</td></tr>
-    <tr><td><code>evidence</code></td><td>一行一条：<code>evidence:名称|acceptance=A1|command=...|run_at=...|result=...|last_edit_at=...|inputs=...|contract_revision=1</code>，证据文件必须存在</td></tr>
-    <tr><td><code>unknowns</code></td><td>还没搞清的事</td></tr>
-    <tr><td><code>blocked_by</code></td><td>被什么挡住（status 为 blocked 时必需）</td></tr>
-    <tr><td><code>unblock_condition</code></td><td>满足什么才能解除阻塞（blocked 时必需）</td></tr>
-    <tr><td><code>next_action</code></td><td>下一步第一动作（blocked 时必需）</td></tr>
-    <tr><td><code>calls_since_progress</code></td><td>距上次有效进展的工具调用次数，有进展就归零</td></tr>
-    <tr><td><code>last_progress_at</code></td><td>上次有效进展的时间</td></tr>
-    <tr><td><code>budget</code></td><td><code>used/limit</code></td></tr>
-    <tr><td><code>started_at</code> / <code>deadline_at</code></td><td>可选；写了就会被校验。超过 <code>deadline_at</code> 仍写 <code>in_progress</code>（或 <code>done</code>）会被 check-state.sh 拦下</td></tr>
-    <tr><td><code>strategy_fingerprints</code></td><td>已用过的策略指纹（修改文件 + 执行命令 + 错误首行）</td></tr>
-    <tr><td><code>review_evidence</code></td><td>中/高风险完成必填：<code>review_evidence</code> 绑定 policy、status、path、inputs、contract_revision、run_at、last_edit_at</td></tr>
+    <tr><td><code>task_id</code></td><td>完整任务目录名</td></tr>
+    <tr><td><code>level</code></td><td>规模，与契约一致</td></tr>
+    <tr><td><code>stage</code></td><td>当前阶段</td></tr>
+    <tr><td><code>status</code></td><td><code>in_progress</code>、<code>done</code>、<code>blocked</code>、<code>stopped</code>、<code>cancelled</code></td></tr>
+    <tr><td><code>done_when</code></td><td>完成条件摘要</td></tr>
+    <tr><td><code>contract_revision</code>、<code>contract_fingerprint</code></td><td>契约版本和内容指纹，必须匹配当前契约</td></tr>
+    <tr><td><code>evidence_schema</code></td><td>新严格任务写 <code>2</code></td></tr>
+    <tr><td><code>required_verification</code></td><td>必过验收的编号、实际结果和证据路径</td></tr>
+    <tr><td><code>evidence</code></td><td>证据名称、验收、动作、时间、结果、输入摘要和契约版本</td></tr>
+    <tr><td><code>unknowns</code></td><td>仍未确定的问题，按需记录</td></tr>
+    <tr><td><code>blocked_by</code>、<code>unblock_condition</code>、<code>next_action</code></td><td>阻塞原因、解除条件和第一步动作；阻塞状态必填</td></tr>
+    <tr><td><code>attempted_paths</code>、<code>shared_assumption</code></td><td>阻塞时保存已试路径和共同假设</td></tr>
+    <tr><td><code>calls_since_progress</code>、<code>last_progress_at</code></td><td>无进展观察与上次有效进展时间；无真实计数时不能虚构次数</td></tr>
+    <tr><td><code>budget</code></td><td>新状态写 <code>untracked/60</code>、<code>untracked/150</code> 或 <code>untracked/400</code>；旧数值格式仍受检查</td></tr>
+    <tr><td><code>tool_count_note</code></td><td><code>--used</code> 写入的可选观察值，不参与完成门</td></tr>
+    <tr><td><code>started_at</code>、<code>deadline_at</code></td><td>开始与截止时间；新大规模或长模式记录 8 小时上限，超时不能保持进行中或完成</td></tr>
+    <tr><td><code>strategy_fingerprints</code></td><td>已试策略指纹，按需记录</td></tr>
+    <tr><td><code>review_evidence</code></td><td>中高风险完成所需审查记录，绑定策略、结果、路径、输入、版本和时间</td></tr>
     <tr><td><code>updated_at</code></td><td>最后更新时间</td></tr>
   </tbody>
 </table>
-
-<p>必需验证项单独一行，<code>名称</code>是契约 Acceptance 里的验收编号：<code>required_verification: A1 status=passed evidence=evidence/check.txt</code>，状态只能是 <code>passed | failed | not_run | blocked</code>；启用 <code>evidence_schema: 2</code> 时 <code>evidence=</code> 指向的文件必须存在，且对应 evidence 行的 <code>acceptance=</code> 必须等于 <code>A1</code>。</p>
-
-<p><strong>有效进展</strong>包括有证据的新结论、目标产物新版本或必需验收转为 passed。只读结论不要求落盘；目录创建、更新时间和重复读取不算。每次有效进展都更新 <code>calls_since_progress</code>（归零）、<code>last_progress_at</code>、<code>budget</code> 和 <code>strategy_fingerprints</code>。</p>
+</details>
+<p>一条验收与证据的格式如下。<code>A1</code> 是第一条验收，示例时间需换成实际时间：</p>
+<pre><code>required_verification: A1 status=passed evidence=evidence/check-1.txt
+evidence:check-1|acceptance=A1|command=实际命令或人工核对|run_at=2026-10-12T03:01:00Z|result=passed|last_edit_at=2026-10-12T03:00:00Z|inputs=evidence/check-1.inputs.json|contract_revision=1</code></pre>
+<p><code>not_run</code> 可以没有证据文件。通过记录必须绑定真实非空证据。只在重要决定、验证、转向、阻塞和阶段边界更新状态，不为每个工具动作重写文件。</p>
 
 <h2 id="cmd">10. 常用命令</h2>
 
 <h3>日常入口</h3>
-<pre><code>/x-rail &lt;任务说明&gt;                      # 普通任务
-/x-rail-long &lt;长任务说明&gt;                 # 长任务
-/x-handoff &lt;补充说明&gt;                # 主动写交接
-/x-rail 调研 &lt;对象&gt;：&lt;要回答的问题&gt;        # 产品调研
-/x-rail 定位：&lt;症状&gt;                      # 问题定位（先不改代码）
-/x-rail 修复 &lt;症状&gt;：复现 → 根因 → 最小修复 → 回归
-/x-rail-long 继续 &lt;task-id&gt;：先给恢复摘要，再执行下一步</code></pre>
+<pre><code>/x-rail &lt;任务说明&gt;
+/x-rail 调研 &lt;对象&gt;：&lt;需要回答的问题&gt;
+/x-rail 设计 &lt;目标&gt;。只在回复交付。
+/x-rail 定位 &lt;症状&gt;。只分析，不改文件。
+/x-rail 修复 &lt;症状&gt;：复现、根因、最小修改、回归
+/x-rail-long &lt;需要恢复或外部等待的任务&gt;
+/x-rail-long 继续 &lt;任务编号&gt;：先核对记录和原运行
+/x-handoff 保存当前任务的真实状态和恢复第一步
+/x-self-check 最近七日</code></pre>
 
 <h3>点名辅助技能</h3>
-<pre><code>/x-how &lt;模块&gt;            # 这块怎么跑起来的
-/x-why &lt;决策/回归&gt;        # 当初为什么这么定，带引用
-/x-blast-radius &lt;改动&gt;    # 改动会波及哪里，并用真实运行证明
-/x-architect &lt;模块&gt;       # 先定类型/签名/结构
-/x-arena &lt;任务&gt;           # 多个候选方案，选优嫁接
-/x-prototype &lt;设计假设&gt;   # 一次性原型回答设计问题
-/x-interrogate &lt;改动&gt;     # 多视角对抗评审
-/x-teach &lt;模块/改动&gt;      # 讲到人真的懂
-/x-html &lt;主题或文档&gt;      # 做成面向初中生的图文讲解页（单文件、离线可看）
-/x-worktree &lt;名称&gt;        # 建 .worktrees/&lt;名称&gt; 分支工作区并复制 .env.local
-/x-wizard &lt;目标&gt;          # 生成交互式 bash 向导
-/x-unslop                 # 去 AI 味
-/x-technical-writing      # 技术写作标准</code></pre>
+<pre><code>/x-how &lt;模块&gt;            # 核对运行链路
+/x-why &lt;决策&gt;            # 核对原因与取舍
+/x-blast-radius &lt;改动&gt;   # 核对影响并实际验证
+/x-architect &lt;模块&gt;      # 先定类型、签名和结构
+/x-arena &lt;任务&gt;          # 已授权的多个候选
+/x-prototype &lt;假设&gt;      # 用原型回答具体问题
+/x-interrogate &lt;结论&gt;    # 已授权的多视角挑战
+/x-teach &lt;模块或改动&gt;    # 解释到读者能理解
+/x-html &lt;主题或文档&gt;     # 单文件离线图文讲解
+/x-wizard &lt;人工目标&gt;     # 人工操作向导
+/x-unslop                # 删除文案冗余
+/x-technical-writing     # 技术写作规范</code></pre>
 
-<h3>严格完成与自检</h3>
-<pre><code>python3 &lt;skill-dir&gt;/scripts/task.py start TASK_DIR
-python3 &lt;skill-dir&gt;/scripts/task.py run TASK_DIR --acceptance A1 --evidence check-1 \
-  --workspace EXECUTION_ROOT --input relevant/file \
-  --expect 'expected output' --command 'verification command'
-python3 &lt;skill-dir&gt;/scripts/task.py finish TASK_DIR
-bash &lt;skill-dir&gt;/scripts/check-state.sh TASK_DIR [--strict|--legacy-readonly]
-python3 &lt;self-check-dir&gt;/scripts/analyze_sessions.py --sessions-root DIR --days 7 --timezone Asia/Shanghai --format json
-python3 &lt;self-check-dir&gt;/scripts/analyze_sessions.py --sessions-root DIR --days 21 \
+<p>建立隔离工作区时优先直接运行现有脚本。<code>wt</code> 是本机已配置时才可用的终端函数；它不是仓库自动安装的命令。</p>
+<pre><code>wt 我的特性名
+# 没有 wt 时，从当前项目调用实际技能路径
+bash /Users/yuanxj/Documents/github/x-rail/skills/x-worktree/scripts/create_worktree.sh 我的特性名
+# 名称需从自然语言推断，或已有任务需记录时
+/x-worktree &lt;名称&gt;</code></pre>
+<p>脚本建本地分支和工作区，复制主分支目录的 <code>.env.local</code>。新工作区有 <code>pnpm-lock.yaml</code> 时运行 <code>pnpm install</code>。pnpm 是该项目使用的依赖安装工具。安装失败保留已建目录，按准确错误处理，不重复创建。</p>
+
+<h3>严格任务的初始化、验收和完成</h3>
+<p>普通任务不运行下面流程。在源仓库使用以下路径；其他项目请换成实际安装技能目录。所有尖括号内容都需替换为本次实际值。</p>
+<pre><code>python3 skills/x-rail/scripts/task.py start &lt;任务目录&gt;
+python3 skills/x-rail/scripts/task.py run &lt;任务目录&gt; \
+  --acceptance A1 --evidence check-1 \
+  --workspace &lt;执行根目录&gt; --input &lt;相关文件&gt; \
+  --expect '实际预期输出' --command '实际验证命令'
+python3 skills/x-rail/scripts/task.py finish &lt;任务目录&gt;
+# 只读检查当前正式状态，不替代候选提交
+python3 skills/x-rail/scripts/task.py check &lt;任务目录&gt;
+bash skills/x-rail/scripts/check-state.sh &lt;任务目录&gt; --strict</code></pre>
+<p><code>--input</code> 和 <code>--expect</code> 可重复。至少声明一个相关输入文件。每次 <code>run</code> 使用新的证据名。默认超时 300 秒，<code>--timeout</code> 可调整。超时保留失败输出，并终止该验证命令的进程组。</p>
+
+<h3>只读会话自检</h3>
+<pre><code>python3 skills/x-self-check/scripts/analyze_sessions.py \
+  --sessions-root &lt;日志目录&gt; --days 7 --timezone Asia/Shanghai --format json
+python3 skills/x-self-check/scripts/analyze_sessions.py \
+  --sessions-root &lt;日志目录&gt; --days 21 \
   --task-root .work-docs/tasks --task-mode strict --format json</code></pre>
-<p>需要 Python 3.10 以上，仅用标准库。删除型安装、全局安装和付费演练另需授权。测试目录保留。结构检查不证明模型遵守。</p>
-<h3>脚本（在源仓库根目录运行）</h3>
-<pre><code>bash scripts/check-repo.sh                                     # 仓库自检（含技能边界、marker、预算）
-bash scripts/install.sh --dest "$HOME/.pi/agent/skills"        # 安装
-bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --update   # 更新已安装副本
-bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --link     # 软链安装（正确已有链接保持不变）
-bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink   # 软链卸载（只删本仓库链接）
-bash scripts/check-workflow.sh --source "$PWD" --installed "$HOME/.pi/agent/skills"   # 源与安装目标对照
-bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;task-id&gt;   # 契约结构校验（动代码前必跑；--draft/--ready/--seal/--locked）
-bash skills/x-rail/scripts/check-state.sh .work-docs/tasks/&lt;task-id&gt;   # 只读校验正式状态（--strict/--legacy-readonly），不替代 complete 候选提交
-bash scripts/check-skill-metadata.sh                           # 技能元数据静态检查
-bash scripts/check-skill-xml.py                                # 入口 XML 结构静态检查
-bash scripts/test-contract.sh                                 # 契约校验器回归
-bash scripts/test-fixtures.sh                                 # 夹具回归
-bash scripts/test-v2-lifecycle.sh                             # v2 完成门生命周期回归
-bash scripts/test-task-checks.py                              # Python 检查器单元回归
-bash scripts/test-install.sh                                   # 安装回归
-bash scripts/test-flow.sh                                      # 流程回归
-bash scripts/test-document-template.sh                         # 轻量文档模板回归
-bash scripts/test-skill-xml.py                                 # 入口 XML 结构回归
-bash scripts/test-skill-metadata.sh                            # 技能元数据与安装清单回归
-bash scripts/test-self-check.py                                # 自检脚本回归</code></pre>
+<p>日志目录用实际路径。三周用 <code>--days 21</code>。指定窗口用成对带时区的 <code>--start</code> 和 <code>--end</code>，不能与 <code>--days</code> 混用。核对任务记录时，<code>--task-root</code> 和 <code>--task-mode</code> 必须成对，历史模式显式写 <code>legacy-readonly</code>。</p>
 
-<p><code>check-state.sh</code> 会拒绝这些情况：标记 <code>done</code> 但存在 failed / not_run / blocked 的必需验收，或证据已过期；非 blocked 状态却已达到无进展阈值；blocked 却缺 <code>blocked_by</code>、<code>unblock_condition</code>、<code>next_action</code>；预算超限却仍写 <code>in_progress</code> 或 <code>done</code>；<code>status: done</code> 但没有任何 <code>required_verification</code>；状态文件是软链或指向任务目录之外。启用 <code>evidence_schema: 2</code> 后还会拒绝：required 验收缺 evidence 绑定、证据文件不存在、evidence 缺 <code>acceptance</code>/<code>command</code>/<code>run_at</code>/<code>result</code>/<code>last_edit_at</code>/<code>inputs</code>/<code>contract_revision</code> 任一字段、evidence 结果不是 <code>passed</code>、<code>contract_revision</code> 或 <code>contract_fingerprint</code> 与契约不一致、输入摘要与当前文件对不上、必需依赖没结束、中/高风险 done 缺 <code>review_evidence</code> 或其 policy / status / 审查文件对不上。</p>
+<h3>仓库检查与回归</h3>
+<p>以下命令从源仓库根目录运行。Python 脚本用 <code>python3</code>，Bash 脚本用 <code>bash</code>。测试使用新的目录并保留产物；删除型安装回归需要明确授权。</p>
+<pre><code>bash scripts/check-repo.sh
+bash scripts/check-skill-metadata.sh
+python3 scripts/check-skill-xml.py
+python3 scripts/test-task-checks.py
+python3 scripts/test-skill-xml.py
+python3 scripts/test-self-check.py
+python3 scripts/test-html-check.py
+bash scripts/test-worktree.sh
+bash scripts/test-contract.sh --keep-artifacts
+bash scripts/test-fixtures.sh
+bash scripts/test-v2-lifecycle.sh
+bash scripts/test-flow.sh
+bash scripts/test-document-template.sh
+bash scripts/test-skill-metadata.sh --keep-artifacts
+bash scripts/test-install.sh --keep-artifacts</code></pre>
+<p>契约和状态检查退出码 <code>0</code> 表示当前模式通过，<code>1</code> 表示材料或验收失败，<code>2</code> 表示参数或依赖错误。结构检查、脚本行为和真实模型使用需要分别验证。</p>
 
 <h2 id="faq">11. 常见疑问</h2>
 
-<h3>为什么辅助技能没有被自动唤起？</h3>
-<p>因为全部设了 <code>disable-model-invocation: true</code>。这是刻意设计：避免模型因为「看到 .ts 文件」或「看到报错」就自行塞进一段技能指令，让任务范围失控。要用就两条路——入口按阶段读，或你点名。</p>
+<details class="qa">
+  <summary>为什么辅助技能没有自动唤起？</summary>
+  <p>所有技能都禁用模型自动调用。入口按条件读取辅助说明，用户也可点名。用安装校验脚本核对文件，不只看模型显示的技能列表。</p>
+</details>
 
-<h3>装完看不到它们，是不是没装成功？</h3>
-<p>用 <code>check-workflow.sh</code> 对照源仓库和安装目标，它会逐项检查目录、安装标记和文件。这比「在列表里看到」可靠。</p>
+<details class="qa">
+  <summary>任务复杂就必须建档或进长模式吗？</summary>
+  <p>先看失败代价和恢复需求。当前会话能完成的普通多阶段任务可以直接交付。只读分析不为流程落盘。跨会话、外部等待或依赖汇总才进长模式。</p>
+</details>
 
-<h3>任务卡住了怎么办？</h3>
-<p>看 <code>state.md</code> 的 <code>status</code>。是 <code>blocked</code> 就看 <code>blocked_by</code> 和 <code>unblock_condition</code>，那两条就是你需要提供的输入；是 <code>stopped</code> 通常意味着等你拍板（不可逆动作、花钱、对外发布、改需求范围）。恢复必须换一条实质不同的策略，同一策略重试会被熔断规则挡住。</p>
+<details class="qa">
+  <summary>为什么普通任务没有 state.md？</summary>
+  <p>普通任务用实际工具结果和回复交付。严格任务才创建状态和完成候选。已有严格任务必须按原记录继续，不能通过删除记录降级。</p>
+</details>
 
-<h3>证据过期是什么意思？</h3>
-<p>证据的 <code>run_at</code> 早于相关文件的 <code>last_edit_at</code>。等于「跑完之后又改了代码」，那条证据不再代表当前状态，必须重跑。</p>
+<details class="qa">
+  <summary>任务卡住了怎么看？</summary>
+  <p>普通任务看当前回复中的阻塞和下一步。严格任务看状态里的阻塞原因、解除条件和第一步动作。等待授权与工具故障分开说明。恢复原运行前先查询，不重复启动。</p>
+</details>
 
-<h3>为什么 check-contract 报 fields must use key: value？</h3>
-<p>契约字段写成了 Markdown 列表项 <code>- key: value</code>。字段必须顶格从第 1 列写成 <code>key: value</code>；去掉行首的 <code>- </code> 即可。</p>
+<details class="qa">
+  <summary>证据时间够新，为什么仍被拒绝？</summary>
+  <p>时间只是一个条件。输入摘要还必须匹配当前文件，契约版本也必须一致。新时间不能补救旧内容或缺少的实际验收。</p>
+</details>
 
-<h3>为什么 check-contract 说 confirmation is pending？</h3>
-<p>契约含敏感动作，但确认仍为 <code>pending</code>，需明确本动作授权才能执行。起草阶段可以用 <code>--draft</code> 模式校验其余结构；拍板后把 <code>confirmation_status</code> 改成 <code>confirmed</code> 并补齐 <code>confirmation_by</code>、<code>confirmation_at</code>、<code>confirmation_source</code>，默认的 <code>--ready</code> 才能通过。</p>
+<details class="qa">
+  <summary>fields must use key: value 是什么意思？</summary>
+  <p>意思是字段必须从第一列写成“字段名：值”。将 <code>- key: value</code> 改成 <code>key: value</code>。保留字段的原值。</p>
+</details>
 
-<h3>为什么 task.py complete 说 required acceptance not passed？</h3>
-<p>报错里会跟具体原因：验收还没 passed、证据文件不存在或比相关文件旧、<code>inputs</code> 摘要与当前文件对不上、必需依赖没结束，或契约快照链缺了一环。逐项补齐后重新提交；不要为了让它通过而降低 required 验收。提交失败会保留正式 <code>state.md</code> 和索引，不会把半成品写成 done。</p>
+<details class="qa">
+  <summary>confirmation is pending 是什么意思？</summary>
+  <p>意思是敏感动作仍待确认。先取得当前动作的明确授权，再记录确认人、时间和来源。草稿可用 <code>--draft</code> 核对结构，但草稿通过不授权执行。</p>
+</details>
 
-<h3>契约改了却被拦（contract changed without a new revision）？</h3>
-<p><code>--seal</code> 会把当时契约的原字节存成 <code>audit/contract-r&lt;N&gt;.md</code>。之后改了任何内容而不提升 <code>contract_revision</code>，新字节就对不上旧快照。正确做法：升版本号，在 <code>audit/contract-change-r&lt;N&gt;.md</code> 写新旧值、原因、批准来源和受影响证据，并在 <code>Contract Changes</code> 段引用它。改了必过验收且被放宽时，还需要批准来源。</p>
+<details class="qa">
+  <summary>required acceptance not passed 是什么意思？</summary>
+  <p>意思是必过验收没有满足。按准确报错补齐实际验证、证据、当前输入、依赖或审查。不能为了让检查通过而降低验收要求。失败不会把正式状态写成完成。</p>
+</details>
 
-<h3>seal 到底做了什么？</h3>
-<p>把当前 <code>contract.md</code> 原字节存成 <code>audit/contract-r&lt;N&gt;.md</code>，形成一份不能静默改动的历史链。开工前 <code>--seal</code> 一次，之后的修复删改都会现形；交付前用 <code>--locked</code> 复核整条链与变更记录。追加新任务时不用重新封存旧版本。</p>
+<details class="qa">
+  <summary>contract changed without a new revision 是什么意思？</summary>
+  <p>意思是契约变了，版本号却没提高。提高契约版本，记录新旧值、原因、批准来源和受影响证据。保留旧快照，再按新版本重新封存和验证。</p>
+</details>
 
-<h3>为什么 check-state 拒绝我的 done？</h3>
-<p>逐条对照报错：最常见的是 required 验收没绑定 evidence（缺 <code>acceptance=</code> 指针或证据文件不存在）、evidence 比代码旧、中/高风险任务缺 <code>review_evidence</code>。这些是 <code>evidence_schema: 2</code> 的完成门，目的就是把「agent 自称完成」挡在门外。</p>
+<details class="qa">
+  <summary>finish 会替我运行测试吗？</summary>
+  <p>不会。自动验收用 <code>run</code>。<code>finish</code> 只生成候选并检查已有材料。<code>check-state.sh</code> 也只读检查，不能代替候选提交。</p>
+</details>
 
-<h3>为什么 grep 通过不算验证过？</h3>
-<p>grep 属于 <code>static</code> 层，只能证明文本里出现了某个字符串。如果契约要求 <code>runtime/local</code> 或 <code>consumer</code> 层，就必须真的运行并观察行为。</p>
+<details class="qa">
+  <summary>untracked/60 是什么意思？</summary>
+  <p>调用数未跟踪，60 是规模提示。没有宿主真实计数时，不填写人工总数。<code>--used</code> 只保存观察值。旧数值预算和明确截止时间仍受校验。</p>
+</details>
 
-<h3>一个任务里能顺手改点别的吗？</h3>
-<p>不能。<code>plan</code> 阶段明确「不得扩大范围」。确实需要改范围，就得回到需求评估、重新定义契约，而不是在执行中悄悄扩大。</p>
+<details class="qa">
+  <summary>文本搜索通过能证明功能可用吗？</summary>
+  <p>只能证明指定文本出现。验收要求本地行为、外部服务或用户流程时，要实际运行并核对结果。证据覆盖什么，结论就写到什么。</p>
+</details>
 
-<h3>第三方技能把文件写到 <code>.work-docs</code> 外面了？</h3>
-<p>立即熔断（<code>blocked_by: external_skill_write_outside_work_docs</code>），保留现场，<strong>不要移动、删除或覆盖</strong>那个文件，等确认后再处置。</p>
+<details class="qa">
+  <summary>能顺手扩大修改范围吗？</summary>
+  <p>不能。先说明范围变化的背景、推荐和后果，再取得明确同意。普通任务更新目标和范围；严格任务还提升契约版本并记录来源。</p>
+</details>
 
-<h3>长任务预算用完了但活还没干完？</h3>
-<p>写 checkpoint 和暂停原因。刚好耗尽且全部验收通过时可提交完成候选；否则暂停。追加预算须记录授权和新策略，不因换一天重置。</p>
+<details class="qa">
+  <summary>第三方技能意外写出文件怎么办？</summary>
+  <p>暂停并保存现场、准确路径和原因。严格记录写 <code>blocked_by: external_skill_write_outside_work_docs</code>，意思是第三方技能越界写文件。未经同意不移动、删除或覆盖。</p>
+</details>
+
+<details class="qa">
+  <summary>长任务到限制时怎么办？</summary>
+  <p>保存阶段记录、真实结果和暂停原因。适用预算刚好耗尽且全部验收满足时可以提交候选。其他情况保留未完成状态，追加预算需记录授权，不因换一天重置。</p>
+</details>
 
 <h2 id="cheatsheet">12. 一页速查</h2>
 
 <table>
-  <thead><tr><th>我想做的事</th><th>敲什么</th><th>产物在哪</th></tr></thead>
+  <thead><tr><th>要做的事</th><th>命令</th><th>交付位置</th></tr></thead>
   <tbody>
-    <tr><td>问一个简单事实</td><td><code>/x-rail &lt;问题&gt;</code>（走 L0 快问快答）</td><td>不建目录，直接回答</td></tr>
-    <tr><td>调研产品 / 技术选型</td><td><code>/x-rail 调研 …</code></td><td><code>outputs/</code> 报告 + 决策门；台账在 <code>evidence/</code></td></tr>
-    <tr><td>评估一个需求该不该做</td><td><code>/x-rail 评估需求：…</code> + <code>/x-interrogate</code></td><td><code>outputs/</code> 评估报告；决策在 <code>audit/</code></td></tr>
-    <tr><td>设计方案（不改代码）</td><td><code>/x-rail 设计 …</code></td><td><code>outputs/</code> 设计文档</td></tr>
-    <tr><td>实现功能</td><td><code>/x-rail 实现 …</code></td><td>计划与审查进 <code>outputs/</code>，验证输出进 <code>evidence/</code></td></tr>
-    <tr><td>查一个问题</td><td><code>/x-rail 定位：…</code></td><td>证据在 <code>evidence/</code>，结论在 <code>audit/</code></td></tr>
-    <tr><td>修一个 bug</td><td><code>/x-rail 修复 …：复现 → 根因 → 最小修复 → 回归</code></td><td>修复前后对比输出在 <code>evidence/</code></td></tr>
-    <tr><td>收口严格任务</td><td><code>task.py start</code> → <code>task.py run</code> → <code>task.py finish</code></td><td>自动记录证据；人工验收仍显式记录；正式 <code>state.md</code> 与 <code>index.md</code> 同步更新</td></tr>
-    <tr><td>开一个隔离工作区</td><td><code>/x-worktree &lt;名称&gt;</code></td><td><code>.worktrees/&lt;名称&gt;</code> 新分支工作区，含复制的 <code>.env.local</code></td></tr>
-    <tr><td>把主题或文档做成图文讲解</td><td><code>/x-html &lt;主题或文档路径&gt;</code></td><td>单文件 HTML 在 <code>outputs/</code>，检查器报告在 <code>evidence/</code></td></tr>
-    <tr><td>跑长任务 / 过夜</td><td><code>/x-rail-long …</code></td><td>多出 <code>audit/checkpoint-*.md</code> 与 <code>handoff.md</code></td></tr>
-    <tr><td>第二天接着干</td><td><code>/x-rail-long 继续 &lt;task-id&gt;</code></td><td>先读 index → contract → state → checkpoint → handoff → runs → evidence</td></tr>
-    <tr><td>只想知道任务到哪了</td><td><code>/x-rail-long 检查 &lt;目录&gt;/.work-docs</code></td><td>每个任务一行状态摘要</td></tr>
-    <tr><td>把任务交出去</td><td><code>/x-handoff</code></td><td><code>handoff.md</code></td></tr>
+    <tr><td>简单事实</td><td><code>/x-rail &lt;问题&gt;</code></td><td>直接回复</td></tr>
+    <tr><td>调研或评估</td><td><code>/x-rail 调研或评估 …</code></td><td>默认回复；指定文档写授权位置</td></tr>
+    <tr><td>设计方案</td><td><code>/x-rail 设计 …</code></td><td>默认回复；只设计不改代码</td></tr>
+    <tr><td>实施修改</td><td><code>/x-rail 实现 …</code></td><td>目标文件原位置，回复给实际验证</td></tr>
+    <tr><td>调查问题</td><td><code>/x-rail 定位 …</code></td><td>只读结论在回复</td></tr>
+    <tr><td>修复错误</td><td><code>/x-rail 修复 …</code></td><td>原文件修改，给修复前后结果</td></tr>
+    <tr><td>严格任务</td><td><code>task.py start</code>、<code>run</code>、<code>finish</code></td><td>任务目录保存完整记录；目标文件仍写授权位置</td></tr>
+    <tr><td>隔离工作区</td><td><code>wt &lt;名称&gt;</code> 或直接调用创建脚本</td><td>主工作区下的 <code>.worktrees/&lt;名称&gt;</code></td></tr>
+    <tr><td>图文讲解</td><td><code>/x-html &lt;主题或文档&gt;</code></td><td>指定路径；未指定时写任务 <code>outputs/</code></td></tr>
+    <tr><td>跨会话或外部等待</td><td><code>/x-rail-long …</code></td><td>任务阶段记录、原运行引用和交接</td></tr>
+    <tr><td>恢复任务</td><td><code>/x-rail-long 继续 &lt;任务编号&gt;</code></td><td>先核对原记录、工作区、输入和原运行</td></tr>
+    <tr><td>只查状态</td><td><code>/x-rail-long 检查 &lt;目录&gt;/.work-docs</code></td><td>回复状态摘要</td></tr>
+    <tr><td>主动交接</td><td><code>/x-handoff</code></td><td>当前任务 <code>handoff.md</code></td></tr>
+    <tr><td>会话自检</td><td><code>/x-self-check 最近七日</code></td><td>默认回复；保存报告需明确授权</td></tr>
   </tbody>
 </table>
 
 <div class="note">
-  <strong>三条最容易被忽略的硬规则</strong>：① 完成只能靠证据，不能靠自述、退出码或编译通过；② 证据必须比代码新；③ 同一策略失败两次就换方法，不许原样重试。
+  <p>先读后改，保留已有修改。检查实际结果后才说完成。失败后读准确报错并换方法。删除、覆盖数据、费用、对外发布和范围变化先确认。</p>
 </div>
 
 <footer>
-  由 x-rail 源仓库的 <code>skills/</code>、<code>scripts/</code>、<code>docs/</code> 现状生成，本次按 <code>main 1a5e9e4</code>（0.0.3）校对。文件位置：<code>/Users/yuanxj/Documents/github/x-rail/docs/usage-guide.html</code>。
-  规则若与仓库文件不一致，以 <code>skills/x-rail/SKILL.md</code>、<code>skills/x-rail-long/SKILL.md</code> 和 <code>docs/architecture.md</code> 为准。
+  本次按 <code>main 74d86b0</code> 的入口、阶段说明和脚本校对，更新日期为 2026-10-12。文件位置：<code>/Users/yuanxj/Documents/github/x-rail/docs/usage-guide.html</code>。
+  执行规则以当前用户授权、主入口和实际脚本为准。安装清单由 <code>scripts/runtime-skills.txt</code> 决定。结构检查不能证明模型会遵守。
 </footer>
 
 </main>
