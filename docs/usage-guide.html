@@ -334,7 +334,7 @@ bash scripts/install.sh --dest "$HOME/.pi/agent/skills" --unlink</code></pre>
   <figcaption>人工核对、外部服务和使用者验收不在自动路径里，需要单独记录。</figcaption>
 </figure>
 
-<p>严格任务的文件只有两个：<code>contract.md</code> 是任务约定，<code>state.md</code> 是进度记录。<code>start</code>、<code>run</code>、<code>finish</code> 是 <code>task.py</code> 的三个子命令。</p>
+<p>严格任务的文件只有两个：<code>contract.md</code> 是任务约定，<code>state.md</code> 是进度记录。<code>task.py</code> 用 <code>start</code> 初始化、<code>run</code> 执行自动验证、<code>finish</code> 核对完成；另用 <code>update</code> 更新状态、<code>capture</code> 采集非自动观察输入、<code>record</code> 登记结果、<code>summary</code> 生成只读摘要。</p>
 
 <p>严格任务的启动摘要来自契约、状态和最近的阶段记录。摘要说明当前阶段、目标、风险、允许改动、禁止动作、必过验收、证据、阻塞和下一步。缺字段写“未记录”。摘要不创建第二份状态文件。</p>
 <p>阶段按当前问题选择。已确认方案不重复设计，小修改可直接执行。审查只在风险、验证不足、需求分歧、用户要求或关键逻辑重改时触发。多个阶段本身不要求长模式。</p>
@@ -759,9 +759,9 @@ bash skills/x-rail/scripts/check-contract.sh .work-docs/tasks/&lt;任务编号&g
     <dt>什么时候用</dt>
     <dd>需要跨会话或过夜、等待外部运行，或汇总必需子任务时。多个阶段、大规模或高风险本身不触发长模式。</dd>
     <dt>怎么敲</dt>
-    <dd><pre><code>/x-rail-long &lt;目标&gt;。需要跨会话继续；每阶段结束保存记录，暂停前保存恢复第一步。</code></pre></dd>
+    <dd><pre><code>/x-rail-long &lt;目标&gt;。需要跨会话继续；重要变化时保存记录，暂停前保存恢复第一步。</code></pre></dd>
     <dt>内部走什么</dt>
-    <dd>续用同范围进行中任务，或创建新的严格记录。每个阶段结束追加 <code>audit/checkpoint-&lt;序号&gt;.md</code>，即阶段检查记录，并同步状态。暂停、过夜或等待前保存 <code>handoff.md</code> 交接摘要。外部运行引用保存在 <code>audit/runs.json</code>，包含原运行标识、提供方、工作区、观察时间和输出位置，不保存密钥。</dd>
+    <dd>续用同范围进行中任务，或创建新的严格记录。只在重要决定、新验证、转向、阻塞、交接或交付时维护记录；阶段变化影响恢复时合并更新。状态用 <code>update</code>，摘要用 <code>summary</code>；只有新结论才声明实质进展。暂停、过夜或等待前保存 <code>handoff.md</code> 的恢复第一步与易错点，其他事实引用原记录。外部运行引用保存在 <code>audit/runs.json</code>，包含原运行标识、提供方、工作区、观察时间和输出位置，不保存密钥。</dd>
     <dt>交付与位置</dt>
     <dd>记录写当前执行目录的 <code>.work-docs/tasks/&lt;任务编号&gt;/</code>。父契约声明必需依赖。阶段结束不等于任务完成，子任务完成不自动通过父验收。</dd>
     <dt>验收与常见问题</dt>
@@ -1164,6 +1164,19 @@ python3 skills/x-rail/scripts/task.py finish &lt;任务目录&gt;
 python3 skills/x-rail/scripts/task.py check &lt;任务目录&gt;
 bash skills/x-rail/scripts/check-state.sh &lt;任务目录&gt; --strict</code></pre>
 <p><code>--input</code> 和 <code>--expect</code> 可重复。至少声明一个相关输入文件。每次 <code>run</code> 使用新的证据名。默认超时 300 秒，<code>--timeout</code> 可调整。超时保留失败输出，并终止该验证命令的进程组。</p>
+
+<h3>进度、人工验证与证据复用</h3>
+<p><code>update</code> 更新阶段、下一步、阻塞和恢复，不允许直接标为完成。仅更新时间不算进展；取得新结论时用 <code>--progress</code> 并写原因。<code>summary</code> 从原记录生成只读摘要，相关输入变化标为过期，记录或报告不符标为无效。</p>
+<pre><code>python3 skills/x-rail/scripts/task.py update &lt;任务目录&gt; --stage review --next-action '核对用户入口'
+python3 skills/x-rail/scripts/task.py summary &lt;任务目录&gt;
+# 人工、用户实际使用或外部方式：观察前采集，实际观察后登记
+python3 skills/x-rail/scripts/task.py capture &lt;任务目录&gt; --evidence observation-1 --workspace &lt;执行根目录&gt; --input &lt;相关文件&gt;
+python3 skills/x-rail/scripts/task.py record &lt;任务目录&gt; --acceptance A1 --evidence manual-1 --report evidence/observation-1.md --inputs evidence/observation-1.inputs.json --observed-at &lt;实际观察时间&gt; --result passed --observation '实际核对动作和结果'</code></pre>
+<p>报告须为任务内真实非空产物。登记保留实际观察时间，另写登记时间；登记时间不能使旧结果变新。独立审查还需真实审查者与来源，脚本不证明独立性。完整参数与暂停、恢复示例见 <a href="../skills/x-rail/playbooks/verification.md">验证说明</a>。</p>
+<p>先核对原结果、证据、当前相关输入和限制，再决定重跑。换会话不自动使证据失效；相关输入、外部环境或时效要求变化时重跑受影响检查。交接只补恢复第一步、易错点与引用。</p>
+<h3>编码测试和完成标准</h3>
+<p>像先写表单行为检查再满足它：TDD（Test-Driven Development，测试驱动开发）先观察目标行为失败，再写最小代码、通过并整理。非平凡逻辑默认采用，纯文档、文案和简单样式采用内容或渲染核对。影响用户流程时还要验对应登录、页面入口、操作、请求和结果。</p>
+<p>代码写入、对应测试通过、使用路径已验证、任务全部必需验收满足，分别报告。测试只证明覆盖到的行为；完成当前任务不自动包含上线。没有先失败与后通过证据，不声称使用了测试驱动开发。</p>
 
 <h3>只读会话自检</h3>
 <pre><code>python3 skills/x-self-check/scripts/analyze_sessions.py \

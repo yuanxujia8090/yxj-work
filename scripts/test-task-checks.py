@@ -214,6 +214,288 @@ class TaskTests(unittest.TestCase):
         self.assertEqual((directory / 'evidence/actual.txt').read_bytes(), receipt)
         self.assertFalse((self.root / 'must-not-run').exists())
 
+    def pending_manual(self, policy='auto'):
+        directory = self.fresh_task()
+        contract = (directory / 'contract.md').read_text().replace('verification_type: automatic', 'verification_type: manual')
+        if policy != 'auto':
+            contract = contract.replace('review_policy: auto', 'review_policy: '+policy).replace('review: auto', 'review: '+policy)
+        (directory / 'contract.md').write_text(contract)
+        self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+        return directory
+
+    def capture(self, directory, name='observation'):
+        p = self.run_cli('capture', str(directory), '--evidence', name,
+                         '--workspace', str(self.root), '--input', 'input.txt')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        return 'evidence/'+name+'.inputs.json'
+
+    def record_manual(self, directory, inputs, name='observed', result='passed', *extra):
+        import task as cli
+        report = directory / 'evidence' / (name+'.md')
+        report.write_text('Observed the requested behavior on input.txt; result='+result)
+        return self.run_cli('record', str(directory), '--acceptance', 'A1', '--evidence', name,
+                            '--report', 'evidence/'+name+'.md', '--inputs', inputs,
+                            '--observed-at', cli.now(), '--result', result,
+                            '--observation', 'Read input.txt and checked the requested behavior', *extra)
+
+    def test_update_pause_resume_preserves_evidence_and_progress_time(self):
+        directory = self.pending_manual()
+        original = checks.check_state(directory)
+        p = self.run_cli('update', str(directory), '--stage', 'review', '--next-action', 'inspect behavior')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(checks.check_state(directory)['last_progress_at'], original['last_progress_at'])
+        p = self.run_cli('update', str(directory), '--status', 'blocked', '--blocked-by', 'service unavailable',
+                         '--unblock-condition', 'service responds', '--next-action', 'check original service')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(checks.check_state(directory)['status'], 'blocked')
+        p = self.run_cli('update', str(directory), '--status', 'in_progress', '--reason', 'service responds', '--next-action', 'inspect behavior')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        fields = checks.check_state(directory)
+        self.assertEqual(fields['blocked_by'], 'none')
+        self.assertEqual(fields['unblock_condition'], 'none')
+        self.assertEqual(fields['last_progress_at'], original['last_progress_at'])
+        self.assertIn('service responds', (directory / 'state.md').read_text())
+        inputs = self.capture(directory)
+        self.assertEqual(self.record_manual(directory, inputs).returncode, 0)
+        self.assertEqual(self.run_cli('finish', str(directory)).returncode, 0)
+
+    def test_update_rejects_unsafe_transitions_and_fields_without_writes(self):
+        directory = self.pending_manual()
+        before = (directory / 'state.md').read_bytes()
+        for extra in [('--status', 'done'), ('--status', 'blocked'), ('--stage', 'invented'),
+                      ('--next-action', 'bad\nstatus: done'), ('--status', 'in_progress'),
+                      ('--contract-revision', '2')]:
+            p = self.run_cli('update', str(directory), *extra)
+            self.assertNotEqual(p.returncode, 0, p.stderr)
+            self.assertEqual((directory / 'state.md').read_bytes(), before)
+        p = self.run_cli('update', str(self.task), '--next-action', 'reopen')
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual((self.task / 'state.md').read_text(), self.state)
+
+    def test_summary_reuses_evidence_and_reports_stale_without_writes(self):
+        inputs = self.task / 'evidence/check.inputs.json'
+        before = {p: p.read_bytes() for p in self.task.rglob('*') if p.is_file()}
+        p = self.run_cli('summary', str(self.task))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('A1: passed', p.stdout)
+        self.assertIn('evidence/check.txt', p.stdout)
+        self.assertEqual(before, {p: p.read_bytes() for p in self.task.rglob('*') if p.is_file()})
+        (self.root / 'unrelated.txt').write_text('unrelated change')
+        self.assertIn('A1: passed', self.run_cli('summary', str(self.task)).stdout)
+        (self.root / 'input.txt').write_text('changed behavior')
+        p = self.run_cli('summary', str(self.task))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('A1: stale', p.stdout)
+        self.assertIn('input changed', p.stdout)
+        self.assertNotIn('A1: passed', p.stdout)
+        self.assertEqual(inputs.read_bytes(), before[inputs])
+        self.assertEqual((self.task / 'state.md').read_bytes(), before[self.task/'state.md'])
+
+    def test_stale_evidence_can_be_paused_and_replaced(self):
+        directory = self.pending_manual()
+        inputs = self.capture(directory)
+        self.assertEqual(self.record_manual(directory, inputs).returncode, 0)
+        (self.root / 'input.txt').write_text('new input')
+        p = self.run_cli('update', str(directory), '--status', 'blocked', '--blocked-by', 'input changed',
+                         '--unblock-condition', 'recheck current input', '--next-action', 'capture current input')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        p = self.run_cli('update', str(directory), '--status', 'in_progress', '--reason', 'ready to recheck', '--next-action', 'capture')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        inputs = self.capture(directory, 'current')
+        self.assertEqual(self.record_manual(directory, inputs, 'current-result').returncode, 0)
+        self.assertEqual(self.run_cli('finish', str(directory)).returncode, 0)
+        self.assertIn('evidence:observed|', (directory / 'state.md').read_text())
+
+    def test_record_requires_original_bound_observation_and_preserves_time(self):
+        import task as cli
+        directory = self.pending_manual()
+        inputs = self.capture(directory)
+        manifest = json.loads((directory / inputs).read_text())
+        self.assertIn('captured_at', manifest)
+        observed_at = cli.now()
+        report = directory / 'evidence/report.md'
+        report.write_text('Actual observed result')
+        p = self.run_cli('record', str(directory), '--acceptance', 'A1', '--evidence', 'manual',
+                         '--report', 'evidence/report.md', '--inputs', inputs, '--observed-at', observed_at,
+                         '--result', 'passed', '--observation', 'Read input.txt')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        state = (directory / 'state.md').read_text()
+        self.assertIn('|run_at='+observed_at+'|', state)
+        self.assertIn('|recorded_at=', state)
+        self.assertEqual(report.read_text(), 'Actual observed result')
+        p = self.run_cli('summary', str(directory))
+        self.assertIn('evidence/report.md', p.stdout)
+        self.assertEqual(self.run_cli('finish', str(directory)).returncode, 0)
+
+    def test_record_rejects_stale_future_missing_and_automatic_without_state_change(self):
+        import task as cli
+        directory = self.pending_manual()
+        inputs = self.capture(directory)
+        report = directory/'evidence/report.md'
+        report.write_text('Actual result')
+        before = (directory/'state.md').read_bytes()
+        base = ['record', str(directory), '--acceptance', 'A1', '--evidence', 'invalid',
+                '--report', 'evidence/report.md', '--inputs', inputs, '--result', 'passed', '--observation', 'checked']
+        for observed in ['2000-01-01T00:00:00Z', '2099-01-01T00:00:00Z']:
+            p = self.run_cli(*base, '--observed-at', observed)
+            self.assertNotEqual(p.returncode, 0)
+            self.assertEqual((directory/'state.md').read_bytes(), before)
+        (self.root/'input.txt').write_text('changed')
+        p = self.run_cli(*base, '--observed-at', cli.now())
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn('input changed', p.stderr)
+        self.assertEqual((directory/'state.md').read_bytes(), before)
+        directory.rename(directory.with_name('manual-pending'))
+        directory = self.fresh_task()
+        self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+        inputs = self.capture(directory)
+        p = self.record_manual(directory, inputs)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn('non-automatic', p.stderr)
+
+    def test_failed_observation_cannot_finish_and_review_needs_provenance(self):
+        directory = self.pending_manual('user-confirm')
+        inputs = self.capture(directory)
+        self.assertEqual(self.record_manual(directory, inputs, 'failure', 'failed').returncode, 0)
+        self.assertNotEqual(self.run_cli('finish', str(directory)).returncode, 0)
+        self.assertEqual(self.record_manual(directory, inputs, 'success').returncode, 0)
+        import task as cli
+        report = directory/'evidence/review.md'
+        report.write_text('Independent report artifact, synthetic test')
+        base = ['record', str(directory), '--review', '--evidence', 'review', '--report', 'evidence/review.md',
+                '--inputs', inputs, '--observed-at', cli.now(), '--result', 'passed', '--observation', 'Independent review']
+        before = (directory/'state.md').read_bytes()
+        p = self.run_cli(*base)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual((directory/'state.md').read_bytes(), before)
+        p = self.run_cli(*base, '--reviewer', 'synthetic independent reviewer', '--source', 'synthetic-run-1')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('reviewer=synthetic independent reviewer', (directory/'state.md').read_text())
+        self.assertEqual(self.run_cli('finish', str(directory)).returncode, 0)
+
+    def test_capture_refuses_overwrite_and_paths(self):
+        directory = self.pending_manual()
+        inputs = self.capture(directory)
+        original = (directory/inputs).read_bytes()
+        p = self.run_cli('capture', str(directory), '--evidence', 'observation', '--workspace', str(self.root), '--input', 'input.txt')
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual((directory/inputs).read_bytes(), original)
+        p = self.run_cli('capture', str(directory), '--evidence', 'escape', '--workspace', str(self.root), '--input', '../outside')
+        self.assertNotEqual(p.returncode, 0)
+
+    def test_progress_requires_substantive_reason_and_resume_handles_long_pause(self):
+        import task as cli
+        directory = self.pending_manual()
+        original = (directory/'state.md').read_bytes()
+        p = self.run_cli('update', str(directory), '--progress', '--next-action', 'check')
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual((directory/'state.md').read_bytes(), original)
+        p = self.run_cli('update', str(directory), '--progress', '--reason', 'identified root cause', '--next-action', 'test cause')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(checks.check_state(directory)['calls_since_progress'], '0')
+
+    def test_record_report_mutation_duplicate_and_missing_are_rejected(self):
+        directory = self.pending_manual()
+        inputs = self.capture(directory)
+        self.assertEqual(self.record_manual(directory, inputs).returncode, 0)
+        original = (directory/'state.md').read_bytes()
+        p = self.record_manual(directory, inputs)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual((directory/'state.md').read_bytes(), original)
+        (directory/'evidence/observed.md').write_text('changed observation report')
+        p = self.run_cli('finish', str(directory))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn('report changed', p.stderr)
+        self.assertEqual((directory/'state.md').read_bytes(), original)
+        self.assertIn('invalid', self.run_cli('summary', str(directory)).stdout)
+
+    def test_nonautomatic_types_and_missing_review_summary(self):
+        for kind in ['consumer', 'external']:
+            directory = self.fresh_task()
+            contract = (directory/'contract.md').read_text().replace('verification_type: automatic', 'verification_type: '+kind)
+            (directory/'contract.md').write_text(contract)
+            self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+            inputs = self.capture(directory)
+            self.assertEqual(self.record_manual(directory, inputs).returncode, 0)
+            self.assertEqual(self.run_cli('finish', str(directory)).returncode, 0)
+            directory.rename(directory.with_name(kind))
+        directory = self.pending_manual('user-confirm')
+        self.assertIn('审查：not_run', self.run_cli('summary', str(directory)).stdout)
+
+    def test_review_summary_reports_mutation_and_missing_report_is_rejected(self):
+        import task as cli
+        directory = self.pending_manual('user-confirm')
+        inputs = self.capture(directory)
+        report = directory/'evidence/review.md'
+        report.write_text('Independent review observed result')
+        args = ['record', str(directory), '--review', '--evidence', 'review', '--report', 'evidence/review.md',
+                '--inputs', inputs, '--observed-at', cli.now(), '--result', 'passed', '--observation', 'review',
+                '--reviewer', 'tester', '--source', 'test-run']
+        self.assertEqual(self.run_cli(*args).returncode, 0)
+        report.write_text('changed after observation')
+        self.assertIn('invalid', self.run_cli('summary', str(directory)).stdout)
+        directory.rename(directory.with_name('review-task'))
+        directory = self.pending_manual()
+        inputs = self.capture(directory)
+        original = (directory/'state.md').read_bytes()
+        p = self.run_cli('record', str(directory), '--acceptance', 'A1', '--evidence', 'missing',
+                         '--report', 'evidence/missing.md', '--inputs', inputs, '--observed-at', cli.now(),
+                         '--result', 'passed', '--observation', 'checked')
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual((directory/'state.md').read_bytes(), original)
+
+    def test_update_stale_before_validation_and_record_preserves_concurrent_change(self):
+        import task as cli
+        from unittest.mock import patch
+        directory = self.pending_manual()
+        inputs = self.capture(directory)
+        report = directory/'evidence/result.md'
+        report.write_text('Actual result')
+        import argparse
+        args = argparse.Namespace(acceptance='A1', review=False, evidence='result', report='evidence/result.md',
+                                  inputs=inputs, observed_at=cli.now(), result='passed', observation='checked', reviewer=None, source=None)
+        save = cli.save_state
+        def changed(task_dir, text, original, contract):
+            (directory/'state.md').write_text('concurrent user change')
+            save(task_dir, text, original, contract)
+        with patch.object(cli, 'save_state', changed), self.assertRaisesRegex(ValueError, 'changed'):
+            cli.record(directory, args)
+        self.assertEqual((directory/'state.md').read_text(), 'concurrent user change')
+
+    def test_overdue_task_can_record_pause_without_erasing_limits(self):
+        directory = self.pending_manual()
+        formal = directory/'state.md'
+        text = formal.read_text().replace('calls_since_progress: 0', 'calls_since_progress: 20')
+        formal.write_text(text)
+        p = self.run_cli('update', str(directory), '--status', 'blocked', '--blocked-by', 'no progress',
+                         '--unblock-condition', 'new approach', '--next-action', 'inspect failed approach')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(checks.check_state(directory)['calls_since_progress'], '20')
+        p = self.run_cli('update', str(directory), '--status', 'in_progress', '--reason', 'new approach', '--next-action', 'inspect')
+        self.assertNotEqual(p.returncode, 0)
+        p = self.run_cli('update', str(directory), '--status', 'in_progress', '--progress', '--reason', 'new root cause found', '--next-action', 'test root cause')
+        self.assertEqual(p.returncode, 0, p.stderr)
+
+    def test_summary_minimum_recovery_context_and_failed_report_is_immutable(self):
+        directory = self.pending_manual()
+        inputs = self.capture(directory)
+        self.assertEqual(self.record_manual(directory, inputs, 'failure', 'failed').returncode, 0)
+        p = self.run_cli('summary', str(directory))
+        for value in ['禁止动作：', '风险：', '解除条件：', '下一步：', 'failed', 'evidence/failure.md']:
+            self.assertIn(value, p.stdout)
+        (directory/'evidence/failure.md').write_text('altered failure report')
+        p = self.run_cli('summary', str(directory))
+        self.assertIn('invalid', p.stdout)
+
+    def test_summary_malformed_review_reports_invalid_without_traceback(self):
+        directory = self.pending_manual('user-confirm')
+        formal = directory/'state.md'
+        formal.write_text(formal.read_text()+'review_evidence: review|status=passed\n')
+        p = self.run_cli('summary', str(directory))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('invalid', p.stdout)
+        self.assertNotIn('Traceback', p.stderr)
+
     def test_missing_schema_evidence_and_review(self):
         for line in ['evidence_schema: 2\n', next(x for x in self.state.splitlines(True) if x.startswith('evidence:'))]:
             with self.subTest(line=line):

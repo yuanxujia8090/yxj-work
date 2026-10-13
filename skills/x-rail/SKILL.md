@@ -91,9 +91,9 @@ disable-model-invocation: true
 下一步第一动作：next_action 中可直接执行的第一步（state、最近 checkpoint）
 ```
 
-摘要不是第二套状态事实源，不单独持久化为新状态文件；事实来源对应上面的括号，用户请求只用来识别新任务目标和授权。新任务先写最小 contract/state，尚未验证的项写 `not_run`；历史任务缺字段写“未记录”，只有缺口影响当前动作或完成门时才补齐，不批量迁移。contract 决定边界，state 记录进展，evidence 证明结果；若记录矛盾，先说明冲突并核对证据，不用摘要覆盖任务事实。完整示例见 `playbooks/verification.md`。</startup_summary>
-    <execution>先读相关代码、说明和调用方，再按当前阶段处理。项目规范优先。只读结论可以是有效进展；创建目录、更新时间、重复读取不算。文档先覆盖清单和初稿，6 次资料动作、20 次总动作时收口。这些是提醒，不是宿主硬限制。按实际嵌套动作计数。</execution>
-    <lifecycle>普通任务：简短步骤 → 先读后改 → 实际验证 → 交付。严格任务：写契约 → task.py start TASK_DIR（生成状态、封存并校验）→ 实施与取证 → task.py run → 人工/消费端/外部验收（如有）→ task.py finish TASK_DIR（生成候选并复用 complete）。已有状态不得 start 重建；已有 seal/check/complete 入口保留。只记录重要决定、验证、转向、阻塞和阶段边界，不每次动作重写状态。预算是离线记录提示，不是宿主真实计数或效率证明；未接入宿主计数时不填写或只作为 tool_count_note 观察值。默认上限 60/150/400；L3 8 小时。解决当前未知的最短路径优先，不要求默认完整阶段链路；review 按风险、覆盖不足、需求分歧、用户要求或关键逻辑重改触发。</lifecycle>
+摘要优先通过 task.py summary 从原记录生成，只读输出并标明过期证据；它不代替实际结果判断。摘要不是第二套状态事实源，不单独持久化为新状态文件；事实来源对应上面的括号，用户请求只用来识别新任务目标和授权。新任务先写最小 contract/state，尚未验证的项写 `not_run`；历史任务缺字段写“未记录”，只有缺口影响当前动作或完成门时才补齐，不批量迁移。contract 决定边界，state 记录进展，evidence 证明结果；若记录矛盾，先说明冲突并核对证据，不用摘要覆盖任务事实。完整示例见 `playbooks/verification.md`。</startup_summary>
+    <execution>先读相关代码、说明和调用方，再按当前阶段处理。项目规范优先。非平凡行为默认先写失败行为测试再最小实现，纯文档、文案和简单样式按实际内容或渲染核对；完整适用范围见 playbooks/exec.md。测试保护代码行为，用户结果另按任务验收核对。只读结论可以是有效进展；创建目录、更新时间、重复读取不算。文档先覆盖清单和初稿，6 次资料动作、20 次总动作时收口。这些是提醒，不是宿主硬限制。按实际嵌套动作计数。</execution>
+    <lifecycle>普通任务：简短步骤 → 先读后改 → 实际验证 → 交付。严格任务：写契约 → task.py start TASK_DIR（生成状态、封存并校验）→ 实施与取证 → task.py run → 人工/消费端/外部验收（如有）→ task.py finish TASK_DIR（生成候选并复用 complete）。已有状态不得 start 重建；已有 seal/check/complete 入口保留。严格状态变化用 task.py update；非自动验收和审查先 capture 相关输入，实际观察后 record；摘要用 summary，细节见 playbooks/verification.md。只记录目标或授权变化、新验证结果、重要决定或转向、阻塞或交接、交付；阶段变化影响恢复时随之更新，不每次动作重写状态。真实新结论才用 update --progress 并说明原因，更新时间不算进展。预算是离线记录提示，不是宿主真实计数或效率证明；未接入宿主计数时不填写或只作为 tool_count_note 观察值。默认上限 60/150/400；L3 8 小时。解决当前未知的最短路径优先，不要求默认完整阶段链路；review 按风险、覆盖不足、需求分歧、用户要求或关键逻辑重改触发。</lifecycle>
   </workflow>
   <decision_policy>review_policy 保留 auto/user-confirm/full-review；review 按风险、自动覆盖不足、需求分歧、用户要求或关键逻辑重改触发；低风险自动核对，中高风险独立审查按要求执行，不仅因风险重复要求确认。Decision Gates action_categories 为 none 或四类敏感动作子集。重要选择记录选择、证据、推断、假设、替代成本、推翻条件，不要求内部思考过程。</decision_policy>
   <verification>普通任务依实际完成条件运行必要检查，并核对预期结果、说明未验证项；工具成功不是任务成功。严格任务的检查命令默认严格模式，历史只能 --legacy-readonly，不得用缺字段降级。evidence_schema: 2 必需。每条 passed 验收绑定唯一非空证据、契约版本、command、run_at、last_edit_at、inputs。命令只是数据。证据任务内路径；输入摘要按相关文件原字节 SHA-256，不纳入状态或证据自身。时间带时区解析成 UTC 比较。审查也绑定当前输入。调用 task.py complete 提交候选，失败保留正式状态与索引。
@@ -102,7 +102,7 @@ disable-model-invocation: true
 每条新增或调整的 Acceptance 都写清“观察对象、预期结果、验证动作”；使用现有 `outcome` 和 `verification` 字段即可，不增加必填字段。evidence 记录实际观察结果、失败输出、时间和限制，并沿用 acceptance 编号绑定。仅运行命令而没有核对预期结果不能作为通过证据。五类观察面、现有 layer 的解释、正反例和摘要示例统一放在 `playbooks/verification.md`；写契约、执行验证和审查证据时主动读取它。
 
 `verification_type` 表示由谁/怎样验证：`automatic` 为自动命令或断言，`manual` 为人工逐项核对，`consumer` 为最终用户或下游系统实际消费产物，`external` 为验证依赖外部服务或权限。它与环境层 `layer` 分开：例如自动调用外部服务为 `automatic + external`，本地用户流程可以为 `consumer + runtime/local`。证据无法取得时写 `not_run`；实际运行未达到预期写 `failed`；被权限或依赖卡住写 `blocked`。required 条目不能凭较低层证据放行，不为凑完成降低 required 条目。</verification>
-  <recovery>普通任务续接当前目标、用户补充和实际工具结果；需要跨会话恢复时先保存事实再进入严格记录，不补造过去验证。严格任务恢复读取索引 → contract → state → 最近 checkpoint → handoff → audit/runs.json → 相关 evidence。核对工作区、版本、未提交差异、输入摘要。原运行先查询再恢复，不能重发。基础设施错误暂停依赖，保存准确错误与运行引用；不得切协议、前后台或冒充独立审查。超时保留事实/未知/下一步摘要。失败不原样重试。无进展 20/60 次或长任务 30 分钟暂停并记录原因。重复命令错误两次或必过验证连续失败三次停止，保留 checkpoint。
+  <recovery>普通任务续接当前目标、用户补充和实际工具结果；需要跨会话恢复时先保存事实再进入严格记录，不补造过去验证。严格任务恢复读取索引 → contract → state → 最近 checkpoint → handoff → audit/runs.json → 相关 evidence。核对工作区、版本、未提交差异、输入摘要，以及原结果、证据和限制。相关输入、外部环境或时效要求变化时只重跑受影响检查；换会话本身不使证据失效。交接只补恢复第一步与易错点，其他事实引用原记录。原运行先查询再恢复，不能重发。基础设施错误暂停依赖，保存准确错误与运行引用；不得切协议、前后台或冒充独立审查。超时保留事实/未知/下一步摘要。失败不原样重试。无进展 20/60 次或长任务 30 分钟暂停并记录原因。重复命令错误两次或必过验证连续失败三次停止，保留 checkpoint。
 第三方 skill 不会自动继承本规则。调用前先读 `playbooks/third-party-skill.md`，再分类为只读、可指定输出根、固定/未知写入。可指定输出根时传入 `.work-docs/tasks/&lt;task-id&gt;/outputs|evidence|tmp`；固定/未知写入只能隔离验证，否则 `blocked`。调用前后保存目录清单。发现越界文件时停止，记录：
 
 ```text

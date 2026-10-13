@@ -14,5 +14,5 @@ disable-model-invocation: true
   <decision_policy>范围冲突以契约和当前用户授权为准。依赖、费用或发布未获授权保持阻塞；摘要不授予权限。</decision_policy>
   <verification>运行严格 task.py check，只读核对状态。历史材料只能显式历史模式读取，不伪造过去快照。交接不是完成证明。</verification>
   <recovery>优先查询原运行；未知或不可查询时记录阻塞，不新派、不原样重试、不切运行协议。保存准确错误、失败策略及解除条件。</recovery>
-  <output_contract>写背景、目标、阶段、状态、已完成、未完成、实际验证输出、证据、运行引用、约束、待授权、最近 checkpoint、next_action。末尾“下一会话第一步”与 next_action 第一条一致。新会话先核对事实再执行。</output_contract>
+  <output_contract>先用 task.py summary 读取当前约定、状态和证据，再写恢复第一步、易错点、原运行入口与记录引用；已有目标、阶段、验证和授权引用原文件，不全文再维护。原记录缺失且影响恢复时补可证明事实，无法确认写未知。末尾“下一会话第一步”与 next_action 第一条一致；必要时先用 update 更新原状态。新会话先核对原结果、证据、相关输入和限制再执行，不因换会话重跑全部检查。交接说明不是第二份状态。</output_contract>
 </skill>

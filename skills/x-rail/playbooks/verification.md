@@ -18,10 +18,50 @@ python3 <skill-dir>/scripts/task.py finish <task-dir>
 - `run`：仅处理 required=yes 且 verification_type=automatic 的验收。执行前生成相关输入摘要；在指定工作区实际执行命令，核对退出码和全部 `--expect` 文本。命令输出、完成时间、输入摘要和证据行由脚本写入；输入在执行期间改变则拒绝更新正式状态。人工、消费端、外部方式和独立审查仍单独核对，不能用此命令冒充。
 - `--input`：可重复，只绑定当前验收相关文件；必须至少声明一个文件；确实缺失的文件记录 absent。目标文件、测试和必要依据应一起绑定，不能只选一个无关文件；不绑定状态、证据、快照和候选。输入集合由执行者声明，程序校验摘要，不能替执行者判断材料是否完整。
 - `--expect`：可重复，必须是命令实际输出中的预期事实；不能只写“退出 0”。文本包含关系不能证明完整行为，命令应包含真正检查结果的测试或脚本。输入集合由执行者声明，不能自动证明完整；机器可读测试结果优先于宽泛文字匹配。
-- - `--used`：兼容旧调用的可选观察值。它只写入 `tool_count_note`，不参与预算、完成门或效率结论。没有宿主真实计数时不要填写。
+- `--used`：兼容旧调用的可选观察值。它只写入 `tool_count_note`，不参与预算、完成门或效率结论。没有宿主真实计数时不要填写。
 - `finish`：从当前状态生成唯一候选，调用原 complete 的全部检查。只生成完成时间，不刷新旧验证时间，不修改验收、审查或授权。失败保留正式状态与索引，候选留在 tmp/。
 
 证据文件名每次验证使用新名称；旧记录不覆盖。`run` 的默认超时为 300 秒，可用 `--timeout` 调整；超时保存失败输出并终止该命令进程组。check/complete/finish 只核对资料，不执行证据里的命令。初始化和完成不包含提交、发布或数据库操作。
+
+## 固定状态与非自动验证命令
+
+像提交前端表单一样：执行者判断内容，脚本处理字段、时间和保存。严格任务更新阶段、下一步、阻塞和恢复用 `update`，非自动验收或审查用 `capture` 和 `record`，读取当前结果用 `summary`。普通任务继续直接验证和交付。
+
+```bash
+# 更新下一步，不刷新最后进展时间
+python3 <skill-dir>/scripts/task.py update <task-dir> --stage review --next-action '核对用户入口'
+# 新结论或可用交付才声明实质进展，不用于单纯更新时间
+python3 <skill-dir>/scripts/task.py update <task-dir> --progress --reason '已定位入口权限根因' --next-action '验证对应用户创建路径'
+# 阻塞与恢复；恢复不清除旧证据、不自动刷新进展
+python3 <skill-dir>/scripts/task.py update <task-dir> --status blocked --blocked-by '外部服务不可用' --unblock-condition '服务可访问' --next-action '查询原服务状态'
+python3 <skill-dir>/scripts/task.py update <task-dir> --status in_progress --reason '服务已恢复' --next-action '验证用户入口'
+# 人工、用户实际使用、外部方式：先保存相关输入，再实际观察
+python3 <skill-dir>/scripts/task.py capture <task-dir> --evidence observation-1 --workspace <execution-root> --input <相关文件>
+# 实际观察后，将结果保存为任务内报告；参数必须使用真实结果与观察时间
+python3 <skill-dir>/scripts/task.py record <task-dir> --acceptance A1 --evidence manual-1 --report evidence/observation-1.md --inputs evidence/observation-1.inputs.json --observed-at <带时区的实际观察时间> --result passed --observation '实际逐项核对动作和结果'
+# 独立审查用相同登记命令，但绑定审查者及实际运行或报告来源
+python3 <skill-dir>/scripts/task.py record <task-dir> --review --evidence review-1 --report evidence/review-1.md --inputs evidence/observation-1.inputs.json --observed-at <实际审查时间> --result passed --observation '实际审查内容' --reviewer <真实审查者> --source <原运行或产物来源>
+python3 <skill-dir>/scripts/task.py summary <task-dir>
+```
+
+- `update` 只允许阶段、下一步和合法非完成状态变化。暂停必须有原因、解除条件、第一步；恢复必须有原因和下一步。done 和 cancelled 不重开。完成仍用 finish；目标、授权和验收变化仍走契约版本规则。仅更新字段不刷新最后进展，`--progress` 必须说明新结论；脚本不能证明该结论真实。
+- `capture` 在观察前保存相关输入摘要及 captured_at（采集时间），不更新状态、不覆盖旧摘要。相关材料变化需重新采集并重新观察，不能给旧结论补新摘要。
+- `record` 只登记必需非自动验收或契约要求的审查；不运行验证、不判断报告质量。报告须为任务内非空文件。它保留 observed-at（实际观察时间），另写 recorded_at（登记时间），要求采集不晚于观察、观察不晚于登记，并再次核对输入。报告内容摘要也保存，后续更改报告不能仍按原结论放行。passed、failed、blocked 分别记录；未执行保持 not_run，不造空报告。人工登记参数本身不是事实证明。
+- 独立审查先获得委派授权，再向审查者提供采集绑定的输入，取得真实报告后登记。reviewer 和 source 只是可追踪来源，不证明独立性；主会话自查不能冒充独立审查。旧审查记录留在证据历史，当前指针只选最近实际判定。
+- `summary` 只读生成目标、范围、阶段、必需验收、证据路径、审查、阻塞和下一步。相关输入变化显示 stale（过期），记录或报告不符显示 invalid（无效），不写回 state；记录中的 done 不代替当前证据核对。外部环境和时效变化还需执行者判断。严重格式或契约错误可明确报错；摘要不单独证明任务完成。
+- 旧相关输入过期时允许 update 记录阻塞、run 或 record 获取替代证据；默认 check、complete、finish 仍核对所有必需当前输入。不能用维护状态的路径绕过完成检查。
+
+目标和授权在 contract，当前进展在 state，实际结果在 evidence，重要决定在 audit。摘要和报告从原记录生成，不要求每次同步多份文本；交接只补恢复第一步、易错点和引用。只在目标或授权变化、新验证结果、重要转向、阻塞或交接、交付时记录。阶段变化影响恢复时合并更新，普通读取或命令不单独记账。
+
+## 编码方法与完成标准
+
+测试驱动开发先写目标行为检查，观察准确失败，再写最小代码、验证通过并整理；适用范围见 exec.md。它保护代码行为，但不能代替用户流程验收。改动影响用户流程时，按当前任务要求核对登录、页面入口、操作、请求和结果，以及必要拒绝路径。
+
+例如新增创建权限：内部函数检查通过后，还要用对应用户从页面点击创建，核对请求实际到达正确判断、结果归属正确，并验证越权或超额拒绝。自动测试可以覆盖这条路径；不足部分才补真实环境或人工检查。验证强度取决于需求和失败影响，不要求每次小改动跑所有环境。
+
+代码已写入、对应检查通过、使用路径已验证、全部必需验收满足，分别报告。文档任务以准确可用文档为交付，并说明测试未执行；开发任务需要实际实现和相应行为证据。完成不自动包含上线。没有先失败、后通过证据，不声称使用测试驱动开发。
+
+审查或恢复先核对原结果、证据、当前相关输入及限制。相关输入、外部环境或时效要求变化时，只重跑受影响检查；换会话本身不导致证据失效，也不能从当前机器缺环境推断过去未验证。
 
 ## 启动摘要最小示例
 

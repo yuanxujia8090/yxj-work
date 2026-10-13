@@ -12,7 +12,7 @@
 不做什么：不把测试全绿当作无缺陷，不越过用户确认门，不在只读审查中修改目标文件。
 停止条件：每条 Acceptance 都有对应审查结论和证据，或明确列出阻塞与未审查范围。
 
-1. Read the contract, change set, evidence and unverified items. For a new formal task, create the task skeleton and minimal contract before broad exploration. If a model request times out, record the recovery summary in `audit/` before continuing.
+1. Read the contract, change set, evidence and unverified items. 先核对原任务结果 → 原始证据 → 当前相关输入 → 验证环境、时间和限制，再决定重跑。更换会话本身不使证据失效；相关输入、外部环境或时效要求变化时，只重跑受影响检查。当前环境缺失不能证明过去未验证。可用 task.py summary 生成只读摘要，但摘要不代替原证据与独立判断。For a new formal task, create the task skeleton and minimal contract before broad exploration. If a model request times out, record the recovery summary in `audit/` before continuing.
 2. Run `skills/x-rail/scripts/check-contract.sh &lt;task-dir&gt;` for a v2 contract before reviewing the change set.
 3. Apply the contract's `review_policy`: low/auto uses automatic verification plus a delivery summary; medium/user-confirm adds an independent read-only review; high/full-review requires full review; confirmation depends on sensitive actions.
    低风险只读审查默认普通流程，直接交付问题、依据和未覆盖范围，不建任务文件。已有严格契约时保留 contract/evidence/state；只运行验收要求的检查，不重复独立审查。

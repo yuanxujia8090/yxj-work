@@ -331,7 +331,7 @@ def _check_inputs(task_dir: Path, reference: str, contract_revision: str) -> Non
         if path in seen:
             fail('duplicate input path')
         seen.add(path)
-        if path == task_dir / 'state.md' or path == task_dir / 'contract.md' or path.is_relative_to(task_dir / 'evidence') or path.is_relative_to(task_dir / 'audit'):
+        if path == task_dir / 'state.md' or path == task_dir / 'contract.md' or any(path.is_relative_to(task_dir / part) for part in ['evidence', 'audit', 'tmp']):
             fail('input summary cannot include task state or evidence')
         if item.get("state") == "present":
             if not path.is_file():
@@ -377,7 +377,7 @@ def read_runs(task_dir: Path, dependencies: list[dict] | None = None) -> list[di
     return result
 
 
-def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = True, ancestors: tuple = ()) -> dict:
+def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = True, ancestors: tuple = (), validate_inputs: bool = True) -> dict:
     task_dir = Path(task_dir).resolve()
     state_path = Path(state_path or task_dir / "state.md")
     if strict and state_path.is_symlink():
@@ -483,13 +483,24 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
                 fail(f"invalid verification status: {aid}")
             if fields["status"] == "done" and status != "passed":
                 fail(f"required acceptance not passed: {aid}")
+            if record.get('evidence_id'):
+                evidence_id = record['evidence_id']
+                rows = [line for line in evidence_lines if line.startswith(f'evidence:{evidence_id}|')]
+                if len(rows) != 1:
+                    fail(f'evidence record missing or duplicate: {evidence_id}')
+                values = _parse_pipe(rows[0], f'evidence:{evidence_id}|')
+                report = _safe_task_path(task_dir, evidence_ref)
+                if not report.is_file() or not report.read_bytes().strip():
+                    fail('observation report missing or empty')
+                if values.get('report_sha256') and hashlib.sha256(report.read_bytes()).hexdigest() != values['report_sha256']:
+                    fail(f'observation report changed: {evidence_id}')
             if status == "passed":
                 if not evidence_ref:
                     fail(f"required verification missing evidence: {aid}")
                 ev_path = _safe_task_path(task_dir, evidence_ref)
                 if not ev_path.is_file() or not ev_path.read_bytes().strip():
                     fail(f"evidence file missing or empty: {evidence_ref}")
-                evidence_id = Path(evidence_ref).stem
+                evidence_id = record.get('evidence_id', Path(evidence_ref).stem)
                 matches = [line for line in evidence_lines if line.startswith(f"evidence:{evidence_id}|")]
                 if len(matches) != 1:
                     fail(f"evidence record missing or duplicate: {evidence_id}")
@@ -503,7 +514,10 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
                 last_edit = parse_evidence_time(ev["last_edit_at"])
                 if run_at < last_edit:
                     fail(f"evidence is stale: {evidence_id}")
-                _check_inputs(task_dir, ev["inputs"], revision)
+                if ev.get('report_sha256') and hashlib.sha256(ev_path.read_bytes()).hexdigest() != ev['report_sha256']:
+                    fail(f'observation report changed: {evidence_id}')
+                if validate_inputs:
+                    _check_inputs(task_dir, ev["inputs"], revision)
         evidence_ids = [line.split('|', 1)[0] for line in evidence_lines]
         if len(evidence_ids) != len(set(evidence_ids)):
             fail('duplicate evidence id')
@@ -531,7 +545,10 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
                     fail('review evidence contract revision mismatch')
                 if parse_evidence_time(review['run_at']) < parse_evidence_time(review['last_edit_at']):
                     fail('review evidence stale')
-                _check_inputs(task_dir, review['inputs'], revision)
+                if review.get('report_sha256') and hashlib.sha256(report.read_bytes()).hexdigest() != review['report_sha256']:
+                    fail('review report changed')
+                if validate_inputs:
+                    _check_inputs(task_dir, review['inputs'], revision)
             for item in contract_data['dependencies']:
                 if item['required'] == 'no':
                     continue
