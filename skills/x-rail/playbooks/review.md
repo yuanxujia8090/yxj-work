@@ -17,10 +17,11 @@
 3. Apply the contract's `review_policy`: low/auto uses automatic verification plus a delivery summary; medium/user-confirm adds an independent read-only review; high/full-review requires full review; confirmation depends on sensitive actions.
    低风险只读审查默认普通流程，直接交付问题、依据和未覆盖范围，不建任务文件。已有严格契约时保留 contract/evidence/state；只运行验收要求的检查，不重复独立审查。
 4. 先列断言，再按断言读取局部实现。Start with an assertion ledger: list the document/spec claims or Acceptance conditions, map each to implementation symbols, read only the relevant local code, and write evidence immediately. Do not dump multiple complete source files before identifying the claim they answer.
-5. Review correctness, security boundaries, maintainability, completion-condition coverage and workflow file boundary.
+5. Review correctness, security boundaries, maintainability, completion-condition coverage and workflow file boundary. 使用 work_items_schema: 1 时逐项核对需求覆盖、文件范围、依赖、实际产物与验收引用；工作项 verified 或子代理通知不能代替当前有效证据。整体状态与七种工作项状态分开，不能通过改清单规避未完成项。
 6. Confirm each numbered `Acceptance` condition has the declared evidence type and layer; do not treat a manual, consumer or external condition as passed from a local command alone.
 7. Classify findings as must-fix, consider, note or rejected; cite files and evidence.
-8. State what was not reviewed.
+8. State what was not reviewed. 固定本批输入，集中交回必修问题及其影响项，供执行者集中修复后重跑受影响检查。优先恢复原审查运行定向复核；不可恢复时记录原因并按宿主规则建立同角色替代。原审查复核不能替代契约要求的独立最终审查，必修项不能降成可选。非阻塞建议写现有决定或后续事项，不无限扩展收口范围。
+   修复相关代码或报告后重新核对对应输入与证据；无关文件变化不自动使全部证据失效。范围按实际调用和验收确定，不能缩小输入声明逃避重审；state.md 不作为代码审查输入，避免记进度使证据自我失效。基础设施错误立即报告并暂停依赖，保存准确错误、原运行、目录和已有产物；不换协议、不重复启动、不以主会话自查冒充独立审查。审查返回和修复验证结果由唯一状态写入者更新工作项，审查者保持只读。
 9. Write the review result to the contract's `review_evidence` path under `.work-docs/tasks/&lt;task-id&gt;/`; the state must record matching `policy` and `status=passed` before `done`.
 10. This playbook is read-only. Put the review in `.work-docs/tasks/&lt;task-id&gt;/outputs/` only when requested by the contract.</procedure>
   <quality_check>有限问题与证据包判断，证据不足逐题拒绝推断。运行成功、输出非空、验收通过分开。独立审查无授权则 blocked，不冒充。</quality_check>

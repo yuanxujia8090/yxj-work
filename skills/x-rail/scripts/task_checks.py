@@ -5,18 +5,21 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
+from typing import NoReturn
 
-UTC = timezone.utc
+import work_items
+
+UTC = timezone.utc  # noqa: UP017 - Python 3.10 compatibility
 ISO_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$")
 SENSITIVE_ACTIONS = {"irreversible", "cost", "external-publish", "scope-change"}
 STATUSES = {"in_progress", "done", "blocked", "stopped", "cancelled"}
 STAGES = {"fast-answer", "investigate", "research", "design", "plan", "exec", "bugfix", "review", "ops", "mixed", "handoff"}
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> NoReturn:
     raise ValueError(message)
 
 
@@ -52,7 +55,7 @@ def _lines(path: Path) -> list[str]:
 def _unique_fields(lines: Iterable[str], label: str) -> dict[str, str]:
     result: dict[str, str] = {}
     for line in lines:
-        if not line or line.startswith("#") or line.startswith("##"):
+        if not line or line.startswith("#"):
             continue
         match = re.fullmatch(r"([a-z_]+): (.*)", line)
         if not match:
@@ -132,6 +135,10 @@ def check_contract(task_dir: Path, mode: str = "ready", strict: bool = True) -> 
         fail(f"invalid level: {fields['level']}")
     if fields["task_type"] not in {"investigate", "research", "design", "plan", "exec", "bugfix", "review", "ops", "mixed"}:
         fail(f"invalid task_type: {fields['task_type']}")
+    if fields.get('cost_control', 'default') not in {'default', 'unlimited'}:
+        fail('invalid cost_control; expected default or unlimited')
+    if fields.get('cost_control') == 'unlimited' and fields.get('cost_authorization', '').strip() in {'', 'none'}:
+        fail('unlimited cost_control requires cost_authorization from current user')
     if fields["risk"] not in {"low", "medium", "high"}:
         fail(f"invalid risk: {fields['risk']}")
     if fields["review_policy"] not in {"auto", "user-confirm", "full-review"}:
@@ -156,6 +163,7 @@ def check_contract(task_dir: Path, mode: str = "ready", strict: bool = True) -> 
             fail(f"{aid} optional condition needs skip_reason")
         if values["required"] not in {"yes", "no"}:
             fail(f"{aid} invalid required: {values['required']}")
+    item_definitions = work_items.definitions(lines, fields, acceptances)
     gates = _gate(lines)
     for key in ["confirmation", "confirmation_status", "review", "action_categories"]:
         if not gates.get(key):
@@ -203,7 +211,8 @@ def check_contract(task_dir: Path, mode: str = "ready", strict: bool = True) -> 
             fail('dependency task path invalid or self-reference')
         if name in dependency_names or child in dependency_tasks:
             fail('duplicate dependency')
-        dependency_names.add(name); dependency_tasks.add(child)
+        dependency_names.add(name)
+        dependency_tasks.add(child)
         if item.get('required') not in {'yes', 'no'} or item.get('acceptance') not in acceptances:
             fail('dependency required or acceptance invalid')
         if item['required'] == 'no' and not item.get('skip_reason'):
@@ -219,9 +228,8 @@ def check_contract(task_dir: Path, mode: str = "ready", strict: bool = True) -> 
     if mode in {"seal", "locked"}:
         for number in range(1, revision + 1):
             snapshot = audit / f"contract-r{number}.md"
-            if number < revision or mode == "locked":
-                if not snapshot.is_file():
-                    fail(f"missing contract snapshot r{number}")
+            if (number < revision or mode == "locked") and not snapshot.is_file():
+                fail(f"missing contract snapshot r{number}")
             if number > 1:
                 change = audit / f"contract-change-r{number}.md"
                 if not change.is_file():
@@ -249,7 +257,7 @@ def check_contract(task_dir: Path, mode: str = "ready", strict: bool = True) -> 
             audit.mkdir(exist_ok=True)
             with snapshot.open('xb') as output:
                 output.write(path.read_bytes())
-    return {"legacy": False, "fields": fields, "acceptances": acceptances, "gates": gates, "dependencies": dependencies}
+    return {"legacy": False, "fields": fields, "acceptances": acceptances, "gates": gates, "dependencies": dependencies, "work_items": item_definitions}
 
 
 def _parse_state(path: Path) -> tuple[dict[str, str], list[str], list[str]]:
@@ -306,7 +314,7 @@ def _check_inputs(task_dir: Path, reference: str, contract_revision: str) -> Non
         fail(f"input summary missing or empty: {reference}")
     try:
         data = json.loads(path.read_text(), object_pairs_hook=unique_json_object)
-    except json.JSONDecodeError as error:
+    except json.JSONDecodeError:
         fail(f"invalid input summary: {reference}")
     if not isinstance(data, dict):
         fail('input summary must be an object')
@@ -377,6 +385,111 @@ def read_runs(task_dir: Path, dependencies: list[dict] | None = None) -> list[di
     return result
 
 
+def tracked_acceptances(contract_data: dict) -> set[str]:
+    result = {aid for aid, item in contract_data['acceptances'].items() if item['required'] == 'yes'}
+    if contract_data.get('work_items'):
+        for item in contract_data['work_items']['items'].values():
+            result.update(work_items.references(item['acceptances']))
+    return result
+
+
+def check_passed_acceptance(task_dir: Path, aid: str, record: dict, evidence_lines: list[str], revision: str, validate_inputs=True) -> None:
+    evidence_ref = record.get("evidence", "")
+    if not evidence_ref:
+        fail(f"required verification missing evidence: {aid}")
+    ev_path = _safe_task_path(task_dir, evidence_ref)
+    if not ev_path.is_file() or not ev_path.read_bytes().strip():
+        fail(f"evidence file missing or empty: {evidence_ref}")
+    evidence_id = record.get('evidence_id', Path(evidence_ref).stem)
+    matches = [line for line in evidence_lines if line.startswith(f"evidence:{evidence_id}|")]
+    if len(matches) != 1:
+        fail(f"evidence record missing or duplicate: {evidence_id}")
+    ev = _parse_pipe(matches[0], f"evidence:{evidence_id}|")
+    for key in ["acceptance", "command", "run_at", "result", "last_edit_at", "inputs", "contract_revision"]:
+        if not ev.get(key):
+            fail(f"evidence {evidence_id} missing {key}")
+    if ev["acceptance"] != aid or ev["contract_revision"] != revision or ev["result"] != "passed":
+        fail(f"evidence {evidence_id} does not match {aid}")
+    run_at = parse_evidence_time(ev["run_at"])
+    last_edit = parse_evidence_time(ev["last_edit_at"])
+    if run_at < last_edit:
+        fail(f"evidence is stale: {evidence_id}")
+    if ev.get('report_sha256') and hashlib.sha256(ev_path.read_bytes()).hexdigest() != ev['report_sha256']:
+        fail(f'observation report changed: {evidence_id}')
+    if validate_inputs:
+        _check_inputs(task_dir, ev["inputs"], revision)
+
+
+def check_review(task_dir: Path, state_path: Path, contract_data: dict, validate_inputs=True) -> None:
+    revision = contract_data["fields"]["contract_revision"]
+    if contract_data["fields"]["review_policy"] != "auto":
+        review_lines = [line for line in _lines(state_path) if line.startswith("review_evidence:")]
+        if not review_lines:
+            fail("review evidence required for " + contract_data["fields"]["review_policy"])
+        if len(review_lines) != 1:
+            fail('duplicate review evidence')
+        if '|' not in review_lines[0]:
+            fail('malformed review evidence')
+        review = _parse_pipe(review_lines[0].split('|', 1)[1], '')
+        if review.get("policy") != contract_data["fields"]["review_policy"] or review.get("status") != "passed":
+            fail("review evidence is not passed")
+        for key in ['path', 'inputs', 'contract_revision', 'run_at', 'last_edit_at']:
+            if not review.get(key):
+                fail(f'review evidence missing {key}')
+        report = _safe_task_path(task_dir, review['path'])
+        if not report.is_file() or not report.read_bytes().strip():
+            fail('review evidence file missing or empty')
+        if review['contract_revision'] != revision:
+            fail('review evidence contract revision mismatch')
+        if parse_evidence_time(review['run_at']) < parse_evidence_time(review['last_edit_at']):
+            fail('review evidence stale')
+        if review.get('report_sha256') and hashlib.sha256(report.read_bytes()).hexdigest() != review['report_sha256']:
+            fail('review report changed')
+        if validate_inputs:
+            _check_inputs(task_dir, review['inputs'], revision)
+
+
+def check_work_item_dependencies(contract_data: dict, rows: dict, name: str) -> list[str]:
+    verified = []
+    for dep in work_items.references(contract_data['work_items']['items'][name]['depends'], True):
+        if rows[dep]['status'] not in {'verified', 'skipped'}:
+            fail(f'work item dependency not satisfied: {name} requires {dep}')
+        if rows[dep]['status'] == 'verified':
+            verified.append(dep)
+    return verified
+
+
+def check_work_item_evidence(task_dir: Path, state_path: Path, contract_data: dict, name: str, ancestors=()) -> None:
+    fields, required, evidence = _parse_state(state_path)
+    definition = contract_data['work_items']
+    rows = work_items.state_rows(state_path.read_text(), definition, fields)
+    if name in ancestors:
+        fail('work item dependency cycle')
+    for dep in check_work_item_dependencies(contract_data, rows, name):
+        check_work_item_evidence(task_dir, state_path, contract_data, dep, ancestors + (name,))
+    row = rows[name]
+    refs = work_items.references(row['evidence_refs'], True, identifiers=False)
+    if not refs:
+        fail(f'work item verified requires evidence_refs: {name}')
+    records = {}
+    for line in required:
+        parts = line[len('required_verification: '):].split()
+        if parts:
+            records[parts[0]] = _parse_pipe('|'.join(parts[1:]), '')
+    for aid in work_items.references(definition['items'][name]['acceptances']):
+        record = records.get(aid, {})
+        if record.get('status') != 'passed':
+            fail(f'work item acceptance not passed: {name}/{aid}')
+        check_passed_acceptance(task_dir, aid, record, evidence, fields['contract_revision'])
+        if record.get('evidence') not in refs:
+            fail(f'work item evidence_refs must include acceptance evidence: {name}/{aid}')
+    for ref in refs:
+        path = _safe_task_path(task_dir, ref)
+        if not path.is_file() or not path.read_bytes().strip():
+            fail(f'work item evidence missing or empty: {ref}')
+    check_review(task_dir, state_path, contract_data)
+
+
 def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = True, ancestors: tuple = (), validate_inputs: bool = True) -> dict:
     task_dir = Path(task_dir).resolve()
     state_path = Path(state_path or task_dir / "state.md")
@@ -405,22 +518,27 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
     calls = int(fields["calls_since_progress"])
     if calls >= threshold and fields["status"] not in {"blocked", "stopped", "cancelled"}:
         fail(f"calls_since_progress reached {threshold} while status is not paused")
+    contract_data = check_contract(task_dir, mode='locked')
+    unlimited = contract_data['fields'].get('cost_control') == 'unlimited'
     budget_value = fields["budget"]
     untracked = re.fullmatch(r"untracked/(\d+)", budget_value)
     match = re.fullmatch(r"(\d+)/(\d+)", budget_value)
-    if untracked:
+    if budget_value == 'unlimited':
+        if not unlimited:
+            fail('unlimited budget requires contract cost_control and cost_authorization')
+    elif untracked:
         if int(untracked.group(1)) <= 0:
             fail("invalid budget; expected untracked/positive-limit")
     elif match:
         used, limit = map(int, match.groups())
         if limit <= 0:
             fail("invalid budget; expected used/positive-limit")
-        if used > limit and fields["status"] not in {"blocked", "stopped", "cancelled"}:
+        if not unlimited and used > limit and fields["status"] not in {"blocked", "stopped", "cancelled"}:
             fail("budget exceeded; state must be paused")
-        if used == limit and fields["status"] == "in_progress":
+        if not unlimited and used == limit and fields["status"] == "in_progress":
             fail("budget exhausted; state must be paused")
     else:
-        fail("invalid budget; expected used/limit or untracked/limit")
+        fail("invalid budget; expected used/limit, untracked/limit or unlimited")
     if fields.get('level') not in {'L1', 'L2', 'L3', 'long'}:
         fail('invalid level')
     if fields["status"] in {"blocked", "stopped", "cancelled"}:
@@ -443,15 +561,14 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
         observed = parse_evidence_time(fields.get('updated_at', fields.get('last_progress_at', '')))
         if fields.get('started_at') and parse_evidence_time(fields['started_at']) > deadline:
             fail('deadline precedes start')
-        if observed > deadline and fields['status'] == 'in_progress':
+        if not unlimited and observed > deadline and fields['status'] == 'in_progress':
             fail('deadline exceeded; state must be paused')
-        if observed > deadline and fields['status'] == 'done':
+        if not unlimited and observed > deadline and fields['status'] == 'done':
             fail('done state exceeded deadline')
     contract = task_dir / "contract.md"
     if not contract.is_file():
         fail('strict state requires contract.md')
     if contract.is_file():
-        contract_data = check_contract(task_dir, mode='locked')
         read_runs(task_dir, dependencies=contract_data['dependencies'])
         if fields['task_id'] != contract_data['fields']['task_id']:
             fail('state task_id differs from contract')
@@ -466,6 +583,14 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
         if fields.get("contract_fingerprint") != fingerprint:
             fail("contract_fingerprint mismatch or missing in state")
         required_ids = [aid for aid, item in contract_data["acceptances"].items() if item["required"] == "yes"]
+        item_rows = work_items.state_rows(state_path.read_text(), contract_data['work_items'], fields)
+        needed_acceptances = set(required_ids)
+        if contract_data['work_items'] is None:
+            needed_acceptances.update(contract_data['acceptances'])  # Preserve legacy validation.
+        else:
+            for name, row in item_rows.items():
+                if row['status'] != 'skipped':
+                    needed_acceptances.update(work_items.references(contract_data['work_items']['items'][name]['acceptances']))
         seen_acceptances: set[str] = set()
         for line in required_lines:
             raw = line[len("required_verification: "):]
@@ -481,7 +606,7 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
             evidence_ref = record.get('evidence', '')
             if status not in {"passed", "failed", "not_run", "blocked"}:
                 fail(f"invalid verification status: {aid}")
-            if fields["status"] == "done" and status != "passed":
+            if fields["status"] == "done" and aid in required_ids and status != "passed":
                 fail(f"required acceptance not passed: {aid}")
             if record.get('evidence_id'):
                 evidence_id = record['evidence_id']
@@ -495,60 +620,15 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
                 if values.get('report_sha256') and hashlib.sha256(report.read_bytes()).hexdigest() != values['report_sha256']:
                     fail(f'observation report changed: {evidence_id}')
             if status == "passed":
-                if not evidence_ref:
-                    fail(f"required verification missing evidence: {aid}")
-                ev_path = _safe_task_path(task_dir, evidence_ref)
-                if not ev_path.is_file() or not ev_path.read_bytes().strip():
-                    fail(f"evidence file missing or empty: {evidence_ref}")
-                evidence_id = record.get('evidence_id', Path(evidence_ref).stem)
-                matches = [line for line in evidence_lines if line.startswith(f"evidence:{evidence_id}|")]
-                if len(matches) != 1:
-                    fail(f"evidence record missing or duplicate: {evidence_id}")
-                ev = _parse_pipe(matches[0], f"evidence:{evidence_id}|")
-                for key in ["acceptance", "command", "run_at", "result", "last_edit_at", "inputs", "contract_revision"]:
-                    if not ev.get(key):
-                        fail(f"evidence {evidence_id} missing {key}")
-                if ev["acceptance"] != aid or ev["contract_revision"] != revision or ev["result"] != "passed":
-                    fail(f"evidence {evidence_id} does not match {aid}")
-                run_at = parse_evidence_time(ev["run_at"])
-                last_edit = parse_evidence_time(ev["last_edit_at"])
-                if run_at < last_edit:
-                    fail(f"evidence is stale: {evidence_id}")
-                if ev.get('report_sha256') and hashlib.sha256(ev_path.read_bytes()).hexdigest() != ev['report_sha256']:
-                    fail(f'observation report changed: {evidence_id}')
-                if validate_inputs:
-                    _check_inputs(task_dir, ev["inputs"], revision)
+                check_passed_acceptance(task_dir, aid, record, evidence_lines, revision,
+                                        validate_inputs and aid in needed_acceptances)
         evidence_ids = [line.split('|', 1)[0] for line in evidence_lines]
         if len(evidence_ids) != len(set(evidence_ids)):
             fail('duplicate evidence id')
         if fields["status"] == "done":
             if not set(required_ids).issubset(seen_acceptances):
                 fail("done state does not list every required acceptance")
-            if contract_data["fields"]["review_policy"] != "auto":
-                review_lines = [line for line in _lines(state_path) if line.startswith("review_evidence:")]
-                if not review_lines:
-                    fail("review evidence required for " + contract_data["fields"]["review_policy"])
-                if len(review_lines) != 1:
-                    fail('duplicate review evidence')
-                if '|' not in review_lines[0]:
-                    fail('malformed review evidence')
-                review = _parse_pipe(review_lines[0].split('|', 1)[1], '')
-                if review.get("policy") != contract_data["fields"]["review_policy"] or review.get("status") != "passed":
-                    fail("review evidence is not passed")
-                for key in ['path', 'inputs', 'contract_revision', 'run_at', 'last_edit_at']:
-                    if not review.get(key):
-                        fail(f'review evidence missing {key}')
-                report = _safe_task_path(task_dir, review['path'])
-                if not report.is_file() or not report.read_bytes().strip():
-                    fail('review evidence file missing or empty')
-                if review['contract_revision'] != revision:
-                    fail('review evidence contract revision mismatch')
-                if parse_evidence_time(review['run_at']) < parse_evidence_time(review['last_edit_at']):
-                    fail('review evidence stale')
-                if review.get('report_sha256') and hashlib.sha256(report.read_bytes()).hexdigest() != review['report_sha256']:
-                    fail('review report changed')
-                if validate_inputs:
-                    _check_inputs(task_dir, review['inputs'], revision)
+            check_review(task_dir, state_path, contract_data, validate_inputs)
             for item in contract_data['dependencies']:
                 if item['required'] == 'no':
                     continue
@@ -561,6 +641,11 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
                         fail('dependency is not done')
                 except (OSError, ValueError) as error:
                     fail(f'dependency {item["key"]}: {error}')
+    rows = work_items.state_rows(state_path.read_text(), contract_data['work_items'], fields)
+    if validate_inputs:
+        for name, row in rows.items():
+            if row['status'] == 'verified':
+                check_work_item_evidence(task_dir, state_path, contract_data, name)
     return fields
 
 

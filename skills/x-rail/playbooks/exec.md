@@ -14,15 +14,27 @@
 
 1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-rail/scripts/check-contract.sh &lt;task-dir&gt;` before broad exploration. For an existing task, read contract, plan, state, target files, callers, tests, current differences, and the workspace baseline (cwd, branch/worktree, pending changes). If a model request times out, record a recovery summary in `audit/` before continuing.
 2. If the contract uses v2 format, run `skills/x-rail/scripts/check-contract.sh &lt;task-dir&gt;` before editing; do not execute against an incomplete contract.
-3. List the current logical change and its required verification before editing. Read only the target symbols and their callers first; expand to full files only when a specific Acceptance condition requires it.
+3. 先核对工作项清单及覆盖；复杂或大范围实施必须拆分并持久记录，不按需求数量判断。已有计划复用，新严格实施采用 work_items_schema: 1。start 对 task_type=exec|bugfix 强制此字段；mixed/ops 等其他类型不由脚本猜测是否实施，但触发复杂度或范围条件的严格实施仍须显式采用，不能换类型绕过。旧记录 check/update 兼容，按需显式升级契约并保留快照，不自动迁移或补造历史；普通局部任务仍可用会话内清单，只读分析不落盘。List the current logical change and its required verification before editing. Read only the target symbols and their callers first; expand to full files only when a specific Acceptance condition requires it.
    新增或改变条件、解析、权限、金额、数据写入等非平凡逻辑，默认采用 TDD（Test-Driven Development，测试驱动开发）：先写行为测试，确认它因目标行为缺失而失败，再写最小实现，确认同一测试和相关回归通过，最后在测试保护下整理代码。导入或环境错误不能代替目标行为失败。优先复用项目测试工具，不新增框架。纯文档、文案、简单样式和不改行为的低风险修改采用内容或渲染核对；真实设备或外部服务不能自动化时记录实际观察和限制。用户明确要求优先。
 4. Modify only files inside the task boundary. User project files are targets; workflow records stay in `.work-docs`.
 5. Verify from narrow to broad: `syntax/config`, `static`, `runtime/local`, `external`, `consumer` as required by the contract. A manual, consumer or external condition must be explicitly recorded rather than silently treated as automatic.
    对影响用户流程的改动，按任务验收沿实际入口检查：对应用户登录 → 页面入口 → 操作 → 请求 → 预期结果；核对必要的越权或超额拒绝。测试数量不替代入口结果。没有预先失败和实现后通过证据，不声称使用了测试驱动开发。严格任务自动验证用 run；非自动验证先 capture，观察后 record，状态变化用 update；命令细节见 verification.md。
 6. If a contract condition changes, increase `contract_revision`, record old/new value, reason, approver and affected evidence before continuing.
 7. After a failed verification, record the strategy fingerprint and use a materially different strategy. Three consecutive required failures trip the circuit breaker.
-8. Preserve real output in `evidence/`; decisions and checkpoints go to `audit/`。只在目标或授权变化、新验证结果、重要转向、阻塞或交接、交付时更新；相关变化一次处理。阶段变化影响恢复时随之更新，普通读取和更新时间不触发新记录。交付初稿与完成验收分别报告。
-9. Apply the done gate. Never infer completion from exit code, build success, file existence or agent report alone.</procedure>
+8. Preserve real output in `evidence/`; decisions and checkpoints go to `audit/`。开始、实现完成、新验证、审查返回、阻塞/解除、重要阶段变化、提交、压缩和交接前核对相关工作项，目标或授权变化走契约变更。普通读取和每行编辑不更新；状态改字、换执行者或更新时间不算真实进展。整体 next_action 是第一可执行动作，其他待办留在各项；某项 blocked 而其他项能继续时，整体保持可推进状态。交付初稿、实现完成、验收通过分别报告。
+9. Apply the done gate. Never infer completion from exit code, build success, file existence or agent report alone. 工作项实现后先 awaiting_verification；关联验收及当前证据满足才 verified。全部必需项已验证、可选项明确处理后仍须通过原验收、审查、授权和依赖门。
+
+## 已授权并行与恢复
+
+拆分后每轮选择无依赖或前置已满足、彼此无依赖且资源不冲突的项，优先交子代理并行实现。主会话负责共享约定、调度、集成与最终验收，不包揽独立实现；一项完成即重查就绪项，不必等整批结束。并发数按任务、宿主能力和集成成本调整，不固定数量。适合并行却串行时在现有状态/决定记录具体原因，如接口未稳定、任务过小、资源无法隔离或宿主限制。委派未授权时串行并记录原因，不能从拆分推导委派权。
+
+并行写入者使用独立副本和明确允许路径；共享接口、配置与父状态仅一个写入者。测试可能写数据库、缓存和构建目录，分配前核对副作用及环境所有权。子任务使用 child-task.md 传工作项、固定输入、依赖、验收、权限、成本和正式输出绑定；父会话核对真实差异、产物和验证后更新父状态，通知不自动通过验收。
+
+派发异步运行后继续独立工作，无独立工作则交还控制权等原生通知；仅在结果依赖处汇总。只有宿主允许且同轮确需非通知结果时显式等待。恢复先读原清单与状态、核对工作区和证据，再查询原运行；已结束消费原产物，可恢复续接，不可查记 unknown/blocked，不重复启动。基础设施错误立即暂停依赖并报告准确错误、原运行及产物，不能换协议、前后台或以主会话核对冒充独立审查。
+
+成本与总量、上下文容量、模型请求超时、工具/子运行超时、无进展分别处理。容量依据宿主实际信号，未知就写未知；不能凭感觉宣称预算耗尽，也不能用工具 timeout 解释模型请求超时。保留成本策略、失败熔断和硬限制；不限成本沿用至任务结束或用户收紧，不取消权限与必过验收。压缩/交接前保存恢复第一步，恢复后核对原编号、状态和输入。
+
+实现与自检后固定输入，必要审查集中返回必修问题；集中修复，再跑受影响检查。优先恢复原审查运行定向复核，不可恢复记录原因并按宿主规则替代；不能代替要求的独立最终审查。相关输入或报告变化更新对应证据；无关变化不重跑全部，进度文件不作为代码审查输入。非阻塞建议记后续，不把必修改可选。</procedure>
   <quality_check>先失败反例后最小实现；共同变化逻辑只维护一处，接口保持小。项目规范优先，非 TypeScript 不注入专用规则。</quality_check>
   <exit>普通任务交付实际结果、验证与限制，不创建状态文件。严格任务核对真实证据，用 task.py finish 或 complete 提交候选；阻塞保留状态，不放宽必需验收。</exit>
 </stage>

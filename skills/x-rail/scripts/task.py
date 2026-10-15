@@ -17,6 +17,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import task_checks
 
+work_items = task_checks.work_items
+
 
 def inside(child: Path, parent: Path) -> bool:
     try:
@@ -45,6 +47,10 @@ def complete(task_dir: Path, candidate: Path, before_commit=None) -> None:
     result = task_checks.check_state(task_dir, candidate)
     if result['status'] != 'done':
         raise ValueError('candidate must set status: done')
+    previous, _, _ = task_checks._parse_state(formal)
+    if ('active_work_items' in result and previous.get('status') != 'done'
+            and result.get('next_action', 'none') in {'none', '', previous.get('next_action')}):
+        raise ValueError('completion candidate must update next_action to delivery or closure')
     if before_commit:
         before_commit()
     if formal.read_bytes() != original or contract.read_bytes() != original_contract or candidate.read_bytes() != candidate_bytes:
@@ -63,7 +69,7 @@ def complete(task_dir: Path, candidate: Path, before_commit=None) -> None:
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+    return datetime.now(timezone.utc).isoformat(timespec='seconds')  # noqa: UP017 - Python 3.10
 
 
 def state_text(text: str, updates: dict[str, str]) -> str:
@@ -72,7 +78,7 @@ def state_text(text: str, updates: dict[str, str]) -> str:
             raise ValueError(f'{key} must use one line')
         expression = r'^' + re.escape(key) + r': .*$'
         if re.search(expression, text, re.M):
-            text = re.sub(expression, lambda _: f'{key}: {value}', text, flags=re.M)
+            text = re.sub(expression, lambda _, key=key, value=value: f'{key}: {value}', text, flags=re.M)
         else:
             text = text.rstrip('\n') + f'\n{key}: {value}\n'
     return text
@@ -92,22 +98,28 @@ def start(task_dir: Path) -> None:
     if formal.exists() or formal.is_symlink():
         raise ValueError('state.md already exists; resume the existing task')
     data = task_checks.check_contract(task_dir, mode='ready')
+    if data['fields']['task_type'] in {'exec', 'bugfix'} and data['work_items'] is None:
+        raise ValueError('new strict implementation tasks require work_items_schema: 1')
     task_checks._safe_task_path(task_dir, 'audit')
     task_checks.check_contract(task_dir, mode='seal')
     fields = data['fields']
     timestamp = now()
     limit = {'L1': 60, 'L2': 150, 'L3': 400, 'long': 400}[fields['level']]
+    unlimited = fields.get('cost_control') == 'unlimited'
     values = {'task_id': task_dir.name, 'level': fields['level'], 'stage': fields['task_type'],
               'status': 'in_progress', 'contract_revision': fields['contract_revision'],
               'contract_fingerprint': hashlib.sha256((task_dir / 'contract.md').read_bytes()).hexdigest(),
-              'evidence_schema': '2', 'done_when': fields['done_when'], 'budget': f'untracked/{limit}',
+              'evidence_schema': '2', 'done_when': fields['done_when'], 'budget': 'unlimited' if unlimited else f'untracked/{limit}',
               'calls_since_progress': '0', 'last_progress_at': timestamp, 'updated_at': timestamp,
               'blocked_by': 'none', 'unblock_condition': 'none', 'next_action': fields['objective']}
     if fields['level'] in {'L3', 'long'}:
         values['started_at'] = timestamp
-        values['deadline_at'] = (datetime.fromisoformat(timestamp) + timedelta(hours=8)).isoformat(timespec='seconds')
+        if not unlimited:
+            values['deadline_at'] = (datetime.fromisoformat(timestamp) + timedelta(hours=8)).isoformat(timespec='seconds')
     text = ''.join(f'{key}: {value}\n' for key, value in values.items())
-    text += ''.join(f'required_verification: {aid} status=not_run\n' for aid, item in data['acceptances'].items() if item['required'] == 'yes')
+    tracked = task_checks.tracked_acceptances(data)
+    text += ''.join(f'required_verification: {aid} status=not_run\n' for aid in data['acceptances'] if aid in tracked)
+    text += work_items.initial_state(data['work_items'])
     candidate = candidate_file(task_dir, text)
     task_checks.check_state(task_dir, candidate)
     # Exclusive creation keeps an existing task intact, even if it appeared during setup.
@@ -121,6 +133,8 @@ def finish(task_dir: Path, used: int | None = None) -> None:
         raise ValueError('finish requires an in_progress task')
     original = (task_dir / 'state.md').read_bytes()
     updates = {'status': 'done', 'updated_at': now()}
+    if 'active_work_items' in fields:
+        updates['next_action'] = '交付已验证结果并结束任务'
     if used is not None:
         updates['tool_count_note'] = str(used)
     candidate = candidate_file(task_dir, state_text(original.decode(), updates))
@@ -161,10 +175,13 @@ def evidence_name(value: str) -> None:
         raise ValueError('evidence name must use letters, digits, underscores or hyphens')
 
 
-def save_state(task_dir: Path, text: str, original: bytes, contract: bytes) -> None:
+def save_state(task_dir: Path, text: str, original: bytes, contract: bytes, verify_items=()) -> None:
     candidate = candidate_file(task_dir, text)
-    # Stale inputs remain visible until reverified; only finish can claim completion.
+    # Keep stale rows visible for repair; new verified claims still require current evidence.
     task_checks.check_state(task_dir, candidate, validate_inputs=False)
+    data = task_checks.check_contract(task_dir, mode='locked')
+    for name in verify_items:
+        task_checks.check_work_item_evidence(task_dir, candidate, data, name)
     if (task_dir / 'state.md').read_bytes() != original or (task_dir / 'contract.md').read_bytes() != contract:
         raise ValueError('state or contract changed before recording result')
     os.replace(candidate, task_dir / 'state.md')
@@ -196,7 +213,9 @@ def update(task_dir: Path, args) -> None:
             raise ValueError('pause requires blocked_by, unblock_condition and next_action')
     elif args.blocked_by is not None or args.unblock_condition is not None:
         raise ValueError('blocker fields require a status transition')
-    if not updates:
+    data = task_checks.check_contract(task_dir, mode='locked')
+    text = work_items.update(original.decode(), data['work_items'], fields, args)
+    if not updates and not getattr(args, 'item', None):
         raise ValueError('update requires a changed field')
     if args.reason:
         updates['transition_reason'] = args.reason
@@ -205,7 +224,18 @@ def update(task_dir: Path, args) -> None:
         if not args.reason or not args.next_action:
             raise ValueError('progress requires a substantive reason and next_action')
         updates.update(calls_since_progress='0', last_progress_at=updates['updated_at'])
-    save_state(task_dir, state_text(original.decode(), updates), original, contract)
+    verify_items = []
+    if getattr(args, 'item', None):
+        active_line = next(line for line in text.splitlines() if line.startswith('active_work_items: '))
+        item_fields = dict(fields, active_work_items=active_line.split(': ', 1)[1])
+        rows = work_items.state_rows(text, data['work_items'], item_fields)
+        name = args.item
+        if rows[name]['status'] == 'verified':
+            verify_items.append(name)
+        # A dependent may start only against current, valid completed inputs.
+        if rows[name]['status'] in {'in_progress', 'awaiting_verification'}:
+            verify_items.extend(task_checks.check_work_item_dependencies(data, rows, name))
+    save_state(task_dir, state_text(text, updates), original, contract, verify_items)
 
 
 def capture(task_dir: Path, args) -> None:
@@ -249,12 +279,15 @@ def record(task_dir: Path, args) -> None:
             raise ValueError('review record requires a non-auto review policy')
         if not args.reviewer or not args.source:
             raise ValueError('independent review requires reviewer and source')
-        cell(args.reviewer); cell(args.source)
+        cell(args.reviewer)
+        cell(args.source)
     else:
         acceptance = contract['acceptances'].get(args.acceptance)
-        if not acceptance or acceptance['required'] != 'yes' or acceptance['verification_type'] == 'automatic':
+        if not acceptance or args.acceptance not in task_checks.tracked_acceptances(contract) or acceptance['verification_type'] == 'automatic':
             raise ValueError('record requires a required non-automatic acceptance; use run for automatic checks')
-    cell(args.observation); cell(args.report); cell(args.inputs)
+    cell(args.observation)
+    cell(args.report)
+    cell(args.inputs)
     report = task_checks._safe_task_path(task_dir, args.report)
     if not report.is_file() or not report.read_bytes().strip() or report in {task_dir/'state.md', task_dir/'contract.md'}:
         raise ValueError('report must be a non-empty observation artifact, not task state or contract')
@@ -316,7 +349,7 @@ def summary(task_dir: Path) -> None:
         if parts:
             records[parts[0]] = task_checks._parse_pipe('|'.join(parts[1:]), '')
     for aid, acceptance in contract['acceptances'].items():
-        if acceptance['required'] != 'yes':
+        if aid not in task_checks.tracked_acceptances(contract):
             continue
         item = records.get(aid, {})
         status = item.get('status', 'not_run')
@@ -359,6 +392,13 @@ def summary(task_dir: Path) -> None:
         print(f'审查：{status}；{review.get("path", "未记录")}')
     elif contract['fields']['review_policy'] != 'auto':
         print('审查：not_run；必需独立审查尚未登记')
+    try:
+        rows = work_items.state_rows(state.read_text(), contract['work_items'], fields)
+        for line in work_items.summary(contract['work_items'], rows,
+                lambda name: task_checks.check_work_item_evidence(task_dir, state, contract, name)):
+            print(line)
+    except ValueError as error:
+        print(f'工作项：invalid；{error}')
     print(f'阻塞：{fields.get("blocked_by", "未记录")}；解除条件：{fields.get("unblock_condition", "未记录")}')
     print(f'下一步：{fields.get("next_action", "未记录")}')
     print('来源：contract.md、state.md、evidence；摘要不写回状态，不证明验收范围完整')
@@ -370,7 +410,7 @@ def run_verification(task_dir: Path, args) -> None:
         raise ValueError('run requires an in_progress task')
     contract = task_checks.check_contract(task_dir, mode='locked')
     acceptance = contract['acceptances'].get(args.acceptance)
-    if not acceptance or acceptance['required'] != 'yes' or acceptance['verification_type'] != 'automatic':
+    if not acceptance or args.acceptance not in task_checks.tracked_acceptances(contract) or acceptance['verification_type'] != 'automatic':
         raise ValueError('run requires a required automatic acceptance; manual/consumer/external checks stay explicit')
     if not re.fullmatch(r'[a-zA-Z0-9_-]+', args.evidence):
         raise ValueError('evidence name must use letters, digits, underscores or hyphens')
@@ -421,7 +461,7 @@ def run_verification(task_dir: Path, args) -> None:
     text = re.sub(r'^required_verification: ' + re.escape(args.acceptance) + r' .*\n?', '', text, flags=re.M)
     status = 'passed' if passed else 'failed'
     text += f'required_verification: {args.acceptance} status={status} evidence=evidence/{args.evidence}.txt\n'
-    last_edit = datetime.fromtimestamp(latest, timezone.utc).isoformat(timespec='seconds')
+    last_edit = datetime.fromtimestamp(latest, timezone.utc).isoformat(timespec='seconds')  # noqa: UP017
     text += (f'evidence:{args.evidence}|acceptance={args.acceptance}|command={args.verification_command.replace(chr(10), " ").replace(chr(13), " ").replace("|", "%7C")}'
              f'|run_at={timestamp}|result={status}|last_edit_at={last_edit}|inputs=evidence/{args.evidence}.inputs.json|contract_revision={fields["contract_revision"]}\n')
     save_state(task_dir, text, original, contract_bytes)
@@ -460,6 +500,11 @@ def main() -> int:
     p.add_argument('--progress', action='store_true', help='declare substantive progress with reason and next_action; never for a timestamp-only update')
     for key in ['next-action', 'blocked-by', 'unblock-condition', 'reason']:
         p.add_argument('--'+key)
+    p.add_argument('--item')
+    p.add_argument('--item-status', choices=sorted(work_items.STATUSES))
+    p.add_argument('--item-evidence-ref', action='append')
+    for key in ['owner', 'commit', 'blocked-by', 'unblock-condition', 'reason', 'next-action']:
+        p.add_argument('--item-'+key)
     p = sub.add_parser('capture', help='capture relevant inputs before a non-automatic observation')
     p.add_argument('task_dir')
     p.add_argument('--evidence', required=True)

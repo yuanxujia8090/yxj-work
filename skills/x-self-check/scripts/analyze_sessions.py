@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Read-only streaming statistics for Pi session JSONL. No prompt execution."""
 from __future__ import annotations
+
 import argparse
-from collections import Counter
-from datetime import datetime, timedelta, timezone
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
 import re
 import sys
+from collections import Counter
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
+
+UTC = timezone.utc  # noqa: UP017 - Python 3.10 compatibility
 
 NAMES = {'yxj-work': 'x-rail', 'x-rail': 'x-rail', 'yxj-work-long': 'x-rail-long', 'x-rail-long': 'x-rail-long'}
 SUPPORTED = {'session', 'message', 'model_change', 'thinking_level_change', 'compaction', 'custom', 'branch_summary', 'label', 'session_info'}
@@ -21,10 +24,10 @@ def timestamp(value):
         raise ValueError('event time needs timezone')
     if not value.endswith('Z') and (int(value[-5:-3]) > 23 or int(value[-2:]) > 59):
         raise ValueError('invalid event timezone offset')
-    parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))  # noqa: FURB162 - Python 3.10 compatibility
     if parsed.tzinfo is None:
         raise ValueError('event time needs timezone')
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def text_content(content):
@@ -37,7 +40,7 @@ def text_content(content):
 
 def invocation(text):
     stripped = text.lstrip()
-    match = re.match(r'<skill\s+name=["\']([^"\']+)["\'][^>]*>(.*?)</skill>', stripped, re.S)
+    match = re.match(r'<skill\s+name=["\']([^"\']+)["\'][^>]*>(.*?)</skill>', stripped, re.DOTALL)
     if match and match.group(1) in NAMES:
         return match.group(1), hashlib.sha256(match.group(2).encode()).hexdigest()
     command = re.match(r'^/(yxj-work-long|x-rail-long|yxj-work|x-rail)(?:\s|$)', stripped)
@@ -65,9 +68,12 @@ def new_episode(session_id, source, line, canonical, at, cross_window, model, th
 
 def task_compliance(episodes, task_roots, mode):
     checker_dir = Path(__file__).resolve().parents[2] / 'x-rail/scripts'
-    files = [checker_dir / name for name in ['task_checks.py', 'check-contract-legacy.sh', 'check-state-legacy.sh']]
+    files = [checker_dir / name for name in ['task_checks.py', 'work_items.py', 'check-contract-legacy.sh', 'check-state-legacy.sh']]
     digest = hashlib.sha256(b''.join(file.read_bytes() for file in files)).hexdigest()
+    sys.path.insert(0, str(checker_dir))
     spec = importlib.util.spec_from_file_location('self_check_tasks', files[0])
+    if spec is None or spec.loader is None:
+        raise ValueError(f'cannot load task checks: {files[0]}')
     checks = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(checks)
     roots = [Path(root).resolve() for root in task_roots]
@@ -83,7 +89,7 @@ def task_compliance(episodes, task_roots, mode):
         if task.is_symlink() or not task.resolve().is_relative_to(task.parent.resolve()):
             results.append({'task_id': task_id, 'status': 'blocked', 'reason': 'task-path-boundary'})
             continue
-        def snapshot():
+        def snapshot(task=task):
             return {str(p.relative_to(task)): hashlib.sha256(p.read_bytes()).hexdigest()
                     for p in task.rglob('*') if p.is_file() and not p.is_symlink() and p.resolve().is_relative_to(task.resolve())}
         before = snapshot()
@@ -103,7 +109,7 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
     if bool(task_roots) != bool(task_mode) or (task_mode and task_mode not in {'strict', 'legacy-readonly'}):
         raise ValueError('task roots and explicit task mode must be paired')
     zone = ZoneInfo(timezone_name)
-    finish = timestamp(end) if end else datetime.now(timezone.utc)
+    finish = timestamp(end) if end else datetime.now(UTC)
     begin = timestamp(start) if start else finish - timedelta(days=days)
     if begin >= finish:
         raise ValueError('start must precede end')
@@ -130,8 +136,8 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
                 try:
                     record = json.loads(line)
                     if not isinstance(record, dict):
-                        raise ValueError('event must be object')
-                except (ValueError, json.JSONDecodeError):
+                        raise TypeError('event must be object')
+                except (TypeError, ValueError, json.JSONDecodeError):
                     coverage['bad_lines'] += 1
                     continue
                 parsed_any = True
@@ -168,7 +174,8 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
                         if begin <= custom_time < finish:
                             category = 'user_abort' if subtype == 'request_cancelled' else 'timeout' if subtype == 'request_timeout' else 'service'
                             error = {'category': category, 'source': source, 'line': number}
-                            errors.append(error); active['errors'].append(error)
+                            errors.append(error)
+                            active['errors'].append(error)
                     continue
                 if kind != 'message':
                     continue
@@ -202,7 +209,7 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
                             episodes.append(active)
                     elif active and in_window:
                         continuing = text.strip() in {'继续', 'continue', '继续吧', '按推荐'}
-                        explicit_new = bool(re.match(r'^(?:新任务|另一个任务|new task)', text.strip(), re.I))
+                        explicit_new = bool(re.match(r'^(?:新任务|另一个任务|new task)', text.strip(), re.IGNORECASE))
                         prior = active
                         if prior['_done']:
                             prior['timing']['wait_user_seconds'] += max(0, (at - prior['_done']).total_seconds())
@@ -223,7 +230,8 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
                 if role == 'bashExecution':
                     active['timing']['manual_terminal_events'] += 1
                     continue
-                blocks = message.get('content') if isinstance(message.get('content'), list) else []
+                content = message.get('content')
+                blocks = content if isinstance(content, list) else []
                 if role == 'assistant':
                     active['_last_assistant'] = at
                     active['observed_assistant_span_seconds'] = max(0, (at - active['_start']).total_seconds())
@@ -236,8 +244,10 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
                             args = {}
                         uses = args.get('tool_uses') or args.get('tools') or []
                         count = len(uses) if isinstance(uses, list) else 0
-                        outer += 1; nested += count
-                        active['tool_outer_calls'] += 1; active['tool_nested_actions'] += count
+                        outer += 1
+                        nested += count
+                        active['tool_outer_calls'] += 1
+                        active['tool_nested_actions'] += count
                         path = args.get('path') or args.get('file_path') or args.get('filePath')
                         if isinstance(path, str):
                             task_match = re.search(r'\.work-docs/tasks/([A-Za-z0-9_-]+)/', path)
@@ -253,7 +263,8 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
                     if message.get('errorMessage'):
                         category = error_kind(message['errorMessage'])
                         error = {'category': category, 'source': source, 'line': number}
-                        errors.append(error); active['errors'].append(error)
+                        errors.append(error)
+                        active['errors'].append(error)
                 elif role == 'toolResult':
                     failed = message.get('isError') is True
                     call = calls.pop(message.get('toolCallId'), None)
@@ -264,7 +275,8 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
                             active['first_artifact'] = {'source': source, 'line': number, 'call_line': call_line, 'at': at.isoformat(), 'quality': 'successful-target-write-not-content-verification'}
                     if failed:
                         error = {'category': error_kind(text), 'source': source, 'line': number}
-                        errors.append(error); active['errors'].append(error)
+                        errors.append(error)
+                        active['errors'].append(error)
         if parsed_any:
             coverage['parsed_files'] += 1
     for ep in episodes:
@@ -280,7 +292,9 @@ def analyze(sessions_root, *, start=None, end=None, days=7, timezone_name='Asia/
             else:
                 merged.append((begin_wait, end_wait))
         ep['timing']['tool_wait_seconds'] = sum((end_wait-begin_wait).total_seconds() for begin_wait,end_wait in merged)
-        ep.pop('_start', None); ep.pop('_last_assistant', None); ep.pop('_done', None)
+        ep.pop('_start', None)
+        ep.pop('_last_assistant', None)
+        ep.pop('_done', None)
     coverage['associated_task_count'] = len({ep['task_id'] for ep in episodes if ep['task_id']})
     coverage['unsupported_event_types'] = dict(sorted(unsupported.items()))
     return {'schema_version': 1, 'window': {'start': begin.isoformat(), 'end': finish.isoformat(), 'timezone': timezone_name, 'local_start': begin.astimezone(zone).isoformat(), 'end_exclusive': True}, 'coverage': coverage, 'invocations': invocations, 'episodes': episodes, 'session_relations': relations, 'task_compliance': task_compliance(episodes, task_roots, task_mode) if task_roots else None, 'statistics': {'explicit_invocations': len(invocations), 'canonical_counts': dict(Counter(x['canonical_name'] for x in invocations)), 'tool_outer_calls': outer, 'tool_nested_actions': nested, 'error_events': errors, 'error_affected_episodes': sum(bool(ep['errors']) for ep in episodes), 'error_categories': dict(Counter(x['category'] for x in errors))}, 'limitations': ['No request-start timestamps: thinking time is unknown; observed spans are upper bounds, not active compute.', 'Task identity, parent-child links and unsupported shell writes remain unknown unless explicitly supported.', 'Supported-conclusion detection is a candidate marker, not factual quality grading.', 'Errors describe events, not failed task counts. Historical compliance does not imply historical outcome.']}

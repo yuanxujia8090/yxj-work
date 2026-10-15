@@ -16,6 +16,8 @@
 
 ## 轻量文档分支
 
+先沿用主入口 cost_policy：当前用户明确不限成本时，取消下方 6 次资料读取、20 次总调用的次数收口与默认总预算；按实际缺口推进，保留无进展和必需验收检查。
+
 1. 一次确定交付物、依据、不做什么、完成条件。默认 L1；依据优先使用用户指定方案版本和固定提交，未指定提交时记录本次采用的提交及未提交改动是否纳入，不默默忽略用户修改。风险单独判断。
 2. 普通文档直接读取固定依据并写初稿；需要严格记录时从 `templates/document-task.md` 填契约，优先 `task.py start` 生成状态并校验。只读整理通常低风险、auto；中高风险遵守对应审查，确认仅按敏感动作。默认按模板调用校验器，只有准确报错涉及格式、或任务确需改变格式时才读校验器源码。
 3. 默认读取方案行为要求、计划验收表、固定提交摘要、相关测试名称与必要断言。主材料读取原则上控制在 **6 次资料工具调用**以内，按实际读取动作计数；批量包裹或一个命令读多份材料不能绕过。材料足够立即写初稿；到检查点仍不足，先写已有条目和具体缺口。确需继续读大材料时，先在 state 的 next_action 指明尚未覆盖的验收条目，再只读该条目，不重新讨论路由。
@@ -30,10 +32,11 @@
 1. For a new formal task, create the task skeleton and minimal contract, then run `skills/x-rail/scripts/check-contract.sh &lt;task-dir&gt;` before broad exploration. For an existing task, read its contract and state first. If a model request times out, record a recovery summary in `audit/` before continuing.
 2. Copy the approved `objective`、`done_when`、`scope`、`forbidden`、`risk` and decision gates; do not broaden scope.
 3. If the contract uses the v2 format, copy every numbered `Acceptance` condition and preserve its verification type and layer.
-4. Split work into independently verifiable tasks. Each task names exact target files, allowed changes, required verification, expected evidence and fallback when blocked.
-5. Mark every verification and subtask `required` or `optional`; optional items need a written skip reason.
+4. 按逻辑独立性、复杂度、范围和依赖拆成可独立验证的工作项。多个独立复杂逻辑、单个大范围需求、单需求的多步状态/权限/并发/写入或协作依赖，均先拆分并持久记录，不按五个、六个需求计数。局部简单同源改动可合项，写清依据；只读分析在回复列项，不落盘；用户只要方案文档时只写授权位置。已有合格计划先核对并复用。
+5. 新严格实施在契约顶部写 `work_items_schema: 1`；start 对 task_type=exec|bugfix 强制此字段，mixed/ops 等其他类型不由脚本猜测是否实施，但触发复杂度或范围条件的严格实施仍须显式采用，不能换类型绕过；每个 requirement 有稳定标识和可观察 outcome，每个 work_item 有 title、requirements、depends、scope、required、acceptances、skip_reason；执行者及下一动作由 state 记录。每个需求至少被一项覆盖，每项至少关联一个验收；依赖无环，共享写入有唯一责任人。必需项 required=yes、skip_reason=none；可选项 required=no 并预写非空且非 none 的 skip_reason，skipped 自动引用该理由并保留本次 item-reason 动作说明。完整结构见 verification.md。工作项不是需求编号或验收结果，任务内计划只引用工作项，不维护第二份进度。旧记录 check/update 兼容，需要清单时显式升级契约并保留快照，不自动迁移或补造历史。
 6. Include the done gate, contract revision and circuit-breaker thresholds.
-7. Write the implementation plan to `.work-docs/tasks/&lt;task-id&gt;/outputs/` and state the first executable action.</procedure>
+7. Write the implementation plan to `.work-docs/tasks/&lt;task-id&gt;/outputs/` and state the first executable action. 普通小任务仍可用会话内清单；复杂/大范围实施沿用严格状态与证据，拆分本身不触发长模式或委派授权。
+8. 已获委派授权时，无依赖或前置已满足且互不依赖、资源不冲突的项优先由子代理并行实现。计划分配固定输入、允许路径、执行者、正式输出和环境所有权；共享约定与集成由主会话负责。并发数按宿主能力与集成成本调整。适合并行却串行时记具体原因，未获授权则记录权限原因；不只把子代理留给事后审查。</procedure>
   <quality_check>固定方案、提交或明确未提交差异；先覆盖清单与初稿；补读只回答具体缺口。默认不搭环境、代跑、追踪别的会话。写方案按需 technical-writing 与 unslop。</quality_check>
   <exit>普通任务交付实际结果、验证与限制，不创建状态文件。严格任务核对真实证据，用 task.py finish 或 complete 提交候选；阻塞保留状态，不放宽必需验收。</exit>
 </stage>

@@ -5,8 +5,8 @@ import importlib.util
 import json
 import re
 import sys
-import xml.etree.ElementTree as ET
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 MODULES = ('purpose', 'authority', 'routing', 'workflow', 'decision_policy', 'verification', 'recovery', 'output_contract')
 STAGE_MODULES = ('inputs', 'procedure', 'quality_check', 'exit')
@@ -44,7 +44,10 @@ def check_root(root):
     core = root / 'skills/x-rail/SKILL.md'
     tree = parse_body(core.read_text(), str(core))
     script = root / 'skills/x-rail/scripts/task_checks.py'
+    sys.path.insert(0, str(script.parent))
     spec = importlib.util.spec_from_file_location('task_checks_xml', script)
+    if spec is None or spec.loader is None:
+        raise ValueError(f'cannot load task checks: {script}')
     checks = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(checks)
     routes = tree.findall('routing/route')
@@ -66,7 +69,10 @@ def check_root(root):
     budgets = tree.find('workflow/budget')
     if budgets is None or {key: budgets.get(key) for key in ['L1', 'L2', 'L3', 'reminder-small', 'reminder-large', 'no-progress-minutes']} != {'L1': '60', 'L2': '150', 'L3': '400', 'reminder-small': '20', 'reminder-large': '60', 'no-progress-minutes': '30'}:
         raise ValueError('budget constraints missing or inconsistent')
-    boundary = tree.find('authority').get('sensitive-actions', '')
+    authority = tree.find('authority')
+    if authority is None:
+        raise ValueError('authority module missing')
+    boundary = authority.get('sensitive-actions', '')
     if set(boundary.split(',')) != checks.SENSITIVE_ACTIONS:
         raise ValueError('authorization action categories inconsistent')
     return {'routes': names, 'skills': 3, 'stages': len(names) - 1}

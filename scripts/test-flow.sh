@@ -21,6 +21,13 @@ assert '文本包含关系不能证明完整行为' in verification_text
 assert authority.get('readonly-no-files')=='true'
 assert authority.get('delegation')=='explicit-only'
 assert authority.get('sensitive-actions')=='irreversible,cost,external-publish,scope-change'
+cost_policy=core.find('workflow/cost_policy')
+assert cost_policy is not None
+for rule in ['解除成本限制','不限制成本','不要解除成本限制','解除阻塞','cost_control: unlimited','cost_authorization:','跨会话恢复','无进展','硬限制']:
+    assert rule in cost_policy.text, rule
+for path in ['skills/x-rail/playbooks/plan.md','skills/x-rail/templates/child-task.md','skills/x-rail/templates/document-task.md']:
+    assert '不限成本' in (root/path).read_text(), path
+assert 'budget: unlimited' in verification_text
 for stage in result['routes']:
     if stage=='fast-answer':continue
     tree=m.parse_body((root/f'skills/x-rail/playbooks/{stage}.md').read_text(),stage)

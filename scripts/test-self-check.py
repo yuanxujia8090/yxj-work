@@ -4,9 +4,11 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('analyze_sessions', ROOT / 'skills/x-self-check/scripts/analyze_sessions.py')
+assert spec is not None and spec.loader is not None
 analysis = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(analysis)
 
@@ -14,7 +16,7 @@ spec.loader.exec_module(analysis)
 class SessionTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix='x-rail-sessions-'))
-        self.records = [{'type': 'session', 'id': 'session-one', 'cwd': '/project', 'timestamp': '2026-10-01T00:00:00Z'}, {'type': 'model_change', 'provider': 'test', 'modelId': 'model-one', 'timestamp': '2026-10-01T00:00:00Z'}, {'type': 'thinking_level_change', 'thinkingLevel': 'high', 'timestamp': '2026-10-01T00:00:00Z'}]
+        self.records: list[dict[str, Any]] = [{'type': 'session', 'id': 'session-one', 'cwd': '/project', 'timestamp': '2026-10-01T00:00:00Z'}, {'type': 'model_change', 'provider': 'test', 'modelId': 'model-one', 'timestamp': '2026-10-01T00:00:00Z'}, {'type': 'thinking_level_change', 'thinkingLevel': 'high', 'timestamp': '2026-10-01T00:00:00Z'}]
 
     def message(self, mid, time, role, content, **kw):
         self.records.append({'type': 'message', 'id': mid, 'timestamp': time, 'message': {'role': role, 'content': content, **kw}})
@@ -155,7 +157,8 @@ class SessionTests(unittest.TestCase):
         self.message('task-path','2026-10-01T00:01:00Z','assistant',[{'type':'toolCall','id':'read','name':'read','arguments':{'path':'.work-docs/tasks/fixture/state.md'}}])
         self.run_analysis()
         before = {str(p):p.read_bytes() for p in task.rglob('*') if p.is_file()}
-        args = dict(start='2026-10-01T00:00:00Z',end='2026-10-02T00:00:00Z',task_roots=[tasks],task_mode='legacy-readonly')
+        args = {'start': '2026-10-01T00:00:00Z', 'end': '2026-10-02T00:00:00Z',
+                'task_roots': [tasks], 'task_mode': 'legacy-readonly'}
         result = analysis.analyze(self.root, **args)
         compliance = result['task_compliance']
         self.assertEqual(compliance['mode'],'legacy-readonly')
@@ -170,9 +173,30 @@ class SessionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'paired'):
             analysis.analyze(self.root, task_roots=[tasks])
 
+    def test_checker_fingerprint_includes_work_items_module(self):
+        import shutil
+        from unittest.mock import patch
+        copy = self.root / 'checker-copy'
+        scripts = copy / 'skills/x-rail/scripts'
+        shutil.copytree(ROOT / 'skills/x-rail/scripts', scripts)
+        analyzer = copy / 'skills/x-self-check/scripts/analyze_sessions.py'
+        with patch.object(analysis, '__file__', str(analyzer)):
+            first = analysis.task_compliance([], [], 'strict')['checker_sha256']
+            with (scripts / 'work_items.py').open('a') as stream:
+                stream.write('\n# fingerprint regression\n')
+            second = analysis.task_compliance([], [], 'strict')['checker_sha256']
+        self.assertNotEqual(first, second)
+
+    def test_missing_assistant_content_is_empty_blocks(self):
+        self.message('start', '2026-10-01T00:00:00Z', 'user', '/x-rail task')
+        self.message('empty', '2026-10-01T00:01:00Z', 'assistant', None)
+        result = self.run_analysis()
+        self.assertEqual(result['statistics']['tool_outer_calls'], 0)
+        self.assertEqual(len(result['episodes']), 1)
+
     def test_branch_relation_and_copy_identity(self):
         self.message('same','2026-10-01T00:00:00Z','user','/x-rail task')
-        first=self.run_analysis()
+        self.run_analysis()
         (self.root/'copy.jsonl').write_text((self.root/'one.jsonl').read_text())
         second=analysis.analyze(self.root,start='2026-10-01T00:00:00Z',end='2026-10-02T00:00:00Z')
         self.assertEqual(len(second['invocations']),1)

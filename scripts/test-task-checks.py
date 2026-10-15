@@ -584,6 +584,97 @@ class TaskTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'change|snapshot'):
             checks.check_contract(self.task, mode='locked')
 
+    def unlimited_contract(self, directory):
+        path = directory / 'contract.md'
+        contract = path.read_text().replace('## Acceptance',
+            'cost_control: unlimited\ncost_authorization: 当前用户：本任务不限制成本\n\n## Acceptance')
+        path.write_text(contract)
+        return contract
+
+    def test_unlimited_start_run_finish_without_default_deadline(self):
+        directory = self.fresh_task()
+        contract = self.unlimited_contract(directory).replace('level: L1', 'level: L3')
+        (directory / 'contract.md').write_text(contract)
+        p = self.run_cli('start', str(directory))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        fields = checks.check_state(directory)
+        self.assertEqual(fields['budget'], 'unlimited')
+        self.assertIn('started_at', fields)
+        self.assertNotIn('deadline_at', fields)
+        p = self.run_verification(directory, "printf 'actual result\\n'")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        p = self.run_cli('finish', str(directory))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(checks.check_state(directory)['status'], 'done')
+
+    def test_unlimited_contract_requires_authorization_and_valid_policy(self):
+        for value in ['unlimited', 'unknown']:
+            with self.subTest(value=value):
+                (self.task / 'contract.md').write_text(self.contract.replace('## Acceptance',
+                    f'cost_control: {value}\n\n## Acceptance'))
+                with self.assertRaisesRegex(ValueError, 'cost_'):
+                    checks.check_contract(self.task)
+        for source in ['', 'none']:
+            with self.subTest(source=source):
+                (self.task / 'contract.md').write_text(self.contract.replace('## Acceptance',
+                    f'cost_control: unlimited\ncost_authorization: {source}\n\n## Acceptance'))
+                with self.assertRaisesRegex(ValueError, 'cost_authorization'):
+                    checks.check_contract(self.task)
+
+    def test_unlimited_state_requires_authorized_contract(self):
+        self.assert_bad(self.state.replace('59/60', 'unlimited'), 'cost_authorization')
+
+    def test_unlimited_policy_ignores_existing_budget_and_total_deadline(self):
+        contract = self.unlimited_contract(self.task)
+        (self.task / 'audit/contract-r1.md').write_text(contract)
+        for budget in ['999/60', 'unlimited']:
+            for status in ['in_progress', 'done']:
+                with self.subTest(budget=budget, status=status):
+                    state = (self.state.replace('59/60', budget).replace('status: done', 'status: '+status)
+                             .replace(hashlib.sha256(self.contract.encode()).hexdigest(), hashlib.sha256(contract.encode()).hexdigest()))
+                    state += 'started_at: 2026-09-27T00:00:00Z\ndeadline_at: 2026-09-27T08:00:00Z\nupdated_at: 2026-09-28T15:00:00Z\n'
+                    (self.task / 'state.md').write_text(state)
+                    checks.check_state(self.task)
+
+    def test_existing_task_can_adopt_unlimited_with_revision_history(self):
+        directory = self.fresh_task()
+        self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+        original = (directory / 'audit/contract-r1.md').read_bytes()
+        contract = self.unlimited_contract(directory).replace('contract_revision: 1', 'contract_revision: 2')
+        contract += '\naudit/contract-change-r2.md\n'
+        (directory / 'contract.md').write_text(contract)
+        (directory / 'audit/contract-change-r2.md').write_text(
+            'old_revision: 1\nnew_revision: 2\nold_value: default\nnew_value: unlimited\n'
+            'reason: current user removed cost limit\napproved_by: current user\n'
+            'approval_source: current user message\naffected_evidence: none; verification not run\n')
+        p = self.run_cli('seal', str(directory))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        state = (directory / 'state.md').read_text()
+        state = state.replace('contract_revision: 1', 'contract_revision: 2')
+        state = state.replace(hashlib.sha256(original).hexdigest(), hashlib.sha256(contract.encode()).hexdigest())
+        state = state.replace('budget: untracked/60', 'budget: unlimited')
+        state += 'started_at: 2020-01-01T00:00:00Z\ndeadline_at: 2020-01-01T08:00:00Z\n'
+        (directory / 'state.md').write_text(state)
+        p = self.run_verification(directory, "printf 'actual result\\n'")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        p = self.run_cli('finish', str(directory))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(checks.check_state(directory)['contract_revision'], '2')
+        self.assertEqual((directory / 'audit/contract-r1.md').read_bytes(), original)
+
+    def test_unlimited_keeps_progress_and_acceptance_checks(self):
+        contract = self.unlimited_contract(self.task)
+        (self.task / 'audit/contract-r1.md').write_text(contract)
+        state = (self.state.replace('59/60', 'unlimited')
+                 .replace(hashlib.sha256(self.contract.encode()).hexdigest(), hashlib.sha256(contract.encode()).hexdigest()))
+        (self.task / 'state.md').write_text(state)
+        checks.check_state(self.task)
+        self.assert_bad(state.replace('calls_since_progress: 0', 'calls_since_progress: 20'), 'progress')
+        self.assert_bad(state.replace('A1 status=passed', 'A1 status=not_run'), 'acceptance')
+        self.assert_bad(state.replace('budget: unlimited', 'budget: invalid'), 'budget')
+        (self.root / 'input.txt').write_text('changed after verification')
+        self.assert_bad(state, 'input changed')
+
     def test_budget_boundaries_and_pause(self):
         checks.check_state(self.task)
         (self.task / 'state.md').write_text(self.state.replace('59/60', '60/60'))
@@ -767,6 +858,15 @@ class TaskTests(unittest.TestCase):
         s = self.state.replace('status: done', 'status: in_progress') + 'started_at: 2026-09-28T14:00:00Z\ndeadline_at: 2026-09-28T14:30:00Z\nupdated_at: 2026-09-28T15:00:00Z\n'
         self.assert_bad(s, 'deadline')
         self.assert_bad(self.state.replace('status: done', 'status: stopped'), 'reason')
+
+
+def load_tests(loader, tests, pattern):
+    spec = importlib.util.spec_from_file_location('work_item_tests', ROOT / 'scripts/test-work-items.py')
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    tests.addTests(loader.loadTestsFromModule(module))
+    return tests
 
 
 if __name__ == '__main__':

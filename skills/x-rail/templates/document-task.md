@@ -6,6 +6,8 @@
 
 替换全部双大括号变量：TASK_ID 为分配的任务目录名，OBJECTIVE 为用户目标，SOURCES 为本次固定材料路径和版本/提交（如纳入未提交差异则明确写出），DELIVERABLE 为 outputs 下文件名，NOW 为当前 UTC 时间（YYYY-MM-DDTHH:MM:SSZ）。CONTRACT_SHA256 在契约填写完毕后用 `shasum -a 256 <task-dir>/contract.md` 计算。
 
+当前用户明确不限成本时，按主入口在契约顶部加入 `cost_control: unlimited` 和 `cost_authorization: 当前用户原话及来源`，优先由 start 生成 `budget: unlimited`；手工状态也使用 unlimited。下方 6/20 次检查点和有限预算均不适用，按实际缺口推进，保留无进展与必需验收。
+
 默认低风险仅适用于只读本地材料、产物仅留在任务目录；涉及生产、对外发布、不可逆、费用或范围变化时按入口风险规则调整，不能照抄豁免。校验器通过只证明结构，不代表文档已完成。
 
 ### contract.md
@@ -76,6 +78,28 @@ budget: untracked/60
 strategy_fingerprints: no-modification + no-command + no-error
 updated_at: {{NOW}}
 ```
+
+## 工作清单与适用边界
+
+本模板默认整理既有材料，不是实施任务，不强制为它加工作项。复杂只读分析仍只在回复列清单；普通文档直接写授权位置。仅因条目多，不按五个、六个数量升级记录或长模式。
+
+若严格文档确需逐项交付，在契约首个二级标题前显式加入下例，并用 start 初始化；不要把 state 片段原样混入无 schema 的模板：
+
+```text
+work_items_schema: 1
+requirement:R1|outcome=读者可找到固定依据对应的完整检查步骤
+work_item:W1|title=整理与核对操作文档|requirements=R1|depends=none|scope=.work-docs/tasks/{{TASK_ID}}/outputs/{{DELIVERABLE}}|required=yes|acceptances=A1,A2|skip_reason=none
+```
+
+```text
+# 对应 state.md 初始片段
+work_item_state:W1|status=pending|owner=unassigned|evidence_refs=none|commit=none|blocked_by=none|unblock_condition=none|reason=尚未开始|next_action=读取固定主材料
+active_work_items: none
+```
+
+新严格实施必须使用该 schema；start 对 task_type=exec|bugfix 强制此字段，mixed/ops 等其他类型不由脚本猜测是否实施，但触发复杂度或范围条件的严格实施仍须显式采用，不能换类型绕过。实施不能照抄本模板“不代跑测试”的整理范围。旧记录 check/update 兼容，仅在实际需要清单时显式提升契约版本、封存并保留快照，不自动迁移或补造历史。名称或范围变化走契约变更；执行者与进度走 update --item，完整 --item-* 接口和七状态见 ../playbooks/verification.md。整体状态仍为 in_progress/done/blocked/stopped/cancelled；active_work_items 由 in_progress 项自动生成并校验一致；可选项 skipped 自动引用契约非空且非 none 的 skip_reason，保留本次 item-reason 动作说明。run/record 除原 required=yes 验收外，仅开放 schema=1 清单 work_item.acceptances 引用的 required=no 验收；未引用的可选验收仍拒绝，run 自动/record 非自动边界不变。不改变契约 required 语义，不自动升为整体必过；工作项 verified 仍须全部引用验收 passed 且证据有效，必需工作项不能 skipped，可选工作项合法 skipped 不制造 passed。工作项只引用原验收和证据，不复制 passed，不建立第二份进度。
+
+开始、交付初稿/实现完成、新验证、审查返回、阻塞/解除、重要阶段、提交、压缩和交接前核对相关项；普通读取不逐次记账。整体 next_action 只写第一动作，某项受阻不代表全部停工；完成候选明确交付动作，不留过期等待。原运行先查再恢复，委派另需当前授权；独立且无资源冲突的项在已授权后优先并行，串行记录具体原因。预算依据真实信号，未知不编造；必要审查集中返回、集中修复并定向复核，不能取消必过审查。
 
 ## 初始化与完成
 
