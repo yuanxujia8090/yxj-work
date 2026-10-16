@@ -226,8 +226,8 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
   <div class="cards">
     <div class="card">
       <div class="num">普通</div>
-      <div class="lbl">默认 · 不落盘</div>
-      <p>简短列目标与完成条件，先读、最小改动、实际验证，直接交付。不建任务目录。</p>
+      <div class="lbl">默认 · 不建任务记录</div>
+      <p>简短列目标与完成条件，先读、最小改动、实际验证，直接交付。后来需要跨会话恢复时，先保存事实再转严格记录。</p>
     </div>
     <div class="card">
       <div class="num">严格</div>
@@ -244,7 +244,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
 <!-- ============ 2 ============ -->
 <section id="s2">
   <h2 class="sec"><span class="n">02</span>全景分流图</h2>
-  <p class="lead">一次请求进来后，先按「交付结果」选阶段，再按「风险与恢复需求」选记录强度。两条岔路之后就再没有回头合并——普通路径永不落盘，严格路径永不跳过完成门。</p>
+  <p class="lead">一次请求进来后，先按「交付结果」选阶段，再按「风险与恢复需求」选记录强度。普通任务后来需要跨会话恢复时，先保存事实再转严格记录，不补造过去验证。纯只读分析仍在回复交付，不为记录而写文件；已有严格记录始终按原契约续接。</p>
 
   <figure>
     <svg viewBox="0 0 920 760" role="img" aria-labelledby="f1title">
@@ -304,7 +304,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
       <text class="sm t2" x="66" y="474">· 列目标 / 范围 / 完成条件</text>
       <text class="sm t2" x="66" y="498">· 先读 → 最小改动</text>
       <text class="sm t2" x="66" y="522">· 实际验证 → 直接交付</text>
-      <text class="sm t3" x="66" y="550">不建 .work-docs</text>
+      <text class="sm t3" x="66" y="550">默认不建任务记录；可按需转严格</text>
 
       <!-- 严格卡 -->
       <rect class="boxA" x="590" y="418" width="290" height="152" rx="11"></rect>
@@ -314,10 +314,15 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
       <text class="sm t2" x="606" y="522">· 实施取证 → run / record</text>
       <text class="sm t2" x="606" y="546">· 审查 → finish 完成门</text>
 
+      <!-- 普通任务出现恢复需求时转严格；只读分析例外见图注 -->
+      <path class="flowA dash" d="M330,486 L584,486" marker-end="url(#arA)"></path>
+      <text class="sm" x="460" y="451" text-anchor="middle">后来需跨会话恢复</text>
+      <text class="sm t2" x="460" y="473" text-anchor="middle">先保存事实，再转严格</text>
+
       <!-- 左终点 -->
       <path class="flowO" d="M190,570 L190,598" marker-end="url(#ar)"></path>
       <ellipse class="terminal" cx="190" cy="628" rx="122" ry="28"></ellipse>
-      <text class="md" x="190" y="633" text-anchor="middle">交付即结束（不落盘）</text>
+      <text class="md" x="190" y="633" text-anchor="middle">无需升级 → 直接交付</text>
 
       <!-- 右下继续 -->
       <path class="flowA" d="M735,570 L735,596" marker-end="url(#arA)"></path>
@@ -328,7 +333,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
       <ellipse class="terminal" cx="735" cy="704" rx="158" ry="28"></ellipse>
       <text class="sm" x="735" y="709" text-anchor="middle">完成门通过 → state: done → 更新索引</text>
     </svg>
-    <figcaption><b>图 1</b>　入口只有两个决策点。左半是「读过就改、改完就验」的轻路径；右半一旦进入就是契约驱动的重路径。</figcaption>
+    <figcaption><b>图 1</b>　入口有两个决策点，后续可因恢复需求由普通转严格；只读分析仍只在回复交付。转入时保存当前事实，不补造过去验证；已有严格任务不降级。</figcaption>
   </figure>
 </section>
 
@@ -482,18 +487,19 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
     <figcaption><b>图 2</b>　严格任务的运行时序。注意「契约先写、start 再封存」的顺序，以及实施循环里自动验收（run）与人工验收（capture + record）两条不同的取证路径。</figcaption>
   </figure>
 
-  <h3>五个验证层</h3>
-  <p>验收条目按 <em>谁执行</em> 分成五层，脚本只管其中两层——这是理解整个流程的关键边界。</p>
+  <h3>验证方式、环境与独立审查</h3>
+  <p>像前端测试中「怎样测」和「在哪测」分开填写：<code>verification_type</code> 表示验证方式，只有以下四种；<code>layer</code> 表示验证环境。所有方式都受证据检查约束，只有自动方式由脚本实际执行验证命令。</p>
   <table>
-    <thead><tr><th>层</th><th>谁执行</th><th>脚本管吗</th><th>怎么记录</th></tr></thead>
+    <thead><tr><th>验证方式</th><th>怎样验证</th><th>怎么记录</th></tr></thead>
     <tbody>
-      <tr><td class="id">automatic</td><td>脚本自己跑命令</td><td><span class="tag ok">管</span></td><td><code>run --acceptance --command</code></td></tr>
-      <tr><td class="id">manual</td><td>人</td><td><span class="tag warn">不管</span></td><td><code>record</code> + 报告文件</td></tr>
-      <tr><td class="id">review</td><td>独立审查者</td><td><span class="tag warn">不管</span></td><td><code>record --review</code></td></tr>
-      <tr><td class="id">consumer</td><td>下游消费者</td><td><span class="tag warn">不管</span></td><td><code>record</code></td></tr>
-      <tr><td class="id">external</td><td>外部系统</td><td><span class="tag warn">不管</span></td><td><code>record</code></td></tr>
+      <tr><td class="id">automatic（自动）</td><td>脚本执行命令，检查退出码和预期输出</td><td><code>run</code> 自动保存结果</td></tr>
+      <tr><td class="id">manual（人工）</td><td>人实际逐项核对</td><td>先 <code>capture</code>，观察后 <code>record</code>，绑定报告</td></tr>
+      <tr><td class="id">consumer（实际使用）</td><td>最终用户或下游系统实际消费产物</td><td>先 <code>capture</code>，实际消费后 <code>record</code></td></tr>
+      <tr><td class="id">external（外部验证）</td><td>依赖外部服务或权限取得结果</td><td>先 <code>capture</code>，取得结果后 <code>record</code></td></tr>
     </tbody>
   </table>
+  <p>环境字段 <code>layer</code> 另选 <code>syntax/config</code>（语法或配置）、<code>static</code>（静态检查）、<code>runtime/local</code>（本地运行）、<code>external</code>（外部环境）或 <code>consumer</code>（消费端）。例如自动调用外部服务可填 <code>automatic + external</code>。</p>
+  <p>独立审查 <code>review</code> 不是第五种验证方式，也不是环境值。先获得委派授权并 <code>capture</code> 相关输入，再由真实审查者审查，最后用 <code>record --review</code> 登记报告与来源；脚本检查记录，不能证明审查独立性或结论正确。</p>
   <div class="callout">
     <p><strong>脚本不证明语义。</strong>它能确认「你记录了、证据新鲜、输入没变」，不能确认「你的结论正确」。这条边界写在 <code>SKILL.md</code> 里，是整个设计能长期存活的前提。</p>
   </div>
@@ -594,8 +600,8 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
   <table>
     <thead><tr><th>层</th><th>取值</th><th>含义</th></tr></thead>
     <tbody>
-      <tr><td class="id">整体 status</td><td><code>draft · active · blocked · done · stopped</code></td><td>只有 <code>done</code> 能进完成门</td></tr>
-      <tr><td class="id">整体 stage</td><td>11 个（intake → … → closed 等）</td><td>表示当前处于生命周期哪一段</td></tr>
+      <tr><td class="id">整体 status（状态）</td><td><code>in_progress · done · blocked · stopped · cancelled</code></td><td>完成门通过后才提交为 <code>done</code></td></tr>
+      <tr><td class="id">整体 stage（阶段）</td><td><code>fast-answer · investigate · research · design · plan · exec · bugfix · review · ops · mixed · handoff</code></td><td>10 个路由阶段，加交接阶段 <code>handoff</code></td></tr>
       <tr><td class="id">工作项</td><td><code>pending · in_progress · awaiting_verification · needs_fix · blocked · verified · skipped</code></td><td>每个工作项独立流转</td></tr>
     </tbody>
   </table>
@@ -604,7 +610,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
 <!-- ============ 6 ============ -->
 <section id="s6">
   <h2 class="sec"><span class="n">06</span>完成门六检</h2>
-  <p class="lead">任务想从 active 变成 done，必须依次穿过六道检查。任何一道失败，状态原地保留，候选文件留在 tmp 目录——流程不会为了「跑通」放宽必需验收。</p>
+  <p class="lead">任务想从 in_progress（进行中）变成 done（完成），必须依次穿过六道检查。任何一道失败，状态原地保留，候选文件留在 tmp 目录——流程不会为了「跑通」放宽必需验收。</p>
 
   <figure>
     <svg viewBox="0 0 940 430" role="img" aria-labelledby="f4title">
@@ -694,18 +700,18 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
       <text class="sm t2" x="519" y="372" text-anchor="middle">任一门失败 → 保留正式状态与索引，不放宽必需验收</text>
       <text class="sm t2" x="519" y="392" text-anchor="middle">候选留在 tmp/；不允许删测试或改弱条件来换取通过</text>
     </svg>
-    <figcaption><b>图 4</b>　完成门是「合取」结构：六项必须全真。G6 不是检查而是提交机制——它用字节复核加原子替换，保证不会覆盖并发写入。</figcaption>
+    <figcaption><b>图 4</b>　完成门是「合取」结构：六项必须全真。G6 不是检查而是提交机制——它用字节复核加原子替换，能检测提交前已发生的变化；安全前提是单写入者，不提供同等权限并发写入保护。</figcaption>
   </figure>
 
   <div class="callout warn">
-    <p><strong>最容易踩的坑是 G2。</strong>校验用的是文件修改时间：只要输入文件在取证之后被任何工具碰过（格式化、git 检出、编辑器保存），证据立刻变 stale，必须重跑。这是刻意的保守设计，代价是大文件或多工具链场景会频繁触发。</p>
+    <p><strong>第二道检查同时核对内容和时间记录。</strong>输入按原始字节的 SHA-256（文件内容指纹）比对；内容变化会使原证据 stale（过期），仅文件修改时间变化且内容相同不会因此失效。另需核对取证、观察、登记时间及记录中的最后修改时间；报告内容也绑定指纹。外部环境或时效变化由执行者判断，仍适用的检查直接复用，只重跑受影响部分。</p>
   </div>
 </section>
 
 <!-- ============ 7 ============ -->
 <section id="s7">
   <h2 class="sec"><span class="n">07</span>关键卡点总表</h2>
-  <p class="lead">十六个硬卡点。每一行都是脚本会拒绝或阻断的位置——也就是流程真正的「关节」。<span class="tag stop">拒</span> 表示直接失败，<span class="tag warn">警</span> 表示记录但放行。</p>
+  <p class="lead">十六个关键卡点，分为脚本硬拒绝和规则层停止要求。<span class="tag stop">拒</span> 表示脚本直接失败，<span class="tag warn">规则</span> 表示执行者必须停止并记录，不能当作脚本自动计数。</p>
 
   <table>
     <thead><tr><th>#</th><th>卡点</th><th>触发条件</th><th>结果</th></tr></thead>
@@ -725,7 +731,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
       <tr class="gate"><td class="id">G13</td><td>状态转移门</td><td>工作项或整体状态的非法跳转</td><td><span class="tag stop">拒</span></td></tr>
       <tr class="gate"><td class="id">G14</td><td>暂停字段门</td><td>blocked / stopped 缺 blocked_by、解除条件、下一步</td><td><span class="tag stop">拒</span></td></tr>
       <tr class="gate"><td class="id">G15</td><td>完成门</td><td>六检任一失败（见第 06 节）</td><td><span class="tag stop">拒</span></td></tr>
-      <tr class="gate"><td class="id">G16</td><td>并发防覆盖门</td><td>提交前后 state / contract / 候选字节不一致</td><td><span class="tag stop">拒</span> 不覆盖</td></tr>
+      <tr class="gate"><td class="id">G16</td><td>提交前变化检测门</td><td>检查到 state / contract / 候选字节在提交前已经变化</td><td><span class="tag stop">拒</span> 保留当前文件；仍依赖单写入者</td></tr>
     </tbody>
   </table>
 
@@ -734,8 +740,8 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
   <table>
     <thead><tr><th>事项</th><th>实际强度</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td>预算上限（60 / 150 / 400）</td><td><span class="tag warn">警</span></td><td>离线提示，不阻断；只有记为 tracked 才参与校验</td></tr>
-      <tr><td>无进展提醒（20 / 60 次）</td><td><span class="tag warn">警</span></td><td>提醒收口，不是硬门</td></tr>
+      <tr><td>预算上限（默认 60 / 150 / 400）</td><td><span class="tag warn">条件</span></td><td>默认先记录为 <code>untracked/&lt;limit&gt;</code>；若记录为 <code>used/limit</code>，达到或超过上限且仍未暂停会被拒绝；<code>unlimited</code> 取消总上限</td></tr>
+      <tr><td>无进展计数（20 / 60 次）</td><td><span class="tag stop">拒</span></td><td>未达到阈值时提醒；达到阈值且仍为 <code>in_progress</code> 会被脚本拒绝</td></tr>
       <tr><td>文档收口（6 / 20 次动作）</td><td><span class="tag warn">警</span></td><td>判断「够不够写」的启发式，可被覆盖</td></tr>
       <tr><td>任务名含「正式」「v2」</td><td><span class="tag ok">不触发</span></td><td>明确写不因名字升级严格度</td></tr>
     </tbody>
@@ -750,12 +756,12 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
   <table>
     <thead><tr><th>机制</th><th>阈值</th><th>行为</th></tr></thead>
     <tbody>
-      <tr><td>无进展提醒</td><td>L1/L2 20 次 · L3/long 60 次</td><td><span class="tag warn">警</span> 提醒收口</td></tr>
-      <tr><td>无进展硬门</td><td>L3/long 持续 30 分钟</td><td><span class="tag stop">拒</span> in_progress 校验失败，必须转暂停</td></tr>
-      <tr><td>deadline</td><td>L3/long 8 小时</td><td><span class="tag stop">拒</span> 超时未暂停即失败</td></tr>
-      <tr><td>验证连败</td><td>连续 3 次必过验证失败</td><td><span class="tag stop">拒</span> 停止修改，记录策略指纹</td></tr>
-      <tr><td>重复命令错误</td><td>同一命令错误 2 次</td><td><span class="tag stop">拒</span> 停止继续试同一路径</td></tr>
-      <tr><td>预算</td><td>L1 60 · L2 150 · L3/long 400</td><td><span class="tag warn">警</span> 离线提示</td></tr>
+      <tr><td>无进展计数阈值</td><td>L1/L2 20 次 · L3/long 60 次</td><td><span class="tag stop">拒</span> 达到阈值且仍为 <code>in_progress</code> 时，脚本拒绝状态</td></tr>
+      <tr><td>无进展时间门</td><td>L3/long 持续 30 分钟</td><td><span class="tag stop">拒</span> in_progress 校验失败，必须转暂停</td></tr>
+      <tr><td>deadline</td><td>默认成本策略下 L3/long 8 小时；<code>unlimited</code> 取消总期限</td><td><span class="tag stop">拒</span> 超时未暂停即失败</td></tr>
+      <tr><td>验证连败</td><td>连续 3 次必过验证失败</td><td><span class="tag warn">规则</span> 执行者停止修改并记录策略指纹；脚本不自动计数</td></tr>
+      <tr><td>重复命令错误</td><td>同一命令错误 2 次</td><td><span class="tag warn">规则</span> 执行者停止继续试同一路径；脚本不自动计数</td></tr>
+      <tr><td>预算</td><td>默认 L1 60 · L2 150 · L3/long 400</td><td><span class="tag warn">条件</span> <code>used/limit</code> 达到或超过上限且仍未暂停会被拒绝；<code>unlimited</code> 取消总上限</td></tr>
     </tbody>
   </table>
 
@@ -765,7 +771,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
   2  → usage/runtime error        用法或运行时错误</pre>
 
   <div class="callout">
-    <p>注意 <code>3 连败</code> 与 <code>2 次同错</code> 是「停止并记录」，不是「回滚」。流程要求把失败策略写成指纹留档，避免换汤不换药地重试同一路径。</p>
+    <p>注意 <code>3 连败</code> 与 <code>2 次同错</code> 是规则层「停止并记录」，不是脚本自动计数，也不是「回滚」。流程要求把失败策略写成指纹留档，避免换汤不换药地重试同一路径。</p>
   </div>
 </section>
 
@@ -778,7 +784,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
   <ol>
     <li><strong>脚本只管机械，语义归人。</strong>脚本能校验格式、时间、指纹，不能判断结论对错。这条边界让规则不随业务漂移。</li>
     <li><strong>Fail-closed。</strong>漏字段就拒绝，不自动降级；历史格式必须显式 <code>--legacy-readonly</code> 才读。宁可拦住，不放过去。</li>
-    <li><strong>记录强度按需。</strong>普通任务零落盘——流程自己就把「太重」这件事收敛掉了，这是它能日常使用的前提。</li>
+    <li><strong>记录强度按需。</strong>普通任务默认不建流程记录，必要产物写授权位置；后来需要跨会话恢复时先保存事实再转严格。只读分析仍在回复交付。</li>
   </ol>
 
   <h3>复杂度来源：为什么会「相当庞大」</h3>
@@ -787,7 +793,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
     <tbody>
       <tr><td>整体状态 × 阶段</td><td>5 × 11</td><td>两层状态名近似，容易混用</td></tr>
       <tr><td>工作项状态</td><td>7</td><td>含退回边，不能只记主线</td></tr>
-      <tr><td>验证层</td><td>5</td><td>只有 automatic 走脚本，其余走人</td></tr>
+      <tr><td>验证方式 / 环境层 / 独立审查</td><td>4 / 5 / 单独登记</td><td>方式与环境分开选；仅 automatic 由脚本执行命令，各类记录都受校验</td></tr>
       <tr><td>审查策略</td><td>3</td><td>与风险等级强耦合（G3）</td></tr>
       <tr><td>敏感动作类别</td><td>4</td><td>决定是否必须用户确认（G2）</td></tr>
       <tr><td>硬卡点</td><td>16</td><td>分散在 5 个子命令里</td></tr>
@@ -800,7 +806,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
   <ol>
     <li><strong>规则多处表述，存在漂移窗口。</strong>同一条约束同时写在 XML、playbook 与文档里。近期任务已经在处理「模板文档与实现一致」，说明漂移是真实发生过的。</li>
     <li><strong>大量规则靠模型自觉，脚本管不到。</strong>「不重复调查」「达到 N 次就收口」这类只有文字约束。规则越多，长上下文里越容易漏——这也是 0.0.6 提出分段执行的原因。</li>
-    <li><strong>证据新鲜度门偏严格。</strong>用文件修改时间判定，任何触碰输入的工具都会让证据失效。保守是安全的，但在多工具链或大批文件下会频繁重跑。</li>
+    <li><strong>证据适用范围需要准确声明。</strong>脚本核对已声明输入的内容指纹和时间记录，不能判断输入集合是否完整，也不能自动察觉外部环境变化。漏绑相关文件或忽略环境时效，可能沿用不适用的结论；仅修改时间变化不要求重跑。</li>
     <li><strong>完成门有递归成本。</strong>done 要递归检查依赖任务状态，依赖链长时会变慢（脚本已用祖先集合防环）。</li>
     <li><strong>三方引用矩阵易配错。</strong>需求 ↔ 工作项 ↔ 验收三方互指，还有「未被引用的可选验收」这类边角——细节多，靠校验器兜底。</li>
     <li><strong>项目自身回归负担不轻。</strong>伴随多个测试脚本与 31 个真实任务记录，规则每改一次都要跑一遍行为夹具。</li>
@@ -811,7 +817,7 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
   <ul>
     <li><strong>列一份「单一事实源」清单。</strong>为每条约束指定唯一出处，其余位置只链接不复述。可先把 architecture.md 已有的边界说明延伸成表格。</li>
     <li><strong>给普通路径补示例。</strong>明确写两三个「判定为普通」的例子，避免模型在模糊场景下过度升级为严格。</li>
-    <li><strong>把高频卡点前置到提醒。</strong>如 G11 证据新鲜，可在 capture 时就警告「输入 mtime 晚于上次取证」，把失败从完成门提前到取证时。</li>
+    <li><strong>按实际缺口补证据。</strong>交接或收尾前用现有 <code>summary</code> 查看内容指纹与报告是否仍匹配，再核对外部环境和时效；仍适用的检查复用，过期部分重新采集输入并实际验证，不因文件修改时间变化要求重跑。</li>
   </ul>
   <h4>中期（配合 0.0.6 方向）</h4>
   <ul>
@@ -833,25 +839,68 @@ svg .terminal{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.4}
 <!-- ============ 10 ============ -->
 <section id="s10">
   <h2 class="sec"><span class="n">10</span>附录：命令速查</h2>
-  <p class="lead">严格任务的完整命令序列。左侧是命令，右侧是它会把守的卡点。</p>
+  <p class="lead">以下是按条件选用的严格任务示例，不是每项都必跑。先在仓库根目录执行，替换尖括号占位内容；契约、工作项、验收编号和证据名称须对应实际任务，每次取证使用新名称。</p>
 
-  <pre><b># 1. 写契约并校验（可在生命周期前反复跑）</b>
-python3 scripts/check-contract.sh &lt;task-dir&gt;          # 门1/2/3/4/5
+  <pre><b># 1. 已写好契约后，设置实际路径并开始</b>
+skill_dir="$PWD/skills/x-rail"
+workspace="$PWD"
+task_dir="&lt;任务目录绝对路径&gt;"
+bash "$skill_dir/scripts/check-contract.sh" "$task_dir"
+python3 "$skill_dir/scripts/task.py" start "$task_dir"
 
-<b># 2. 开启生命周期</b>
-python3 scripts/task.py start &lt;task-dir&gt;               # 门6/门7
+<b># 2. 有工作项 W1 时，开始执行；不是修改整体 --status</b>
+python3 "$skill_dir/scripts/task.py" update "$task_dir" --item W1 \
+  --item-status in_progress --item-owner parent \
+  --item-reason '开始执行' --item-next-action '读取相关文件' \
+  --next-action '读取相关文件'
 
-<b># 3. 实施循环</b>
-python3 scripts/task.py update --item &lt;id&gt; --status &lt;s&gt;  # 门13
-python3 scripts/task.py run --acceptance &lt;id&gt; --command "..."   # 门9/门10
-python3 scripts/task.py capture --acceptance &lt;id&gt; --input &lt;p&gt;  # 锁输入
-python3 scripts/task.py record  --acceptance &lt;id&gt; ...          # 门12
-python3 scripts/task.py record  --review ...                   # 门3
+<b># 3. A1 为自动验收时：命令必须实际核对预期结果</b>
+python3 "$skill_dir/scripts/task.py" run "$task_dir" \
+  --acceptance A1 --evidence auto-1 --workspace "$workspace" \
+  --input '&lt;相关输入文件&gt;' --expect '&lt;预期实际输出&gt;' \
+  --command '&lt;验证命令&gt;'
 
-<b># 4. 收尾</b>
-python3 scripts/task.py finish   &lt;task-dir&gt;            # 门15（完成门六检）
-python3 scripts/task.py complete &lt;task-dir&gt;            # 门16（原子替换）
-python3 scripts/task.py summary  &lt;task-dir&gt;</pre>
+<b># 4. A2 为人工、消费端或外部验收时：先采集，再实际观察</b>
+python3 "$skill_dir/scripts/task.py" capture "$task_dir" \
+  --evidence observation-1 --workspace "$workspace" --input '&lt;相关输入文件&gt;'
+# 观察后，先将真实结果保存到任务内 evidence/observation-1.md，再登记
+python3 "$skill_dir/scripts/task.py" record "$task_dir" \
+  --acceptance A2 --evidence manual-1 --report evidence/observation-1.md \
+  --inputs evidence/observation-1.inputs.json \
+  --observed-at '&lt;带时区的实际观察时间&gt;' --result passed \
+  --observation '&lt;实际核对动作与结果&gt;'
+
+<b># 5. 契约要求独立审查时：先获委派授权，采集后再交给审查者</b>
+python3 "$skill_dir/scripts/task.py" capture "$task_dir" \
+  --evidence review-inputs-1 --workspace "$workspace" --input '&lt;相关输入文件&gt;'
+# 取得真实审查报告并保存到 evidence/review-1.md 后登记
+python3 "$skill_dir/scripts/task.py" record "$task_dir" \
+  --review --evidence review-1 --report evidence/review-1.md \
+  --inputs evidence/review-inputs-1.inputs.json \
+  --observed-at '&lt;带时区的实际审查时间&gt;' --result passed \
+  --observation '&lt;实际审查内容与结果&gt;' \
+  --reviewer '&lt;真实审查者&gt;' --source '&lt;原运行或产物来源&gt;'
+
+<b># 6. W1 实现已有后先进入待验证，再按真实验收结果标记通过</b>
+python3 "$skill_dir/scripts/task.py" update "$task_dir" --item W1 \
+  --item-status awaiting_verification \
+  --item-reason '实现已有' --item-next-action '核对关联验收' \
+  --next-action '核对关联验收'
+# 下例假设 W1 关联 A1/A2 且两项均已通过，按实际关联证据调整
+python3 "$skill_dir/scripts/task.py" update "$task_dir" --item W1 \
+  --item-status verified --item-evidence-ref evidence/auto-1.txt \
+  --item-evidence-ref evidence/observation-1.md \
+  --item-reason '关联验收通过且证据有效' --item-next-action '收尾' \
+  --next-action '核对全部工作项与必需验收'
+
+<b># 7. 全部条件满足后收尾；finish 内部生成候选并调用完整完成检查</b>
+python3 "$skill_dir/scripts/task.py" finish "$task_dir"
+python3 "$skill_dir/scripts/task.py" summary "$task_dir"</pre>
+
+  <p>上面的 <code>passed</code> 仅适用于实际通过的结果；失败填 <code>failed</code>，被权限或依赖卡住填 <code>blocked</code>，未执行保持 <code>not_run</code>，不能生成通过记录。相关输入可重复传 <code>--input</code>；人工登记只保存事实，不运行验证。状态流转、报告与输入均由现有检查器核对。</p>
+  <p>只有需要自行准备候选状态文件时，才用下面的替代入口；候选须是任务目录内独立文件，状态为 <code>done</code>，有工作项时还须把整体 <code>next_action</code> 更新为交付或结束动作，并满足全部完成检查。它与 <code>finish</code> 二选一，不是在 <code>finish</code> 后再执行：</p>
+  <pre>python3 "$skill_dir/scripts/task.py" complete "$task_dir" \
+  --candidate '&lt;候选状态文件实际路径&gt;'</pre>
 
   <table>
     <thead><tr><th>入口</th><th>用途</th></tr></thead>
@@ -869,7 +918,7 @@ python3 scripts/task.py summary  &lt;task-dir&gt;</pre>
 </section>
 
 <footer>
-  x-rail workflow analysis · 只读分析产物 · 未修改任何现有文件<br>
+  x-rail workflow analysis · 流程分析与命令参考<br>
   本文件可随时删除或移动。权威流程以 skills/x-rail/ 与 docs/architecture.md 为准。
 </footer>
 
