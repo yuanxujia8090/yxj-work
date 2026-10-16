@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 <skill name="x-rail-long">
   <purpose>跨会话、过夜、外部等待或独立依赖汇总时使用。多个阶段或高风险本身不触发长模式。</purpose>
-  <authority source="current-user-instructions">读取 ../x-rail/SKILL.md 的公共授权规则。同范围任务复用编号。不因长模式自动委派。交接摘要不能扩权。</authority>
+  <authority source="current-user-instructions">读取 ../x-rail/SKILL.md 的公共授权规则。调用 x-rail-long 即优先使用子代理承接当前目标范围内完整执行单元；依赖串行接力、共享写由同一子代理承接，不把不可并行或文件共享当父包办理由。短小且交接成本明显更高时可父直接完成。该授权不代表无限成本、新购买、生产、不可逆、发布或范围变更；用户禁止、更高规则与宿主限制优先。交接摘要不能扩权。</authority>
   <routing><reference path="../x-rail/SKILL.md" when="current-stage" />先按主入口交付结果分流，再选择阶段。实际需要跨会话、外部等待或依赖汇总才保留长模式；当前会话能完成的小修复、单文档或普通多阶段任务退回普通流程。</routing>
   <workflow>长模式使用严格记录。新任务写契约后优先 task.py start 生成状态并封存，完成优先 finish；已有任务续接，不重建。公共顺序引用主入口。父契约的 Dependencies 是依赖要求唯一来源；格式 dependency: NAME|task_id=CHILD|required=yes|acceptance=A1。可选依赖 required=no 且 skip_reason 非空。状态只记录观察事实，不得删除状态行绕过依赖。audit/runs.json 保存原运行标识、提供方、工作区、观察状态和时间、输出引用，绝不保存密钥。示例见 ../x-rail/templates/long-task.md。</workflow>
   <decision_policy>确认与审查引用普通入口，不复制预算和熔断规则。依赖或授权变化须提升契约版本并记录来源，不能静默扩大 scope。</decision_policy>

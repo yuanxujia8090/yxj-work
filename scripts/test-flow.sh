@@ -25,11 +25,19 @@ for path in ['README.md', 'docs/architecture.md', 'docs/usage-guide.html']:
     doc=(root/path).read_text()
     assert '预计超过 8KB' in doc, path
     assert '相互独立、无共享写入、无前置依赖' in doc, path
+assert '调用 `/x-rail` 即授权当前目标范围内默认主动委派' in (root/'README.md').read_text()
+assert '进入长入口后优先使用子代理承接完整执行单元' in (root/'README.md').read_text()
+assert '调用 `/x-rail` 即授权当前目标范围内默认主动委派' in (root/'docs/architecture.md').read_text()
+assert '长入口优先使用子代理' in (root/'docs/usage-guide.html').read_text()
 assert '输入集合由执行者声明' in verification_text
 assert '文本包含关系不能证明完整行为' in verification_text
 assert authority.get('readonly-no-files')=='true'
+# 保留权限声明的显式授权门槛；当前用户调用 x-rail 的目标本身就是本次范围内的明确授权。
 assert authority.get('delegation')=='explicit-only'
 assert authority.get('sensitive-actions')=='irreversible,cost,external-publish,scope-change'
+assert '调用 x-rail 即授权当前目标范围内默认主动委派' in authority.text
+assert '不代表无限成本、新购买、生产、不可逆、发布或范围变更' in authority.text
+assert '用户禁止、更高规则与宿主限制优先' in authority.text
 cost_policy=core.find('workflow/cost_policy')
 assert cost_policy is not None
 for rule in ['解除成本限制','不限制成本','不要解除成本限制','解除阻塞','cost_control: unlimited','cost_authorization:','跨会话恢复','无进展','硬限制']:
@@ -66,7 +74,14 @@ for name, rules in rule_groups.items():
         assert rule in exec_procedure, (name, rule)
 assert '完整执行单元' in work_items_text and '接力' in work_items_text
 assert 'playbooks/exec.md' in work_items_text
-assert '使用子代理或任务内部存在先后关系，本身不触发长模式' in core_text
+assert 'x-rail-long 优先使用子代理' in (root/'plans/0.0.6/优化方案.md').read_text()
+assert '调用 x-rail 已授权当前目标范围内默认主动委派' in core_text
+assert '不可并行或文件共享不是父会话包办理由' in work_items_text
+assert '共享写入由同一子代理承接' in work_items_text
+assert '短小且已掌握材料、交接成本明显更高时直接完成' in work_items_text
+assert '设计并修复' in (root/'skills/x-rail/playbooks/mixed.md').read_text()
+assert '进入实施前必须读取 `playbooks/exec.md`' in (root/'skills/x-rail/playbooks/mixed.md').read_text()
+assert '先按研究' not in (root/'skills/x-rail/playbooks/mixed.md').read_text()
 for rule in ['../playbooks/exec.md', '完整执行单元', '可访问', '实际修改位置与版本', '偏差']:
     assert rule in child_text, ('child-task', rule)
 for path in ['README.md', 'docs/architecture.md', 'docs/usage-guide.html']:
@@ -74,6 +89,8 @@ for path in ['README.md', 'docs/architecture.md', 'docs/usage-guide.html']:
     assert '子代理总时限沿用宿主与代理配置' in doc, path
     assert 'timeoutMs/maxRuntimeMs' in doc, path
 # 对外说明与冲突处引用同一委派规则；关键词通过不等于真实接力已发生。
+assert '优先使用子代理' in (root/'skills/x-rail-long/SKILL.md').read_text()
+assert '不因长模式自动委派' not in (root/'skills/x-rail-long/SKILL.md').read_text()
 stale_parallel=('优先子代理并行实现', '优先交子代理并行实现', '优先由子代理并行实现', '优先并行')
 aligned=('README.md', 'docs/architecture.md', 'docs/usage-guide.html', 'skills/x-rail/playbooks/plan.md')
 for path in aligned:
@@ -84,15 +101,20 @@ for path in aligned:
 for path in ('skills/x-rail/playbooks/verification.md', 'skills/x-rail/templates/document-task.md'):
     doc=(root/path).read_text()
     assert 'exec.md' in doc, path
-    assert '不能从拆分推导委派权' in doc, path
-    assert not any(phrase in doc for phrase in stale_parallel), path
-# 4.6 不再把实现默认留给主会话；代码审查说明仍保留该句。
+    assert '不能从拆分推导委派权' not in doc, path
+assert '调用 `/x-rail` 或 `/x-rail-long`' in (root/'skills/x-rail/templates/child-task.md').read_text()
+assert '调用 `/x-rail` 时当前目标范围内默认主动委派' in (root/'skills/x-rail/templates/document-task.md').read_text()
+# 4.6 实现和独立审查均遵循当前目标范围默认委派；只保留短小、禁用、上级规则和宿主限制例外。
 guide=(root/'docs/usage-guide.html').read_text()
 boundary=guide.split('id="skillrule"',1)[1].split('id="light-document"',1)[0]
 assert '默认由主会话直接执行' not in boundary
 assert '逐项更新与执行交接' in boundary
 review=guide.split('x-requesting-code-review',1)[1].split('x-receiving-code-review',1)[0]
-assert '默认由主会话直接执行' in review
+assert '调用 <code>/x-rail</code> 或 <code>/x-rail-long</code> 已授权当前目标范围内默认主动委派' in review
+assert '默认由主会话直接执行' not in review
+review_doc=(root/'docs/review-delegation.md').read_text()
+assert '调用 `/x-rail` 或 `/x-rail-long` 已授权当前目标范围内默认主动委派' in review_doc
+assert '默认由主会话直接执行' not in review_doc
 for stage in result['routes']:
     if stage=='fast-answer':continue
     tree=m.parse_body((root/f'skills/x-rail/playbooks/{stage}.md').read_text(),stage)

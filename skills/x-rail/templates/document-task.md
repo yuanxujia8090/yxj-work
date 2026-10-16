@@ -99,7 +99,7 @@ active_work_items: none
 
 新严格实施必须使用该 schema；start 对 task_type=exec|bugfix 强制此字段，mixed/ops 等其他类型不由脚本猜测是否实施，但触发复杂度或范围条件的严格实施仍须显式采用，不能换类型绕过。实施不能照抄本模板“不代跑测试”的整理范围。旧记录 check/update 兼容，仅在实际需要清单时显式提升契约版本、封存并保留快照，不自动迁移或补造历史。名称或范围变化走契约变更；执行者与进度走 update --item，完整 --item-* 接口和七状态见 ../playbooks/verification.md。整体状态仍为 in_progress/done/blocked/stopped/cancelled；active_work_items 由 in_progress 项自动生成并校验一致；可选项 skipped 自动引用契约非空且非 none 的 skip_reason，保留本次 item-reason 动作说明。run/record 除原 required=yes 验收外，仅开放 schema=1 清单 work_item.acceptances 引用的 required=no 验收；未引用的可选验收仍拒绝，run 自动/record 非自动边界不变。不改变契约 required 语义，不自动升为整体必过；工作项 verified 仍须全部引用验收 passed 且证据有效，必需工作项不能 skipped，可选工作项合法 skipped 不制造 passed。工作项只引用原验收和证据，不复制 passed，不建立第二份进度。
 
-开始、交付初稿/实现完成、新验证、审查返回、阻塞/解除、重要阶段、提交、压缩和交接前核对相关项；普通读取不逐次记账。整体 next_action 只写第一动作，某项受阻不代表全部停工；完成候选明确交付动作，不留过期等待。原运行先查再恢复。委派、接力与直接完成以 ../playbooks/exec.md 为准；未授权不派发，不能从拆分推导委派权。预算依据真实信号，未知不编造；必要审查集中返回、集中修复并定向复核，不能取消必过审查。
+开始、交付初稿/实现完成、新验证、审查返回、阻塞/解除、重要阶段、提交、压缩和交接前核对相关项；普通读取不逐次记账。整体 next_action 只写第一动作，某项受阻不代表全部停工；完成候选明确交付动作，不留过期等待。原运行先查再恢复。委派、接力与直接完成以 ../playbooks/exec.md 为准；调用 `/x-rail` 时当前目标范围内默认主动委派，不能把拆分或文件共享当父会话包办理由。预算依据真实信号，未知不编造；必要审查集中返回、集中修复并定向复核，不能取消必过审查。
 
 ## 初始化与完成
 

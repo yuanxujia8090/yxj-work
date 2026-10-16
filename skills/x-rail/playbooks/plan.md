@@ -36,7 +36,7 @@
 5. 新严格实施在契约顶部写 `work_items_schema: 1`；start 对 task_type=exec|bugfix 强制此字段，mixed/ops 等其他类型不由脚本猜测是否实施，但触发复杂度或范围条件的严格实施仍须显式采用，不能换类型绕过；每个 requirement 有稳定标识和可观察 outcome，每个 work_item 有 title、requirements、depends、scope、required、acceptances、skip_reason；执行者及下一动作由 state 记录。每个需求至少被一项覆盖，每项至少关联一个验收；依赖无环，共享写入有唯一责任人。必需项 required=yes、skip_reason=none；可选项 required=no 并预写非空且非 none 的 skip_reason，skipped 自动引用该理由并保留本次 item-reason 动作说明。完整结构见 verification.md。工作项不是需求编号或验收结果，任务内计划只引用工作项，不维护第二份进度。旧记录 check/update 兼容，需要清单时显式升级契约并保留快照，不自动迁移或补造历史。
 6. Include the done gate, contract revision and circuit-breaker thresholds.
 7. Write the implementation plan to `.work-docs/tasks/&lt;task-id&gt;/outputs/` and state the first executable action. 普通小任务仍可用会话内清单；复杂/大范围实施沿用严格状态与证据，拆分本身不触发长模式或委派授权。
-8. 委派按执行说明的完整执行规则：已有委派及相应费用授权、宿主可用、目标与读写范围及验收明确时，默认交出完整执行单元；独立且资源隔离的项可并行，有依赖项在前置满足后接力；短小且已掌握材料、交接成本明显更高时直接完成。计划分配固定输入、允许路径、执行者、正式输出和环境所有权；共享约定与集成由主会话负责。未获授权则记录权限原因，不能从拆分推导委派权。</procedure>
+8. 委派按执行说明的完整执行规则：调用 x-rail 已获当前目标范围内委派授权；宿主可用、目标与读写范围及验收明确时，默认交出完整执行单元。独立且资源隔离的项可并行，有依赖项在前置满足后接力；不可并行或文件共享不是父会话包办理由，共享写入由同一子代理承接；短小且已掌握材料、交接成本明显更高时直接完成。计划分配固定输入、允许路径、执行者、正式输出和环境所有权；共享约定与集成由主会话负责。用户禁止、更高规则或宿主限制优先。</procedure>
   <quality_check>固定方案、提交或明确未提交差异；先覆盖清单与初稿；补读只回答具体缺口。默认不搭环境、代跑、追踪别的会话。写方案按需 technical-writing 与 unslop。</quality_check>
   <exit>普通任务交付实际结果、验证与限制，不创建状态文件。严格任务核对真实证据，用 task.py finish 或 complete 提交候选；阻塞保留状态，不放宽必需验收。</exit>
 </stage>
