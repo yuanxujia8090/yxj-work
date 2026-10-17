@@ -28,12 +28,8 @@ EXT="$PI/extensions"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP="$PI/v3-backup-$STAMP"
 
-declare -A LINK_OF=(
-  [x-rail]="$ROOT/skills/x-rail"
-  [x-handoff]="$ROOT/skills/x-handoff"
-  [x-worktree]="$ROOT/skills/x-worktree"
-  [x-self-check]="$ROOT/skills/x-self-check"
-)
+# macOS 自带 bash 3.2 不支持关联数组，用函数代替
+link_of() { printf '%s' "$ROOT/skills/$1"; }
 
 EXT_FILES=(
   constants.ts classify.ts breaker.ts switch.ts compat.ts failback.ts subagent.ts
@@ -61,7 +57,7 @@ same_link() {
 if [[ "$DRY" -eq 1 ]]; then
   note "dry-run HOME=$TARGET_HOME"
   for name in x-rail x-handoff x-worktree x-self-check; do
-    note "软链 $SKILLS/$name -> ${LINK_OF[$name]}"
+    note "软链 $SKILLS/$name -> $(link_of "$name")"
   done
   for file in "${EXT_FILES[@]}"; do
     note "复制 $EXT/$file"
@@ -73,7 +69,7 @@ fi
 mkdir -p "$SKILLS" "$EXT"
 for name in x-rail x-handoff x-worktree x-self-check; do
   dest="$SKILLS/$name"
-  expect="${LINK_OF[$name]}"
+  expect="$(link_of "$name")"
   if same_link "$dest" "$expect"; then
     note "已是目标软链 $dest"
     continue
