@@ -1,0 +1,9 @@
+[
+  {"id": "R1", "source": "01a145cd", "inject": "Request timed out.", "expectClass": "E3", "pass": "无人值守完成；没有单元超过时间盒"},
+  {"id": "R2", "source": "01a14555", "inject": "Request timed out.", "expectClass": "E3", "pass": "自动 failover 后完成；执行期不再提问"},
+  {"id": "R3", "source": "01a123b6", "inject": "The service is busy", "expectClass": "E2", "pass": "0 次人工输入"},
+  {"id": "R4", "source": "01a14555", "inject": "", "expectClass": "none", "pass": "压缩 6 次后仍从胶囊继续，摘要不超过 2KB"},
+  {"id": "R5", "source": "worker-timeout", "inject": "", "expectClass": "none", "pass": "cap 后拆小重派，不 resume"},
+  {"id": "R6", "source": "crash", "inject": "", "expectClass": "none", "pass": "resume 后从 doing 单元继续"},
+  {"id": "R7", "source": "01a145cd", "inject": "gateway_concurrency_limit", "expectClass": "E1", "pass": "重叠文件串行，熔断后并发减半"}
+]
