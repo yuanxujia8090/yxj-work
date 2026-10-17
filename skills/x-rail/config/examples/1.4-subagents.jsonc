@@ -1,0 +1,25 @@
+// 合并进 ~/.pi/agent/settings.json 的 subagents。
+// timeoutMs：worker 45 分钟，reviewer 25 分钟，researcher / scout 15 分钟。
+// 单个代理的 toolBudget 在 0.76.1 上是否合法尚未核实，这里不写。
+{
+  "subagents": {
+    "agentOverrides": {
+      "worker": {
+        "fallbackModels": ["bai/deepseek-v4.1-flash"],
+        "timeoutMs": 2700000
+      },
+      "reviewer": {
+        "fallbackModels": ["bai/deepseek-v4.1-flash"],
+        "timeoutMs": 1500000
+      },
+      "researcher": {
+        "fallbackModels": ["bai/deepseek-v4.1-flash"],
+        "timeoutMs": 900000
+      },
+      "scout": {
+        "fallbackModels": ["bai/deepseek-v4.1-flash"],
+        "timeoutMs": 900000
+      }
+    }
+  }
+}
