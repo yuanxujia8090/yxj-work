@@ -167,15 +167,36 @@ TDD（Test-Driven Development，测试驱动开发）像先写表单行为检查
 
 恢复续用原任务编号，阶段、提交、会话或工作项变化不新建任务。读取索引、contract、state、最近 checkpoint、handoff、audit/runs.json、相关 evidence；核对工作区、版本、未提交差异和输入。原外部运行先查再恢复，不可查时 unknown 或 blocked，不重复启动。[long-task.md](skills/x-rail/templates/long-task.md)给依赖和运行引用格式。
 
+## 本地执行前沿与持久接收
+
+按交付性质选择普通执行、单目标持续推进、复杂定制流程或长期协调。组织方式按真实需要伸缩，不按文件或模块数量分档。证据模式复用 contract/work_items、state 七状态和当前输入摘要；阶段3普通 Markdown 清单检查继续可用，但不能替代证据模式完成门。
+
+```bash
+python3 skills/x-rail/scripts/task.py frontier <task-dir>
+python3 skills/x-rail/scripts/task.py inbox <task-dir>
+python3 scripts/demo-coordination.py
+```
+
+`frontier` 只读输出 JSON 就绪集合、运行/待验证/过期/终态及依赖和资源冲突原因，检查传递依赖、必要审查与当前证据；目录、父子路径和不确定 glob 保守串行。它不启动代理、不修改状态、不代替 finish。`dispatch/notify/inbox/consume` 保存原运行、派发输入版本、通知和消费事实，工作项状态仍只在 state.md。重复通知幂等，旧运行/输入变动结果拒收，消费 accepted 不等于 verified。
+
+循环为前沿 → 宿主派发 → 通知入队 → 安全节点核对消费 → 原证据命令与 update → 重算补位。脚本不发模型请求、不后台等待；遵 Pi 原生协议。系统性基础设施失败先停派、暂停整体，保存准确错误、原运行、产物与恢复第一步；单项失败不阻塞独立兄弟项。冷启动先 inbox 和原运行查询，不重复启动。
+
+完整命令与分类恢复见 [协调说明](skills/x-rail/modules/orchestration.md)，交接见 [协调模板](skills/x-rail/templates/coordinator-handoff.md)。演练仅模拟宿主事件，保留每条公开 CLI 回执；不证明真实多模型服从、跨日稳定性、费用或提速。
+
 ## 自检与验证
 
 ```bash
 python3 skills/x-self-check/scripts/analyze_sessions.py --sessions-root <日志目录> --days 7 --timezone Asia/Shanghai --format json
 python3 scripts/test-task-checks.py
+python3 scripts/test-work-items.py
+python3 scripts/test-task-checklist.py
+python3 scripts/test-frontier.py
+python3 scripts/test-coordination.py
+python3 scripts/test-repo-boundary.py
 python3 scripts/test-skill-xml.py
 python3 scripts/test-self-check.py
 python3 scripts/test-html-check.py
-bash scripts/test-worktree.sh
+bash scripts/test-worktree.sh --keep-artifacts
 bash scripts/test-contract.sh --keep-artifacts
 bash scripts/test-fixtures.sh
 bash scripts/test-v2-lifecycle.sh

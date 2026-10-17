@@ -23,6 +23,99 @@ def fail(message: str) -> NoReturn:
     raise ValueError(message)
 
 
+class ChecklistError(ValueError):
+    """A Markdown checklist error with the documented CLI exit code."""
+
+    def __init__(self, message: str, code: int):
+        super().__init__(message)
+        self.code = code
+
+
+def _checklist_section(lines: list[str], title: str) -> list[str]:
+    marker = f"## {title}"
+    try:
+        start = lines.index(marker) + 1
+    except ValueError:
+        return []
+    end = next((i for i in range(start, len(lines)) if lines[i].startswith("## ")), len(lines))
+    return lines[start:end]
+
+
+def _checklist_value(section: list[str], label: str) -> str:
+    prefix = f"- {label}:"
+    for line in section:
+        if line.startswith(prefix):
+            value = line[len(prefix):].strip()
+            if value:
+                return value
+    raise ChecklistError(f"missing or empty field: {label}", 1)
+
+
+def check_checklist(path: Path) -> dict:
+    """Check the lightweight Markdown task format without changing it."""
+    path = Path(path).absolute()
+    if any(part.is_symlink() for part in [path, *path.parents]) or not path.is_file():
+        raise ChecklistError("task file not found or path contains a symlink", 1)
+    path = path.resolve()
+    lines = path.read_text(encoding="utf-8").splitlines()
+    required_sections = ["Meta", "Intent", "Checklist", "Evidence", "Decisions", "Next"]
+    for title in required_sections:
+        if f"## {title}" not in lines:
+            raise ChecklistError(f"missing section: {title}", 1)
+    meta = _checklist_section(lines, "Meta")
+    for label in ["Created", "Status", "Type"]:
+        _checklist_value(meta, label)
+    intent = _checklist_section(lines, "Intent")
+    for label in ["Goal", "Scope", "Done when"]:
+        _checklist_value(intent, label)
+    checklist = _checklist_section(lines, "Checklist")
+    items = []
+    for line in checklist:
+        match = re.match(r"^- \[([ xX])\] (.+)$", line)
+        if match:
+            text = match.group(2).strip()
+            if not text:
+                raise ChecklistError("checklist item is empty", 1)
+            items.append((match.group(1).lower() == "x", text))
+    if not items:
+        raise ChecklistError("Checklist has no items", 1)
+    evidence = {}
+    current = None
+    for line in _checklist_section(lines, "Evidence"):
+        if line.startswith("### "):
+            current = line[4:].split(":", 1)[0].strip()
+            if not re.fullmatch(r"E[1-9]\d*", current) or current in evidence:
+                raise ChecklistError(f"invalid or duplicate evidence id: {current}", 1)
+            evidence[current] = {}
+        elif current and line.startswith("- ") and ":" in line:
+            key, value = line[2:].split(":", 1)
+            evidence[current][key.strip()] = value.strip()
+    completed_items = [text for completed, text in items if completed]
+    if completed_items and not evidence:
+        raise ChecklistError("completed checklist items require Evidence entries", 2)
+    for completed, text in items:
+        if not completed:
+            continue
+        match = re.search(r"evidence:\s*(E[1-9]\d*)", text, re.IGNORECASE)
+        if not match:
+            raise ChecklistError(f"completed checklist item lacks evidence: {text}", 2)
+        evidence_id = match.group(1)
+        entry = evidence.get(evidence_id)
+        if entry is None:
+            raise ChecklistError(f"evidence not found: {evidence_id}", 2)
+        for key in ["Command", "Exit", "Result", "Path", "Timestamp"]:
+            if not entry.get(key):
+                raise ChecklistError(f"{evidence_id} missing field: {key}", 2)
+        evidence_path = entry["Path"]
+        try:
+            artifact = _safe_task_path(path.parent, evidence_path)
+        except ValueError as error:
+            raise ChecklistError(str(error), 3) from error
+        if not artifact.is_file() or not artifact.read_bytes().strip():
+            raise ChecklistError(f"evidence path not found or empty: {evidence_path}", 3)
+    return {"status": "passed", "counts": {"total": len(items), "completed": sum(done for done, _ in items), "pending": sum(not done for done, _ in items)}}
+
+
 def parse_evidence_time(value: str) -> datetime:
     if not isinstance(value, str) or not ISO_TIME.fullmatch(value):
         raise ValueError(f"invalid timestamp: {value!r}; expected YYYY-MM-DDTHH:MM:SSZ or offset")
@@ -287,8 +380,8 @@ def _safe_task_path(task_dir: Path, relative: str) -> Path:
         resolved.relative_to(task_dir)
     except ValueError:
         fail(f"evidence path escapes task directory: {relative}")
-    if resolved.is_symlink() or (task_dir / candidate).is_symlink():
-        fail(f"evidence path must not be a symlink: {relative}")
+    if any((task_dir / part).is_symlink() for part in [candidate, *candidate.parents]):
+        fail(f"evidence path must not contain a symlink: {relative}")
     return resolved
 
 
@@ -626,6 +719,9 @@ def check_state(task_dir: Path, state_path: Path | None = None, strict: bool = T
         if len(evidence_ids) != len(set(evidence_ids)):
             fail('duplicate evidence id')
         if fields["status"] == "done":
+            from importlib import import_module
+            # Coordination reads this checker; load only at the completion boundary.
+            import_module('coordination').check_closed(task_dir)
             if not set(required_ids).issubset(seen_acceptances):
                 fail("done state does not list every required acceptance")
             check_review(task_dir, state_path, contract_data, validate_inputs)

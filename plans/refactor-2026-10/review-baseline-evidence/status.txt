@@ -1,0 +1,28 @@
+ M DECISIONS.md
+ M README.md
+ M docs/architecture.md
+ M docs/pstack-design-reference.md
+ M scripts/check-repo.sh
+ M scripts/check-workflow.sh
+ M scripts/test-flow.sh
+ M scripts/test-worktree.sh
+ M skills/x-rail-long/SKILL.md
+ M skills/x-rail/SKILL.md
+ M skills/x-rail/playbooks/bugfix.md
+ M skills/x-rail/playbooks/exec.md
+ M skills/x-rail/playbooks/verification.md
+ M skills/x-rail/scripts/task.py
+ M skills/x-rail/scripts/task_checks.py
+ M skills/x-rail/scripts/work_items.py
+?? plans/refactor-2026-10/
+?? scripts/demo-coordination.py
+?? scripts/test-coordination.py
+?? scripts/test-frontier.py
+?? scripts/test-repo-boundary.py
+?? scripts/test-task-checklist.py
+?? skills/x-rail/SKILL.md.bak
+?? skills/x-rail/modules/
+?? skills/x-rail/scripts/coordination.py
+?? skills/x-rail/scripts/frontier.py
+?? skills/x-rail/templates/coordinator-handoff.md
+?? skills/x-rail/templates/task-checklist.md

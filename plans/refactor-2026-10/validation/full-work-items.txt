@@ -1,0 +1,22 @@
+test_candidate_active_empty_action_and_item_update_races_preserve (__main__.WorkItemTests.test_candidate_active_empty_action_and_item_update_races_preserve) ... ok
+test_complete_and_concurrent_changes_preserve_formal_state (__main__.WorkItemTests.test_complete_and_concurrent_changes_preserve_formal_state) ... ok
+test_complete_rejects_unchanged_next_action_and_contract_mutation (__main__.WorkItemTests.test_complete_rejects_unchanged_next_action_and_contract_mutation) ... ok
+test_completion_staleness_summary_readonly_and_demotion (__main__.WorkItemTests.test_completion_staleness_summary_readonly_and_demotion) ... ok
+test_dependency_blocking_and_parallel_active (__main__.WorkItemTests.test_dependency_blocking_and_parallel_active) ... ok
+test_new_implementation_requires_schema_before_sealing_but_old_tasks_remain (__main__.WorkItemTests.test_new_implementation_requires_schema_before_sealing_but_old_tasks_remain) ... ok
+test_optional_acceptance_is_tracked_only_when_referenced (__main__.WorkItemTests.test_optional_acceptance_is_tracked_only_when_referenced) ... ok
+test_optional_skip_and_finish_complete (__main__.WorkItemTests.test_optional_skip_and_finish_complete) ... ok
+test_optional_skip_keeps_event_reason_and_does_not_pass_acceptance (__main__.WorkItemTests.test_optional_skip_keeps_event_reason_and_does_not_pass_acceptance) ... ok
+test_predecessor_repair_preserves_successor_and_blocks_verification (__main__.WorkItemTests.test_predecessor_repair_preserves_successor_and_blocks_verification) ... ok
+test_review_required_before_verified_and_report_mutation (__main__.WorkItemTests.test_review_required_before_verified_and_report_mutation) ... ok
+test_skipped_optional_acceptance_does_not_block_finish_when_stale (__main__.WorkItemTests.test_skipped_optional_acceptance_does_not_block_finish_when_stale) ... ok
+test_start_initializes_and_repeated_start_preserves (__main__.WorkItemTests.test_start_initializes_and_repeated_start_preserves) ... ok
+test_state_mapping_and_active_counterexamples (__main__.WorkItemTests.test_state_mapping_and_active_counterexamples) ... ok
+test_static_counterexamples_and_valid_mapping (__main__.WorkItemTests.test_static_counterexamples_and_valid_mapping) ... ok
+test_update_requires_identity_reason_action_and_preserves_omitted (__main__.WorkItemTests.test_update_requires_identity_reason_action_and_preserves_omitted) ... ok
+test_verified_needs_current_acceptance_and_legal_transition (__main__.WorkItemTests.test_verified_needs_current_acceptance_and_legal_transition) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 4.277s
+
+OK

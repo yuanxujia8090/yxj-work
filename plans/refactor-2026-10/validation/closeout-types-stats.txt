@@ -1,0 +1,23 @@
+Loading configuration file at /private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-closeout-pyright-1pmneu76/pyrightconfig.json
+Auto-excluding **/node_modules
+Auto-excluding **/__pycache__
+Auto-excluding **/.*
+Auto-excluding **/__editable__.*
+Found 11 source files
+pyright 1.1.414
+0 errors, 0 warnings, 0 informations
+Completed in 0.715sec
+
+Analysis stats
+Total files parsed and bound: 85
+Total files checked: 11
+
+Timing stats
+Find Source Files:    0sec
+Read Source Files:    0sec
+Tokenize:             0.04sec
+Parse:                0.05sec
+Resolve Imports:      0.02sec
+Bind:                 0.06sec
+Check:                0.47sec
+Detect Cycles:        0sec

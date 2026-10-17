@@ -216,3 +216,7 @@ required: yes
 ## `layer` 与 `verification_type` 的区别
 
 `layer` 是环境位置，`verification_type` 是验证方式。例如：自动调用外部服务是 `automatic + external`；人工在本地走恢复流程是 `manual + runtime/local`；下游使用生成的操作手册是 `consumer + consumer`。两者必须按实际证据填写，不能因为检查脚本是自动运行就把所有结论标为 `automatic`。
+
+## 按需本地协调
+
+持续目标、复杂定制与长期协调见 ../modules/orchestration.md。frontier 复用原候选与当前证据；dispatch/notify/inbox/consume 保存原运行与接收事实，不启动模型、不更新工作项、不替代 run/record/update/finish。冷启动先接收原产物，再重算与补位。

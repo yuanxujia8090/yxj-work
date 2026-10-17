@@ -15,6 +15,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import coordination
+import frontier
 import task_checks
 
 work_items = task_checks.work_items
@@ -293,7 +295,10 @@ def record(task_dir: Path, args) -> None:
         raise ValueError('report must be a non-empty observation artifact, not task state or contract')
     inputs = task_checks._safe_task_path(task_dir, args.inputs)
     task_checks._check_inputs(task_dir, args.inputs, fields['contract_revision'])
-    manifest = json.loads(inputs.read_text(), object_pairs_hook=task_checks.unique_json_object)
+    try:
+        manifest = json.loads(inputs.read_text(), object_pairs_hook=task_checks.unique_json_object)
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f'invalid input summary: {args.inputs}') from error
     captured = task_checks.parse_evidence_time(manifest.get('captured_at', ''))
     observed = task_checks.parse_evidence_time(args.observed_at)
     timestamp = now()
@@ -472,7 +477,7 @@ def run_verification(task_dir: Path, args) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ["seal", "check", "summary"]:
+    for name in ["seal", "check", "summary", "frontier", "inbox"]:
         p = sub.add_parser(name)
         p.add_argument("task_dir")
     p = sub.add_parser("complete")
@@ -520,16 +525,45 @@ def main() -> int:
     p.add_argument('--result', required=True, choices=['passed', 'failed', 'blocked'])
     p.add_argument('--reviewer')
     p.add_argument('--source')
+    p = sub.add_parser('dispatch', help='persist original host run and captured inputs; never spawn')
+    p.add_argument('task_dir')
+    p.add_argument('--inputs', required=True, help='capture of stable prerequisites, excluding expected output edits; none for contract-only prerequisites')
+    for key in ['run', 'item', 'provider', 'recovery']:
+        p.add_argument('--'+key, required=True)
+    p = sub.add_parser('notify', help='idempotently queue a host result without changing work-item state')
+    p.add_argument('task_dir')
+    for key in ['event', 'run', 'observed-at']:
+        p.add_argument('--'+key, required=True)
+    p.add_argument('--outcome', required=True, choices=sorted(coordination.OUTCOMES))
+    p.add_argument('--report', default='none')
+    p.add_argument('--error', default='')
+    p.add_argument('--systemic', action='store_true')
+    p = sub.add_parser('consume', help='check queued result against original run and current inputs; never verify')
+    p.add_argument('task_dir')
+    p.add_argument('--event', required=True)
     args = parser.parse_args()
     try:
-        task_dir = Path(args.task_dir).resolve()
+        task_path = Path(args.task_dir)
+        task_dir = task_path.resolve()
         if args.command == "seal":
             task_checks.check_contract(task_dir, mode="seal")
         elif args.command == "check":
-            task_checks.check_contract(task_dir, mode="locked")
-            task_checks.check_state(task_dir)
+            if task_dir.is_file():
+                result = task_checks.check_checklist(task_path)
+                print("Structure: OK")
+                print("Logic: OK")
+                print(f"Evidence: {result['counts']['completed']} completed item(s) checked")
+                print("Result: PASSED")
+            else:
+                task_checks.check_contract(task_dir, mode="locked")
+                task_checks.check_state(task_dir)
         elif args.command == 'summary':
             summary(task_dir)
+        elif args.command == 'frontier':
+            print(json.dumps(frontier.compute(task_dir), ensure_ascii=False, sort_keys=True))
+        elif args.command in {'dispatch', 'notify', 'consume', 'inbox'}:
+            result = coordination.inbox(task_dir) if args.command == 'inbox' else getattr(coordination, args.command)(task_dir, args)
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         elif args.command == 'update':
             update(task_dir, args)
         elif args.command == 'capture':
@@ -545,9 +579,12 @@ def main() -> int:
         else:
             candidate = Path(args.candidate)
             complete(task_dir, candidate)
-        if args.command != 'summary':
+        if args.command not in {'summary', 'frontier', 'dispatch', 'notify', 'consume', 'inbox'}:
             print(f"task: {args.command} passed")
         return 0
+    except task_checks.ChecklistError as error:
+        print(f"task: {error}", file=sys.stderr)
+        return error.code
     except (OSError, ValueError) as error:
         print(f"task: {error}", file=sys.stderr)
         return 1

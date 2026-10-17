@@ -1,0 +1,1 @@
+PASS: synthetic host rehearsal, 36 CLI calls; artifacts=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-task-0qymymov/.work-docs/tasks/new-task

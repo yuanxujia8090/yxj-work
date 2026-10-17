@@ -63,7 +63,7 @@ while IFS= read -r skill; do
 done < <(runtime_skills)
 
 # The contract checker is part of the installed x-rail runtime.
-for file in x-rail/scripts/check-contract.sh x-rail/scripts/task.py x-rail/scripts/task_checks.py x-self-check/scripts/analyze_sessions.py; do
+for file in x-rail/scripts/check-contract.sh x-rail/scripts/task.py x-rail/scripts/task_checks.py x-rail/scripts/frontier.py x-rail/scripts/coordination.py x-rail/modules/orchestration.md x-rail/templates/coordinator-handoff.md x-self-check/scripts/analyze_sessions.py; do
   [[ -f "$INSTALLED/$file" ]] || fail "missing installed runtime file: $file"
 done
 

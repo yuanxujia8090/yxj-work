@@ -1,0 +1,95 @@
+..KEEP symlink-task-file: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-5k7b1mxs, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-lqbgqb69
+FKEEP symlink-task-parent: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-1ne5a6zz, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-fwts8pzs
+FKEEP symlink-evidence-file: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-5mr4f5n9, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-gtxruzre
+FKEEP symlink-evidence-parent: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-n6tqzu2l, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-1yczs9zt
+FKEEP symlink-internal-evidence-file: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-th18zq9m, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-584fkeyg
+FKEEP symlink-internal-evidence-parent: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-kmrdluzi, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-5pja6l0a
+F....
+======================================================================
+FAIL: test_cli_rejects_task_and_evidence_symlink_boundaries (__main__.ChecklistTests.test_cli_rejects_task_and_evidence_symlink_boundaries) (case='task-file')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checklist.py", line 153, in test_cli_rejects_task_and_evidence_symlink_boundaries
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 1 : Structure: OK
+Logic: OK
+Evidence: 2 completed item(s) checked
+Result: PASSED
+task: check passed
+
+
+======================================================================
+FAIL: test_cli_rejects_task_and_evidence_symlink_boundaries (__main__.ChecklistTests.test_cli_rejects_task_and_evidence_symlink_boundaries) (case='task-parent')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checklist.py", line 153, in test_cli_rejects_task_and_evidence_symlink_boundaries
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 1 : Structure: OK
+Logic: OK
+Evidence: 2 completed item(s) checked
+Result: PASSED
+task: check passed
+
+
+======================================================================
+FAIL: test_cli_rejects_task_and_evidence_symlink_boundaries (__main__.ChecklistTests.test_cli_rejects_task_and_evidence_symlink_boundaries) (case='evidence-file')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checklist.py", line 153, in test_cli_rejects_task_and_evidence_symlink_boundaries
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 3 : Structure: OK
+Logic: OK
+Evidence: 2 completed item(s) checked
+Result: PASSED
+task: check passed
+
+
+======================================================================
+FAIL: test_cli_rejects_task_and_evidence_symlink_boundaries (__main__.ChecklistTests.test_cli_rejects_task_and_evidence_symlink_boundaries) (case='evidence-parent')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checklist.py", line 153, in test_cli_rejects_task_and_evidence_symlink_boundaries
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 3 : Structure: OK
+Logic: OK
+Evidence: 2 completed item(s) checked
+Result: PASSED
+task: check passed
+
+
+======================================================================
+FAIL: test_cli_rejects_task_and_evidence_symlink_boundaries (__main__.ChecklistTests.test_cli_rejects_task_and_evidence_symlink_boundaries) (case='internal-evidence-file')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checklist.py", line 153, in test_cli_rejects_task_and_evidence_symlink_boundaries
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 3 : Structure: OK
+Logic: OK
+Evidence: 2 completed item(s) checked
+Result: PASSED
+task: check passed
+
+
+======================================================================
+FAIL: test_cli_rejects_task_and_evidence_symlink_boundaries (__main__.ChecklistTests.test_cli_rejects_task_and_evidence_symlink_boundaries) (case='internal-evidence-parent')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checklist.py", line 153, in test_cli_rejects_task_and_evidence_symlink_boundaries
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 3 : Structure: OK
+Logic: OK
+Evidence: 2 completed item(s) checked
+Result: PASSED
+task: check passed
+
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.306s
+
+FAILED (failures=6)

@@ -6,8 +6,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 SCRIPT="$ROOT/skills/x-worktree/scripts/create_worktree.sh"
 [[ -f "$SCRIPT" ]] || { printf 'test-worktree: missing %s\n' "$SCRIPT" >&2; exit 2; }
 
+KEEP_ARTIFACTS=false
+if [[ "${1:-}" == --keep-artifacts ]]; then KEEP_ARTIFACTS=true; shift; fi
+[[ $# -eq 0 ]] || { printf 'test-worktree: invalid arguments\n' >&2; exit 2; }
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+if [[ "$KEEP_ARTIFACTS" == false ]]; then trap 'rm -rf "$TMP"' EXIT; fi
+printf 'test-worktree: artifacts=%s\n' "$TMP"
 
 cases=0
 ok() { cases=$((cases + 1)); }
@@ -16,6 +20,7 @@ bad() { printf 'test-worktree: %s\n' "$1" >&2; exit 1; }
 # 建一个临时仓库：分支名、是否放 .env.local 由参数决定。
 new_repo() {
   local branch="$1" env="${2:-yes}" repo="$TMP/$1-$(date +%s%N)"
+  [[ "$repo" == "$TMP/"* && ! -e "$repo" ]] || bad "fixture must be new and inside temporary root"
   git init -q -b "$branch" "$repo"
   printf 'hello\n' > "$repo/README.md"
   git -C "$repo" add README.md
@@ -118,7 +123,7 @@ printf '%s\n' "$*" >> "$PNPM_LOG"
 mkdir -p node_modules/.pnpm-shim
 SHIM
 chmod +x "$shim/pnpm"
-rm -f "$TMP/pnpm.log"
+[[ ! -e "$TMP/pnpm.log" ]] || bad "fresh fixture log already exists"
 (cd "$prepo" && PATH="$shim:$PATH" PNPM_LOG="$TMP/pnpm.log" bash "$SCRIPT" pnpm-case >/dev/null)
 [[ "$(cat "$TMP/pnpm.log" 2>/dev/null)" == "install" ]] || bad "pnpm install not invoked: $(cat "$TMP/pnpm.log" 2>/dev/null)"
 [[ -d "$prepo/.worktrees/pnpm-case/node_modules/.pnpm-shim" ]] || bad "dependencies not installed in the new worktree"

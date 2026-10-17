@@ -1,0 +1,7 @@
+test_clean_source_and_existing_consumer_records (__main__.RepoBoundaryTests.test_clean_source_and_existing_consumer_records) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.718s
+
+OK
+consumer records unchanged; artifacts=/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-source-zaj4zdze

@@ -1,0 +1,16 @@
+test-worktree: artifacts=/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/tmp.U5aY26Ygsj
+Preparing worktree (new branch 'feat-20261017095722')
+HEAD is now at 97ec8ac init
+Preparing worktree (new branch 'demo')
+HEAD is now at 97ec8ac init
+Preparing worktree (new branch 'from-child')
+HEAD is now at 97ec8ac init
+Preparing worktree (new branch 'master-case')
+HEAD is now at 333729e init
+Preparing worktree (new branch 'no-env')
+HEAD is now at 333729e init
+Preparing worktree (new branch 'other-case')
+HEAD is now at 97ec8ac init
+Preparing worktree (new branch 'pnpm-case')
+HEAD is now at f830b20 pnpm
+test-worktree: passed (16 cases)

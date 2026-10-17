@@ -99,3 +99,11 @@ start 检查定义并初始化 pending；update 检查同一结构、流转和�
 显式给任务根和检查模式时，自检复用检查器核对关联记录，保存检查器版本摘要与字节一致性；缺失或重名写 not_run，不自动从严格模式降级。父会话关系属于扫描来源，不当作窗口内活跃运行或成功任务。
 
 结构检查、确定性测试、真实模型演练分别验收。静态规则不能证明模型遵守。隔离安装不代表全局更新；不含删除的回归不代表删除型路径已执行。接口和完整命令见 [README](../README.md)。
+
+## 本地协调机制
+
+pstack 的分流、可验证单元、完成谓词、滚动前沿和队列收割是主要参考；宿主运行、等待通知与恢复交给 Pi。Python 标准库不启动模型或后台守护，不引入第二套工作项状态库。
+
+`frontier` 复用 `work_items.candidates` 与递归证据检查，额外分配 scope 资源并输出单个 JSON；summary 保留文本候选。当前状态只在 state.md，定义只在 contract.md，证据仍绑定相关文件摘要与必要独立审查。`audit/coordination.json` 只保存原运行/派发输入版本/通知/消费事实，单父写入并原子替换。未解决原运行占资源，系统性故障停派；dispatch 不实际发起运行，accepted 不授予 verified。
+
+公开接口、冷启动与分类恢复见 [协调模块](../skills/x-rail/modules/orchestration.md)，本地模拟见 `scripts/demo-coordination.py`。源码 check-repo 只要求仓库交付文件，不依赖被忽略的消费者 .work-docs/index.md，也不修补消费者记录。源/安装边界不变，安装测试仅临时隔离目录，不运行删除型更新或全局安装。

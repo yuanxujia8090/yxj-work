@@ -1,0 +1,9 @@
+test_malformed_missing_and_duplicate (__main__.XMLTests.test_malformed_missing_and_duplicate) ... ok
+test_real_routes_and_stages (__main__.XMLTests.test_real_routes_and_stages) ... ok
+test_route_removal_and_unsupported_stage (__main__.XMLTests.test_route_removal_and_unsupported_stage) ... ok
+test_untrusted_material_is_data (__main__.XMLTests.test_untrusted_material_is_data) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.087s
+
+OK

@@ -1,0 +1,16 @@
+test_clean_source_and_existing_consumer_records (__main__.RepoBoundaryTests.test_clean_source_and_existing_consumer_records) ... FAIL
+
+======================================================================
+FAIL: test_clean_source_and_existing_consumer_records (__main__.RepoBoundaryTests.test_clean_source_and_existing_consumer_records)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-repo-boundary.py", line 22, in test_clean_source_and_existing_consumer_records
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : check-repo: missing .work-docs/index.md
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.055s
+
+FAILED (failures=1)

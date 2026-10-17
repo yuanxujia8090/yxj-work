@@ -1,0 +1,3 @@
+document-template: passed (sealed initial, unfinished rejected without mutation, bound candidate completed)
+task: check passed
+document-template: installed consumer passed; artifacts=/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T//document-template.Yy1dPu

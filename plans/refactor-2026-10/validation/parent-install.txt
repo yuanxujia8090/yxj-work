@@ -1,0 +1,3 @@
+Command: bash scripts/test-install.sh --keep-artifacts
+Exit: 0
+test-install: passed (copy, links, overwrite refusal, foreign protection); deletion paths blocked; artifacts=/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/tmp.z7R1S8s6F6

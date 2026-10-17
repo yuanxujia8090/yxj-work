@@ -545,3 +545,14 @@ SHA-256（Secure Hash Algorithm 256-bit，256 位安全散列算法）可理解�
 [p-subtract-before-you-add]: /Users/yuanxj/Downloads/plugins-main/pstack/skills/principle-subtract-before-you-add/SKILL.md:7
 [p-test-behavior-not-implementation]: /Users/yuanxj/Downloads/plugins-main/pstack/skills/principle-test-behavior-not-implementation/SKILL.md:7
 [p-type-system-discipline]: /Users/yuanxj/Downloads/plugins-main/pstack/skills/principle-type-system-discipline/SKILL.md:7
+
+## 本地实现映射（2026-10-17）
+
+| 来源 | 本地适配 | 验证边界 |
+| --- | --- | --- |
+| poteto-mode/SKILL.md | 十路交付分流、默认完整单元交接、宿主恢复约束 | XML 与入口检查，非模型服从证明 |
+| figure-it-out/SKILL.md | 复杂定制流程、验证先行、代表单元、逐项与整体核验 | 本地 CLI 演练 |
+| poteto-mode/playbooks/autonomous-run.md | 可检查完成谓词、持续推进与按证据转向 | finish 拒绝半成品，未做真实持续模型实验 |
+| poteto-mode/playbooks/orchestrate.md | frontier、滚动补位、notify/inbox/consume、失败分类、版本绑定、冷启动 | Python 标准库持久化事实；Pi 执行模型动作；不复制云端/Cursor/Graphite |
+
+详细当前规格见 `plans/refactor-2026-10/pstack-local-implementation-plan.md`；公开接口与恢复见 `skills/x-rail/modules/orchestration.md`。脚本复用 contract/state/evidence；不将 pstack 的 units.tsv 复制成第二状态库。

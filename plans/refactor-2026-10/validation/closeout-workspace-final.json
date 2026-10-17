@@ -1,0 +1,45 @@
+{
+  "recovery_snapshot_files": 76,
+  "unchanged_count": 70,
+  "changed_since_recovery": [
+    "plans/refactor-2026-10/delivery.md",
+    "plans/refactor-2026-10/pstack-local-implementation-plan.md",
+    "scripts/test-coordination.py",
+    "scripts/test-task-checklist.py",
+    "skills/x-rail/modules/orchestration.md",
+    "skills/x-rail/scripts/coordination.py"
+  ],
+  "missing": [],
+  "commands": {
+    "head": {
+      "command": "git rev-parse HEAD",
+      "exit": 0,
+      "stdout": "b158f20de87d361829e9c6ed821cbc8d7b3accd0\n",
+      "stderr": ""
+    },
+    "branch": {
+      "command": "git branch --show-current",
+      "exit": 0,
+      "stdout": "v3\n",
+      "stderr": ""
+    },
+    "staged": {
+      "command": "git diff --cached --name-only",
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "diff-check": {
+      "command": "git diff --check",
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "status": {
+      "command": "git status --short",
+      "exit": 0,
+      "stdout": " M DECISIONS.md\n M README.md\n M docs/architecture.md\n M docs/pstack-design-reference.md\n M scripts/check-repo.sh\n M scripts/check-workflow.sh\n M scripts/test-flow.sh\n M scripts/test-worktree.sh\n M skills/x-rail-long/SKILL.md\n M skills/x-rail/SKILL.md\n M skills/x-rail/playbooks/bugfix.md\n M skills/x-rail/playbooks/exec.md\n M skills/x-rail/playbooks/verification.md\n M skills/x-rail/scripts/task.py\n M skills/x-rail/scripts/task_checks.py\n M skills/x-rail/scripts/work_items.py\n?? plans/refactor-2026-10/\n?? scripts/demo-coordination.py\n?? scripts/test-coordination.py\n?? scripts/test-frontier.py\n?? scripts/test-repo-boundary.py\n?? scripts/test-task-checklist.py\n?? skills/x-rail/SKILL.md.bak\n?? skills/x-rail/modules/\n?? skills/x-rail/scripts/coordination.py\n?? skills/x-rail/scripts/frontier.py\n?? skills/x-rail/templates/coordinator-handoff.md\n?? skills/x-rail/templates/task-checklist.md\n",
+      "stderr": ""
+    }
+  }
+}

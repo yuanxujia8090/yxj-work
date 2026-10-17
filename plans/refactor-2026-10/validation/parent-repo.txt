@@ -1,0 +1,3 @@
+Command: bash scripts/check-repo.sh
+Exit: 0
+check-repo: passed

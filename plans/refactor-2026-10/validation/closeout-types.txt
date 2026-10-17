@@ -1,0 +1,18 @@
+/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-skill-xml.py
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-skill-xml.py:9:45 - error: Argument of type "ModuleSpec | None" cannot be assigned to parameter "spec" of type "ModuleSpec" in function "module_from_spec"
+    Type "ModuleSpec | None" is not assignable to type "ModuleSpec"
+      "None" is not assignable to "ModuleSpec" (reportArgumentType)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-skill-xml.py:10:6 - error: "loader" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-skill-xml.py:10:13 - error: "exec_module" is not a known attribute of "None" (reportOptionalMemberAccess)
+/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:15:8 - error: Import "task_checks" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:233:16 - error: Import "task" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:310:16 - error: Import "task" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:331:16 - error: Import "task" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:362:16 - error: Import "task" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:387:16 - error: Import "task" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:426:16 - error: Import "task" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:448:16 - error: Import "task" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:725:16 - error: Import "task" could not be resolved (reportMissingImports)
+  /Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-task-checks.py:813:16 - error: Import "task" could not be resolved (reportMissingImports)
+13 errors, 0 warnings, 0 informations

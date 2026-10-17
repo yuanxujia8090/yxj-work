@@ -1,0 +1,89 @@
+{
+  "coordination_fixture": "/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-task-qx0sjmlg/.work-docs/tasks/new-task",
+  "checklist_fixture": "/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-checklist-b661u92g",
+  "external_fixture": "/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-review-external-wpn_i8dv",
+  "records": [
+    {
+      "case": "finish-before-late",
+      "args": [
+        "finish",
+        "/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-task-qx0sjmlg/.work-docs/tasks/new-task"
+      ],
+      "exit": 0,
+      "stdout": "task: finish passed\n",
+      "stderr": ""
+    },
+    {
+      "case": "notify-after-done",
+      "args": [
+        "notify",
+        "/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-task-qx0sjmlg/.work-docs/tasks/new-task",
+        "--event",
+        "late-after-done",
+        "--run",
+        "run-1",
+        "--outcome",
+        "success",
+        "--observed-at",
+        "2026-10-17T02:09:11+00:00",
+        "--report",
+        "evidence/child.md"
+      ],
+      "exit": 0,
+      "stdout": "{\"error\": \"\", \"event\": \"late-after-done\", \"inputs_sha256\": \"ae9cfefd49ebad43063b98e9cc3a3fd43d0dfdfe3b113cc7d0e058ce02b5d86f\", \"item\": \"W1\", \"observed_at\": \"2026-10-17T02:09:11+00:00\", \"outcome\": \"success\", \"report\": \"evidence/child.md\", \"run\": \"run-1\", \"systemic\": false}\n",
+      "stderr": ""
+    },
+    {
+      "case": "inbox-after-late",
+      "args": [
+        "inbox",
+        "/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-task-qx0sjmlg/.work-docs/tasks/new-task"
+      ],
+      "exit": 1,
+      "stdout": "",
+      "stderr": "task: coordination has unconsumed notifications; reconcile before completion\n"
+    },
+    {
+      "case": "consume-after-late",
+      "args": [
+        "consume",
+        "/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-task-qx0sjmlg/.work-docs/tasks/new-task",
+        "--event",
+        "late-after-done"
+      ],
+      "exit": 1,
+      "stdout": "",
+      "stderr": "task: coordination has unconsumed notifications; reconcile before completion\n"
+    },
+    {
+      "case": "check-after-late",
+      "args": [
+        "check",
+        "/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-task-qx0sjmlg/.work-docs/tasks/new-task"
+      ],
+      "exit": 1,
+      "stdout": "",
+      "stderr": "task: coordination has unconsumed notifications; reconcile before completion\n"
+    },
+    {
+      "case": "check-external-evidence-symlink",
+      "args": [
+        "check",
+        "/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-checklist-b661u92g/task.md"
+      ],
+      "exit": 0,
+      "stdout": "Structure: OK\nLogic: OK\nEvidence: 2 completed item(s) checked\nResult: PASSED\ntask: check passed\n",
+      "stderr": ""
+    },
+    {
+      "case": "check-task-symlink",
+      "args": [
+        "check",
+        "/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-mucNhM/x-rail-checklist-b661u92g/task-alias.md"
+      ],
+      "exit": 0,
+      "stdout": "Structure: OK\nLogic: OK\nEvidence: 2 completed item(s) checked\nResult: PASSED\ntask: check passed\n",
+      "stderr": ""
+    }
+  ]
+}

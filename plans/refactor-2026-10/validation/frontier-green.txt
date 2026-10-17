@@ -1,0 +1,10 @@
+test_active_parent_directory_glob_conflicts_and_candidate_reservations (__main__.FrontierTests.test_active_parent_directory_glob_conflicts_and_candidate_reservations) ... ok
+test_cli_ready_and_not_finish (__main__.FrontierTests.test_cli_ready_and_not_finish) ... ok
+test_paused_and_terminal_do_not_dispatch (__main__.FrontierTests.test_paused_and_terminal_do_not_dispatch) ... ok
+test_review_and_paused_task_and_unrelated_change (__main__.FrontierTests.test_review_and_paused_task_and_unrelated_change) ... ok
+test_transitive_stale_dependency_and_independent_sibling (__main__.FrontierTests.test_transitive_stale_dependency_and_independent_sibling) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 1.404s
+
+OK

@@ -1,0 +1,130 @@
+test_conflicting_duplicate_and_missing_artifact_preserve_facts (__main__.CoordinationTests.test_conflicting_duplicate_and_missing_artifact_preserve_facts) ... FAIL
+test_failure_classification_counts_and_sibling_refill (__main__.CoordinationTests.test_failure_classification_counts_and_sibling_refill) ... FAIL
+test_input_change_and_old_run_are_persisted_rejections (__main__.CoordinationTests.test_input_change_and_old_run_are_persisted_rejections) ... FAIL
+test_path_unknown_item_invalid_input_and_active_run_protection (__main__.CoordinationTests.test_path_unknown_item_invalid_input_and_active_run_protection) ... FAIL
+test_queue_cold_start_idempotency_and_no_automatic_verification (__main__.CoordinationTests.test_queue_cold_start_idempotency_and_no_automatic_verification) ... FAIL
+test_systemic_failure_stops_dispatch_and_preserves_original (__main__.CoordinationTests.test_systemic_failure_stops_dispatch_and_preserves_original) ... FAIL
+
+======================================================================
+FAIL: test_conflicting_duplicate_and_missing_artifact_preserve_facts (__main__.CoordinationTests.test_conflicting_duplicate_and_missing_artifact_preserve_facts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 70, in test_conflicting_duplicate_and_missing_artifact_preserve_facts
+    self.dispatch(directory)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 35, in dispatch
+    return self.call('dispatch', directory, '--run', run, '--item', item, '--provider', 'synthetic-host',
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     '--inputs', inputs, '--recovery', 'query original synthetic run')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 30, in call
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,frontier,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'dispatch' (choose from seal, check, summary, frontier, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_failure_classification_counts_and_sibling_refill (__main__.CoordinationTests.test_failure_classification_counts_and_sibling_refill)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 100, in test_failure_classification_counts_and_sibling_refill
+    self.dispatch(directory)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 35, in dispatch
+    return self.call('dispatch', directory, '--run', run, '--item', item, '--provider', 'synthetic-host',
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     '--inputs', inputs, '--recovery', 'query original synthetic run')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 30, in call
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,frontier,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'dispatch' (choose from seal, check, summary, frontier, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_input_change_and_old_run_are_persisted_rejections (__main__.CoordinationTests.test_input_change_and_old_run_are_persisted_rejections)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 86, in test_input_change_and_old_run_are_persisted_rejections
+    self.dispatch(directory)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 35, in dispatch
+    return self.call('dispatch', directory, '--run', run, '--item', item, '--provider', 'synthetic-host',
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     '--inputs', inputs, '--recovery', 'query original synthetic run')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 30, in call
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,frontier,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'dispatch' (choose from seal, check, summary, frontier, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_path_unknown_item_invalid_input_and_active_run_protection (__main__.CoordinationTests.test_path_unknown_item_invalid_input_and_active_run_protection)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 136, in test_path_unknown_item_invalid_input_and_active_run_protection
+    self.dispatch(directory)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 35, in dispatch
+    return self.call('dispatch', directory, '--run', run, '--item', item, '--provider', 'synthetic-host',
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     '--inputs', inputs, '--recovery', 'query original synthetic run')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 30, in call
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,frontier,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'dispatch' (choose from seal, check, summary, frontier, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_queue_cold_start_idempotency_and_no_automatic_verification (__main__.CoordinationTests.test_queue_cold_start_idempotency_and_no_automatic_verification)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 44, in test_queue_cold_start_idempotency_and_no_automatic_verification
+    dispatched = self.dispatch(directory)
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 35, in dispatch
+    return self.call('dispatch', directory, '--run', run, '--item', item, '--provider', 'synthetic-host',
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     '--inputs', inputs, '--recovery', 'query original synthetic run')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 30, in call
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,frontier,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'dispatch' (choose from seal, check, summary, frontier, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_systemic_failure_stops_dispatch_and_preserves_original (__main__.CoordinationTests.test_systemic_failure_stops_dispatch_and_preserves_original)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 117, in test_systemic_failure_stops_dispatch_and_preserves_original
+    self.dispatch(directory)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 35, in dispatch
+    return self.call('dispatch', directory, '--run', run, '--item', item, '--provider', 'synthetic-host',
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     '--inputs', inputs, '--recovery', 'query original synthetic run')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 30, in call
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,frontier,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'dispatch' (choose from seal, check, summary, frontier, complete, start, finish, run, update, capture, record)
+
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.596s
+
+FAILED (failures=6)

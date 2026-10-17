@@ -1,0 +1,5 @@
+Command: bash scripts/test-document-template.sh
+Exit: 0
+document-template: passed (sealed initial, unfinished rejected without mutation, bound candidate completed)
+task: check passed
+document-template: installed consumer passed; artifacts=/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/.ctx-mode-e5WL6x/document-template.try98e

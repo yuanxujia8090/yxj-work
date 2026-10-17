@@ -1,0 +1,14 @@
+test_all_failure_classes_and_counts_survive_new_runs (__main__.CoordinationTests.test_all_failure_classes_and_counts_survive_new_runs) ... ok
+test_completion_rejects_unresolved_original_run (__main__.CoordinationTests.test_completion_rejects_unresolved_original_run) ... ok
+test_conflicting_duplicate_and_missing_artifact_preserve_facts (__main__.CoordinationTests.test_conflicting_duplicate_and_missing_artifact_preserve_facts) ... ok
+test_failure_classification_counts_and_sibling_refill (__main__.CoordinationTests.test_failure_classification_counts_and_sibling_refill) ... ok
+test_input_change_and_old_run_are_persisted_rejections (__main__.CoordinationTests.test_input_change_and_old_run_are_persisted_rejections) ... ok
+test_own_output_changes_and_contract_only_dispatch (__main__.CoordinationTests.test_own_output_changes_and_contract_only_dispatch) ... ok
+test_path_unknown_item_invalid_input_and_active_run_protection (__main__.CoordinationTests.test_path_unknown_item_invalid_input_and_active_run_protection) ... ok
+test_queue_cold_start_idempotency_and_no_automatic_verification (__main__.CoordinationTests.test_queue_cold_start_idempotency_and_no_automatic_verification) ... ok
+test_systemic_failure_stops_dispatch_and_preserves_original (__main__.CoordinationTests.test_systemic_failure_stops_dispatch_and_preserves_original) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 3.538s
+
+OK

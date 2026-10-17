@@ -1,0 +1,20 @@
+test_bad_lines_unsupported_boundaries_stable (__main__.SessionTests.test_bad_lines_unsupported_boundaries_stable) ... ok
+test_branch_relation_and_copy_identity (__main__.SessionTests.test_branch_relation_and_copy_identity) ... ok
+test_checker_fingerprint_includes_work_items_module (__main__.SessionTests.test_checker_fingerprint_includes_work_items_module) ... ok
+test_custom_abort_and_model_change_within_episode (__main__.SessionTests.test_custom_abort_and_model_change_within_episode) ... ok
+test_dedup_continuation_and_cross_window (__main__.SessionTests.test_dedup_continuation_and_cross_window) ... ok
+test_error_categories_and_nested_actions (__main__.SessionTests.test_error_categories_and_nested_actions) ... ok
+test_explicit_parent_relation_and_dst_boundary (__main__.SessionTests.test_explicit_parent_relation_and_dst_boundary) ... ok
+test_explicit_task_compliance_readonly (__main__.SessionTests.test_explicit_task_compliance_readonly) ... ok
+test_followup_new_episode_and_task_association (__main__.SessionTests.test_followup_new_episode_and_task_association) ... ok
+test_manual_terminal_does_not_extend_assistant (__main__.SessionTests.test_manual_terminal_does_not_extend_assistant) ... ok
+test_missing_assistant_content_is_empty_blocks (__main__.SessionTests.test_missing_assistant_content_is_empty_blocks) ... ok
+test_names_and_false_mentions (__main__.SessionTests.test_names_and_false_mentions) ... ok
+test_parallel_wait_union_and_invocation_reset (__main__.SessionTests.test_parallel_wait_union_and_invocation_reset) ... ok
+test_project_boundary_fractional_time_and_offset (__main__.SessionTests.test_project_boundary_fractional_time_and_offset) ... ok
+test_successful_target_artifact_only (__main__.SessionTests.test_successful_target_artifact_only) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.212s
+
+OK

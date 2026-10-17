@@ -186,27 +186,34 @@ def update(text: str, definition: dict | None, fields: dict, args) -> str:
     return re.sub(r'^active_work_items: .*$', lambda _: 'active_work_items: '+active, text, flags=re.M)
 
 
+def candidates(definition: dict, rows: dict, validity):
+    """Shared summary/frontier candidates, with recursive validity supplied by checks."""
+    errors = {}
+    for name, row in rows.items():
+        if row['status'] == 'verified':
+            try:
+                validity(name)
+            except (OSError, ValueError) as error:
+                errors[name] = str(error)
+    ready = [name for name, row in rows.items() if row['status'] in {'pending', 'needs_fix'} and
+             all(rows[dep]['status'] == 'skipped' or (rows[dep]['status'] == 'verified' and dep not in errors)
+                 for dep in references(definition['items'][name]['depends'], True))]
+    return ready, errors
+
+
 def summary(definition: dict | None, rows: dict, validity) -> list[str]:
     if definition is None:
         return ['工作项：旧格式，未采用逐项检查']
     counts = Counter(row['status'] for row in rows.values())
     output = [f'需求覆盖：{len(definition["requirements"])}/{len(definition["requirements"])}',
               '工作项计数：'+', '.join(f'{status}={counts[status]}' for status in sorted(STATUSES))]
-    valid = {}
+    ready, errors = candidates(definition, rows, validity)
     for name, row in rows.items():
-        detail = ''
-        if row['status'] == 'verified':
-            try:
-                validity(name)
-                valid[name] = True
-            except (OSError, ValueError) as error:
-                detail = f'；stale/invalid：{error}'
+        detail = f'；stale/invalid：{errors[name]}' if name in errors else ''
         if row['status'] == 'skipped':
             detail = f'；契约跳过理由：{definition["items"][name]["skip_reason"]}'
         output.append(f'{name}: {row["status"]}；{definition["items"][name]["title"]}；执行者：{row["owner"]}'
                       f'；证据：{row["evidence_refs"]}；阻塞：{row["blocked_by"]}；解除条件：{row["unblock_condition"]}'
                       f'；原因：{row["reason"]}；下一步：{row["next_action"]}{detail}')
-    ready = [name for name, row in rows.items() if row['status'] in {'pending', 'needs_fix'} and
-             all(valid.get(dep) or rows[dep]['status'] == 'skipped' for dep in references(definition['items'][name]['depends'], True))]
     output.append('可执行候选：'+(','.join(ready) or 'none'))
     return output

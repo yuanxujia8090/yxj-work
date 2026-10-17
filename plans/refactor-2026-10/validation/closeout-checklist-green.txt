@@ -1,0 +1,11 @@
+..KEEP symlink-task-file: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-dh7yomyk, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-clry81_k
+KEEP symlink-task-parent: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-6fctdfib, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-19ntorsq
+KEEP symlink-evidence-file: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-1ky4q3cm, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-o30be_im
+KEEP symlink-evidence-parent: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-j_hze3hb, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-_3up2rtp
+KEEP symlink-internal-evidence-file: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-7de0ky1s, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-cd7xlxl9
+KEEP symlink-internal-evidence-parent: task=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-tp3v4ai1, outside=/private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-checklist-outside-q2op854s
+.....
+----------------------------------------------------------------------
+Ran 7 tests in 0.599s
+
+OK

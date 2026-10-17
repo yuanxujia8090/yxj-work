@@ -1,0 +1,84 @@
+test_active_parent_directory_glob_conflicts_and_candidate_reservations (__main__.FrontierTests.test_active_parent_directory_glob_conflicts_and_candidate_reservations) ... FAIL
+test_cli_ready_and_not_finish (__main__.FrontierTests.test_cli_ready_and_not_finish) ... FAIL
+test_paused_and_terminal_do_not_dispatch (__main__.FrontierTests.test_paused_and_terminal_do_not_dispatch) ... FAIL
+test_review_and_paused_task_and_unrelated_change (__main__.FrontierTests.test_review_and_paused_task_and_unrelated_change) ... FAIL
+test_transitive_stale_dependency_and_independent_sibling (__main__.FrontierTests.test_transitive_stale_dependency_and_independent_sibling) ... FAIL
+
+======================================================================
+FAIL: test_active_parent_directory_glob_conflicts_and_candidate_reservations (__main__.FrontierTests.test_active_parent_directory_glob_conflicts_and_candidate_reservations)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 72, in test_active_parent_directory_glob_conflicts_and_candidate_reservations
+    data = self.frontier(directory)
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 40, in frontier
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'frontier' (choose from seal, check, summary, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_cli_ready_and_not_finish (__main__.FrontierTests.test_cli_ready_and_not_finish)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 46, in test_cli_ready_and_not_finish
+    self.assertEqual(self.frontier(directory)['ready'], ['W1'])
+                     ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 40, in frontier
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'frontier' (choose from seal, check, summary, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_paused_and_terminal_do_not_dispatch (__main__.FrontierTests.test_paused_and_terminal_do_not_dispatch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 106, in test_paused_and_terminal_do_not_dispatch
+    self.assertEqual(self.frontier(directory)['ready'], [])
+                     ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 40, in frontier
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'frontier' (choose from seal, check, summary, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_review_and_paused_task_and_unrelated_change (__main__.FrontierTests.test_review_and_paused_task_and_unrelated_change)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 86, in test_review_and_paused_task_and_unrelated_change
+    self.assertEqual(self.frontier(directory)['ready'], [])
+                     ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 40, in frontier
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'frontier' (choose from seal, check, summary, complete, start, finish, run, update, capture, record)
+
+
+======================================================================
+FAIL: test_transitive_stale_dependency_and_independent_sibling (__main__.FrontierTests.test_transitive_stale_dependency_and_independent_sibling)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 60, in test_transitive_stale_dependency_and_independent_sibling
+    self.assertEqual(self.frontier(directory)['ready'], ['W3', 'W4'])
+                     ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-frontier.py", line 40, in frontier
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: task.py [-h]
+               {seal,check,summary,complete,start,finish,run,update,capture,record} ...
+task.py: error: argument command: invalid choice: 'frontier' (choose from seal, check, summary, complete, start, finish, run, update, capture, record)
+
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.666s
+
+FAILED (failures=5)

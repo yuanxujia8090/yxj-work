@@ -25,7 +25,7 @@ need scripts/test-skill-metadata.sh
 need tests/fixtures/v2-review-valid/contract.md
 need tests/fixtures/v2-review-valid/state.md
 need scripts/test-flow.sh
-need .work-docs/index.md
+# Consumer records are ignored runtime data, never a source checkout prerequisite.
 
 for file in "$ROOT"/skills/x-rail/SKILL.md "$ROOT"/skills/x-rail-long/SKILL.md "$ROOT"/skills/x-handoff/SKILL.md "$ROOT"/skills/x-rail/playbooks/*.md; do
   [[ -f "$file" ]] || fail "missing runtime file $file"
@@ -40,6 +40,10 @@ done < <(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/runtime-skills.txt")
 command -v python3 >/dev/null || fail 'Python 3 is required'
 need skills/x-rail/scripts/task.py
 need skills/x-rail/scripts/task_checks.py
+need skills/x-rail/scripts/frontier.py
+need skills/x-rail/scripts/coordination.py
+need skills/x-rail/modules/orchestration.md
+need skills/x-rail/templates/coordinator-handoff.md
 need skills/x-self-check/scripts/analyze_sessions.py
 need scripts/check-skill-xml.py
 PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/check-skill-xml.py" --root "$ROOT" >/dev/null

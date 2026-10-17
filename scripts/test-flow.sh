@@ -8,18 +8,23 @@ result=m.check_root(root)
 core_text=(root/'skills/x-rail/SKILL.md').read_text()
 core=m.parse_body(core_text,'core')
 authority=core.find('authority')
-assert 'failure_cost_high' in core_text
-assert 'recovery_or_handoff_needed' in core_text
-assert '任一为真' in core_text
-assert '任务名称' in core_text
-assert '最短路径' in core_text
-assert '不要求默认完整链路' in core_text
-assert '按风险触发' in core_text
-assert '相互独立、无共享写入、无前置依赖' in core_text
-assert '预计超过 8KB' in core_text
-assert '原始输出' in core_text
-assert '通过数量' in core_text
-assert '失败测试名' in core_text
+execution_text=(root/'skills/x-rail/modules/execution.md').read_text()
+recovery_text=(root/'skills/x-rail/modules/recovery.md').read_text()
+cost_text=(root/'skills/x-rail/modules/cost-policy.md').read_text()
+work_items_text=(root/'skills/x-rail/modules/work-items.md').read_text()
+orchestration_text=(root/'skills/x-rail/modules/orchestration.md').read_text()
+# Rules moved out of the small entry must remain reachable, not duplicated in XML.
+for module in ['execution', 'verification', 'recovery', 'work-items', 'cost-policy', 'orchestration']:
+    assert f'modules/{module}.md' in core_text, module
+assert '失败代价高' in core_text
+assert '跨会话恢复' in core_text
+assert '最短路径' in execution_text
+assert '不要求默认完整阶段链路' in execution_text
+assert '按风险' in core_text
+assert '相互独立、无共享写入、无前置依赖' in execution_text
+assert '预计超过 8KB' in execution_text
+for rule in ['原始输出','通过数量','失败测试名']:
+    assert rule in execution_text, rule
 verification_text=(root/'skills/x-rail/playbooks/verification.md').read_text()
 for path in ['README.md', 'docs/architecture.md', 'docs/usage-guide.html']:
     doc=(root/path).read_text()
@@ -33,22 +38,20 @@ assert '输入集合由执行者声明' in verification_text
 assert '文本包含关系不能证明完整行为' in verification_text
 assert authority.get('readonly-no-files')=='true'
 # 保留权限声明的显式授权门槛；当前用户调用 x-rail 的目标本身就是本次范围内的明确授权。
-assert authority.get('delegation')=='explicit-only'
+assert authority.get('delegation')=='default-active'
 assert authority.get('sensitive-actions')=='irreversible,cost,external-publish,scope-change'
-assert '调用 x-rail 即授权当前目标范围内默认主动委派' in authority.text
-assert '不代表无限成本、新购买、生产、不可逆、发布或范围变更' in authority.text
-assert '用户禁止、更高规则与宿主限制优先' in authority.text
-cost_policy=core.find('workflow/cost_policy')
-assert cost_policy is not None
+assert '当前目标范围内默认主动委派' in authority.text
+assert '不可逆、花钱、对外发布、生产变更和范围变化先确认' in authority.text
+assert '宿主限制与用户禁止优先' in authority.text
 for rule in ['解除成本限制','不限制成本','不要解除成本限制','解除阻塞','cost_control: unlimited','cost_authorization:','跨会话恢复','无进展','硬限制']:
-    assert rule in cost_policy.text, rule
+    assert rule in cost_text, rule
 for path in ['skills/x-rail/playbooks/plan.md','skills/x-rail/templates/child-task.md','skills/x-rail/templates/document-task.md']:
     assert '不限成本' in (root/path).read_text(), path
 assert 'budget: unlimited' in verification_text
 # 子代理运行时限由宿主配置，不从任务预算或记录期限推导覆盖参数。
-work_items_text=core.find('workflow/work_items').text
 child_text=(root/'skills/x-rail/templates/child-task.md').read_text()
 for text in [work_items_text, child_text]:
+    text=text.replace('`', '')
     for rule in ['子代理总时限沿用宿主与代理配置', '默认省略 timeoutMs/maxRuntimeMs',
                  '不在提示词或子任务停止条件中另设运行倒计时',
                  '仅当前用户明确要求或更高优先级规则强制时传入', '并记录来源',
@@ -75,10 +78,10 @@ for name, rules in rule_groups.items():
 assert '完整执行单元' in work_items_text and '接力' in work_items_text
 assert 'playbooks/exec.md' in work_items_text
 assert 'x-rail-long 优先使用子代理' in (root/'plans/0.0.6/优化方案.md').read_text()
-assert '调用 x-rail 已授权当前目标范围内默认主动委派' in core_text
+assert '当前目标范围内默认主动委派' in core_text
 assert '不可并行或文件共享不是父会话包办理由' in work_items_text
 assert '共享写入由同一子代理承接' in work_items_text
-assert '短小且已掌握材料、交接成本明显更高时直接完成' in work_items_text
+assert '短小且已掌握材料' in work_items_text and '交接成本明显更高时直接完成' in work_items_text
 assert '设计并修复' in (root/'skills/x-rail/playbooks/mixed.md').read_text()
 assert '进入实施前必须读取 `playbooks/exec.md`' in (root/'skills/x-rail/playbooks/mixed.md').read_text()
 assert '先按研究' not in (root/'skills/x-rail/playbooks/mixed.md').read_text()
@@ -121,9 +124,12 @@ for stage in result['routes']:
     assert all((tree.find(name).text or '').strip() for name in m.STAGE_MODULES)
     procedure=tree.find('procedure').text
     for field in ['适用场景：','输入：','输出：','不做什么：','停止条件：']:assert field in procedure,(stage,field)
-refs=core.findall('routing/route[@name="exec"]/reference')
-assert all(r.get('when')!='always' for r in refs)
-assert any(r.get('when')=='typescript-project-rules-insufficient' for r in refs)
+assert '项目规范优先' in exec_text and '非 TypeScript 不注入专用规则' in exec_text
+assert 'frontier' in orchestration_text and '冷启动' in orchestration_text
+assert 'audit/coordination.json' in orchestration_text
+for status in ['pending','in_progress','awaiting_verification','needs_fix','blocked','verified','skipped']:
+    assert status in work_items_text, status
+assert '15 分钟硬上限' not in execution_text
 for stage in ['plan','design','review','bugfix','exec']:
     tree=m.parse_body((root/f'skills/x-rail/playbooks/{stage}.md').read_text(),stage)
     assert tree.find('quality_check').text

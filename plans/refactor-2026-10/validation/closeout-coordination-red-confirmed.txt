@@ -1,0 +1,54 @@
+test_all_failure_classes_and_counts_survive_new_runs (__main__.CoordinationTests.test_all_failure_classes_and_counts_survive_new_runs) ... ok
+test_completion_rejects_unresolved_original_run (__main__.CoordinationTests.test_completion_rejects_unresolved_original_run) ... ok
+test_conflicting_duplicate_and_missing_artifact_preserve_facts (__main__.CoordinationTests.test_conflicting_duplicate_and_missing_artifact_preserve_facts) ... ok
+test_failure_classification_counts_and_sibling_refill (__main__.CoordinationTests.test_failure_classification_counts_and_sibling_refill) ... ok
+test_input_change_and_old_run_are_persisted_rejections (__main__.CoordinationTests.test_input_change_and_old_run_are_persisted_rejections) ... ok
+test_own_output_changes_and_contract_only_dispatch (__main__.CoordinationTests.test_own_output_changes_and_contract_only_dispatch) ... ok
+test_path_unknown_item_invalid_input_and_active_run_protection (__main__.CoordinationTests.test_path_unknown_item_invalid_input_and_active_run_protection) ... ok
+test_queue_cold_start_idempotency_and_no_automatic_verification (__main__.CoordinationTests.test_queue_cold_start_idempotency_and_no_automatic_verification) ... ok
+test_real_event_before_registration_is_accepted_but_future_is_rejected (__main__.CoordinationTests.test_real_event_before_registration_is_accepted_but_future_is_rejected) ... KEEP early-event fixture: /private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-task-yss1s2uc/.work-docs/tasks/new-task
+FAIL
+test_systemic_failure_stops_dispatch_and_preserves_original (__main__.CoordinationTests.test_systemic_failure_stops_dispatch_and_preserves_original) ... ok
+test_terminal_notifications_reject_new_events_and_preserve_replays (__main__.CoordinationTests.test_terminal_notifications_reject_new_events_and_preserve_replays) ... KEEP terminal-done fixture: /private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-task-pe8keow0/.work-docs/tasks/new-task
+
+  test_terminal_notifications_reject_new_events_and_preserve_replays (__main__.CoordinationTests.test_terminal_notifications_reject_new_events_and_preserve_replays) (terminal='done') ... FAIL
+KEEP terminal-cancelled fixture: /private/var/folders/8n/8hn9tlpx3j18cjtc3brs11j40000gn/T/x-rail-task-j66radyi/.work-docs/tasks/new-task
+  test_terminal_notifications_reject_new_events_and_preserve_replays (__main__.CoordinationTests.test_terminal_notifications_reject_new_events_and_preserve_replays) (terminal='cancelled') ... FAIL
+
+======================================================================
+FAIL: test_real_event_before_registration_is_accepted_but_future_is_rejected (__main__.CoordinationTests.test_real_event_before_registration_is_accepted_but_future_is_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 213, in test_real_event_before_registration_is_accepted_but_future_is_rejected
+    event = self.call('notify', directory, '--event', 'early-event', '--run', 'run-1', '--outcome', 'success',
+                      '--observed-at', observed, '--report', 'evidence/child.md')
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 34, in call
+    self.assertEqual(result.returncode, 0, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : task: event time must follow dispatch and not be in the future
+
+
+======================================================================
+FAIL: test_terminal_notifications_reject_new_events_and_preserve_replays (__main__.CoordinationTests.test_terminal_notifications_reject_new_events_and_preserve_replays) (terminal='done')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 190, in test_terminal_notifications_reject_new_events_and_preserve_replays
+    self.assertNotEqual(late.returncode, 0, late.stdout)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0 : {"error": "", "event": "late-event", "inputs_sha256": "d2d02b2acbe9a8d2d31816ed01608d3a4b85dc868aeae07b1899103f84171fb1", "item": "W1", "observed_at": "2026-10-17T02:23:25+00:00", "outcome": "success", "report": "evidence/child.md", "run": "run-1", "systemic": false}
+
+
+======================================================================
+FAIL: test_terminal_notifications_reject_new_events_and_preserve_replays (__main__.CoordinationTests.test_terminal_notifications_reject_new_events_and_preserve_replays) (terminal='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/yuanxj/Documents/github/x-rail/.worktrees/v3/scripts/test-coordination.py", line 190, in test_terminal_notifications_reject_new_events_and_preserve_replays
+    self.assertNotEqual(late.returncode, 0, late.stdout)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0 : {"error": "", "event": "late-event", "inputs_sha256": "5c80df00cdc0bd25d79ca6ec0ab1812c918f71dc222eeae282ef5bba49cb040c", "item": "W1", "observed_at": "2026-10-17T02:23:26+00:00", "outcome": "success", "report": "evidence/child.md", "run": "run-1", "systemic": false}
+
+
+----------------------------------------------------------------------
+Ran 11 tests in 5.143s
+
+FAILED (failures=3)
