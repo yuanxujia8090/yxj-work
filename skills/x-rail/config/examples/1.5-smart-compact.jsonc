@@ -1,0 +1,19 @@
+// 压缩和摘要的 LLM。胶囊仍由 xr capsule 生成，不由这个模型写。
+// bai 超过 120 秒或报错时，x-run-guard 只用胶囊。
+{
+  "smartCompact": {
+    "summaryModel": "bai/deepseek-v4.1-flash",
+    "summaryThinkingLevel": "low",
+    "requireApproval": false
+  },
+  "x-failover": {
+    "primary": "openai26/gpt-6.1-sol",
+    "fallback": [{ "model": "bai/deepseek-v4.1-flash", "thinking": "high" }],
+    "cooldownMin": 15,
+    "maxCooldownMin": 60,
+    "failback": "auto",
+    "failbackMaxContextTokens": 200000,
+    "maxFailoversPerRun": 8,
+    "streamWatchdogSec": 180
+  }
+}
