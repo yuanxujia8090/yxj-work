@@ -7,3 +7,4 @@ tests/tmp/
 .worktrees/
 .pi/
 __pycache__/
+node_modules/

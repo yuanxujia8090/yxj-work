@@ -1,0 +1,19 @@
+{
+  "source": "摘自 plans/v3/01 与 06 §4。本环境没有 sessions.tgz，未重跑 evidence/mine.py。",
+  "window": "2026-10-09 至 2026-10-17（UTC+8），与 01 相同",
+  "metrics": {
+    "manual_continue_after_provider_error": 31,
+    "openai26_idle_hours_after_error": 6.92,
+    "replay_completion": "两个真实大任务都未完成",
+    "execution_path_rules_bytes": 71216,
+    "bookkeeping_reject_rate": 0.37,
+    "bookkeeping_reject_fraction": "203/544",
+    "tool_error_rate": 0.044,
+    "tool_error_fraction": "638/14414",
+    "summary_with_state_pointer_rate": 0.64,
+    "subagent_failure_rate": 0.177,
+    "bai_422_count": 3,
+    "openai26_timeout_count": 56,
+    "openai26_success_p99_seconds": 171
+  }
+}
