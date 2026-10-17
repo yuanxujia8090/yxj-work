@@ -100,6 +100,9 @@ export function assistantErrorText(message: unknown): { stopReason?: string; tex
   const stopReason = typeof record.stopReason === "string" ? record.stopReason : undefined;
   const parts: string[] = [];
   if (typeof record.errorMessage === "string") parts.push(record.errorMessage);
+  // 只有出错的回合才看正文。正常完成（stop / toolUse / length）的回答里出现
+  // “HTTP 401”“Connection error”等字样，多半是在讨论代码，不是模型故障。
+  if (stopReason !== undefined && stopReason !== "error") return { stopReason, text: parts.join("\n") };
   const content = record.content;
   if (typeof content === "string") parts.push(content);
   else if (Array.isArray(content)) {

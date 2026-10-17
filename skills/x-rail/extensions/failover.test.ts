@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { classifyError } from "./classify.ts";
+import { assistantErrorText, classifyError } from "./classify.ts";
 import { cooldownElapsed, freshBreaker, noteFailback, noteProbe, observe } from "./breaker.ts";
 import { COOLDOWN_MIN_MS, HYSTERESIS_MS } from "./constants.ts";
 import { planSwitch } from "./compat.ts";
@@ -40,6 +40,16 @@ for (const [name, input, expected] of cases) {
   const got = classifyError(input);
   assert.equal(got.klass, expected, name);
 }
+
+// 正常完成的回答里出现错误字样（例如讨论代码里的 HTTP 401）不能当成模型故障。
+const normalAnswer = { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "在 fetch 里遇到 HTTP 401 时要刷新 token，Connection error 也要重试。" }] };
+assert.equal(classifyError(assistantErrorText(normalAnswer)).klass, "none", "正常回答里的错误字样");
+const toolTurn = { role: "assistant", stopReason: "toolUse", content: [{ type: "text", text: "Request timed out 的处理在 x.ts" }] };
+assert.equal(classifyError(assistantErrorText(toolTurn)).klass, "none", "调用工具的回合里的错误字样");
+const realError = { role: "assistant", stopReason: "error", errorMessage: "HTTP 401 Unauthorized", content: [] };
+assert.equal(classifyError(assistantErrorText(realError)).klass, "E1", "真实错误仍按 E1");
+const errorInContent = { role: "assistant", stopReason: "error", content: [{ type: "text", text: "Request timed out." }] };
+assert.equal(classifyError(assistantErrorText(errorInContent)).klass, "E3", "出错回合正文里的错误仍要识别");
 
 let breaker = freshBreaker();
 breaker = observe(breaker, "E1", 0).state;
