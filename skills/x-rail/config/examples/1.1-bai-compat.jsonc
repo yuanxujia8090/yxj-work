@@ -1,0 +1,10 @@
+// 合并进 ~/.pi/agent/models.json 里 provider bai 的对象。不要写入 apiKey。
+{
+  "providers": {
+    "bai": {
+      "compat": {
+        "supportsDeveloperRole": false
+      }
+    }
+  }
+}
