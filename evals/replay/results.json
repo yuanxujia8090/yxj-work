@@ -1,0 +1,54 @@
+{
+  "live": "not-run",
+  "results": [
+    {
+      "id": "R1",
+      "offline": "passed",
+      "detail": "E3",
+      "live": "pending-user-approval"
+    },
+    {
+      "id": "R2",
+      "offline": "passed",
+      "detail": "E3",
+      "live": "pending-user-approval"
+    },
+    {
+      "id": "R3",
+      "offline": "passed",
+      "detail": "E2",
+      "live": "pending-user-approval"
+    },
+    {
+      "id": "R4",
+      "offline": "passed",
+      "detail": [
+        255,
+        255,
+        255,
+        255,
+        255,
+        255
+      ],
+      "live": "pending-user-approval"
+    },
+    {
+      "id": "R5",
+      "offline": "passed",
+      "detail": "ok fail u abandoned attempts=1\n正确命令：xr plan add ub \"拆小后的标题\" --deps none --files README.md --verify \"true\"",
+      "live": "pending-user-approval"
+    },
+    {
+      "id": "R6",
+      "offline": "passed",
+      "detail": "进程结束后磁盘仍是 doing",
+      "live": "pending-user-approval"
+    },
+    {
+      "id": "R7",
+      "offline": "passed",
+      "detail": "E1",
+      "live": "pending-user-approval"
+    }
+  ]
+}
