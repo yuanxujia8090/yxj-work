@@ -24,7 +24,9 @@ done
 
 PI="$TARGET_HOME/.pi/agent"
 SKILLS="$PI/skills"
-EXT="$PI/extensions"
+# pi 会把 extensions/ 下每个 .ts 都当扩展加载，所以辅助模块放进子目录，用 package.json 的 pi 清单只声明两个入口
+EXT="$PI/extensions/x-rail"
+MANIFEST='{\n  "name": "x-rail-extensions",\n  "private": true,\n  "type": "module",\n  "pi": { "extensions": ["./x-failover.ts", "./x-run-guard.ts"] }\n}'
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP="$PI/v3-backup-$STAMP"
 
@@ -62,6 +64,7 @@ if [[ "$DRY" -eq 1 ]]; then
   for file in "${EXT_FILES[@]}"; do
     note "复制 $EXT/$file"
   done
+  note "写入 $EXT/package.json（pi 清单：x-failover.ts、x-run-guard.ts）"
   note "不修改 models.json、settings.json，不运行 skills-cleanup.sh"
   exit 0
 fi
@@ -95,6 +98,15 @@ for file in "${EXT_FILES[@]}"; do
   cp "$src" "$dest"
   note "已安装 $dest"
 done
+
+manifest_tmp="$(mktemp)"
+printf '%b\n' "$MANIFEST" > "$manifest_tmp"
+if [[ -f "$EXT/package.json" ]] && cmp -s "$manifest_tmp" "$EXT/package.json"; then
+  rm -f "$manifest_tmp"; note "清单未变化 $EXT/package.json"
+else
+  [[ -e "$EXT/package.json" ]] && backup_path "$EXT/package.json"
+  mv "$manifest_tmp" "$EXT/package.json"; note "已写入 $EXT/package.json"
+fi
 
 note "安装完成。配置片段在 $ROOT/skills/x-rail/config/examples/ ，需要你批准后才并入 settings。"
 note "批次 B 不由本脚本执行。"
