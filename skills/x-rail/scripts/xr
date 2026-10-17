@@ -1,0 +1,767 @@
+#!/usr/bin/env python3
+"""xr：v3 run 的记账命令。状态只写在 .work-docs/runs，模型不直接改 TSV。"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import frontier  # noqa: E402
+
+TZ = ZoneInfo("Asia/Shanghai")
+HEADER = ["id", "title", "state", "deps", "scope", "timebox_min", "attempts", "owner", "model", "verify_cmd", "evidence", "updated", "kind"]
+LEDGER = ["unit", "tree_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
+DECISIONS = ["ts", "unit", "decision", "reason", "alternatives", "reversible", "by_model"]
+ID_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
+SLUG_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+KINDS = {"impl", "review", "research", "bugfix"}
+FAIL_KINDS = {"cap", "net", "tool", "logic", "verify", "unknown"}
+WRITERS = {"impl", "bugfix"}
+TERMINAL = {"done", "abandoned"}
+
+
+def now() -> datetime:
+    return datetime.now(TZ)
+
+
+def stamp(moment: datetime | None = None) -> str:
+    return (moment or now()).isoformat(timespec="seconds")
+
+
+def say(text: str) -> None:
+    print(text)
+
+
+def die(text: str) -> None:
+    say(f"xr: {text}")
+    raise SystemExit(2)
+
+
+def repo_of(args: argparse.Namespace) -> Path:
+    return Path(args.repo).resolve() if args.repo else Path.cwd().resolve()
+
+
+def cell(value: str) -> str:
+    if value is None or "\t" in value or "\n" in value or "\r" in value:
+        die("字段不能包含制表符或换行")
+    return value
+
+
+def read_tsv(path: Path, header: list[str]) -> list[dict[str, str]]:
+    if not path.is_file():
+        return []
+    lines = path.read_text().splitlines()
+    if not lines:
+        return []
+    got = lines[0].split("\t")
+    if got != header:
+        die(f"{path.name} 表头不对。正确命令：不要手改 TSV，用 xr 动词重写")
+    rows = []
+    for line in lines[1:]:
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        if len(parts) != len(header):
+            die(f"{path.name} 有一行字段数不对")
+        rows.append(dict(zip(header, parts)))
+    return rows
+
+
+def write_tsv(path: Path, header: list[str], rows: list[dict[str, str]]) -> None:
+    body = ["\t".join(header)]
+    for row in rows:
+        body.append("\t".join(cell(row[key]) for key in header))
+    path.write_text("\n".join(body) + "\n")
+
+
+def event(run: Path, payload: dict) -> None:
+    payload = {"ts": stamp(), **payload}
+    with (run / "events.jsonl").open("a") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+def active_id(repo: Path) -> str:
+    pointer = repo / ".work-docs" / "runs" / "ACTIVE"
+    if not pointer.is_file():
+        die("没有 active run。正确命令：xr init <slug>")
+    return pointer.read_text().strip()
+
+
+def run_dir(repo: Path, run_id: str | None = None) -> Path:
+    name = run_id or active_id(repo)
+    path = repo / ".work-docs" / "runs" / name
+    if not (path / "RUN.md").is_file():
+        die(f"找不到 run {name}。正确命令：xr init <slug>")
+    return path
+
+
+def units(run: Path) -> list[dict[str, str]]:
+    return read_tsv(run / "units.tsv", HEADER)
+
+
+def save_units(run: Path, rows: list[dict[str, str]]) -> None:
+    write_tsv(run / "units.tsv", HEADER, rows)
+
+
+def find_unit(rows: list[dict[str, str]], unit_id: str) -> dict[str, str]:
+    for row in rows:
+        if row["id"] == unit_id:
+            return row
+    die(f"没有单元 {unit_id}。正确命令：xr plan add {unit_id} \"标题\" --deps none --files <路径> --verify \"<命令>\"")
+    raise AssertionError
+
+
+def check_scope(scope: str) -> list[str]:
+    parts = [part.strip() for part in scope.split(",") if part.strip()]
+    if not parts:
+        die("缺少独占文件集。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\"")
+    for part in parts:
+        try:
+            frontier.scope_parts(part)
+        except ValueError as error:
+            die(f"{error}。正确命令：--files 使用仓库内相对路径，不要写 .. 或绝对路径")
+    return parts
+
+
+def cycles(rows: list[dict[str, str]]) -> bool:
+    graph = {row["id"]: [item for item in row["deps"].split(",") if item and item != "none"] for row in rows}
+    seen: set[str] = set()
+    stack: set[str] = set()
+
+    def walk(name: str) -> bool:
+        if name in stack:
+            return True
+        if name in seen:
+            return False
+        stack.add(name)
+        for dep in graph.get(name, []):
+            if dep not in graph or walk(dep):
+                return True
+        stack.remove(name)
+        seen.add(name)
+        return False
+
+    return any(walk(name) for name in graph)
+
+
+def breaker_open() -> bool:
+    path = os.environ.get("X_FAILOVER_STATE")
+    if not path or not Path(path).is_file():
+        return False
+    try:
+        data = json.loads(Path(path).read_text())
+    except json.JSONDecodeError:
+        return False
+    return any(item.get("open") for item in data.get("breakers", {}).values())
+
+
+def limits() -> tuple[int, int, int]:
+    if breaker_open():
+        return 2, 1, 2
+    return 5, 2, 5
+
+
+def is_writer(kind: str) -> bool:
+    return kind in WRITERS
+
+
+def tree_hash(repo: Path, scope: str) -> str:
+    digest = hashlib.sha256()
+    files: list[Path] = []
+    for pattern in check_scope(scope):
+        if any(char in pattern for char in "*?["):
+            files.extend(path for path in repo.glob(pattern) if path.is_file())
+        else:
+            candidate = repo / pattern
+            if candidate.is_file():
+                files.append(candidate)
+            elif candidate.is_dir():
+                files.extend(path for path in candidate.rglob("*") if path.is_file())
+    for path in sorted({item.resolve() for item in files}):
+        rel = path.relative_to(repo).as_posix()
+        digest.update(rel.encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()[:16]
+
+
+def model_of(run: Path) -> str:
+    for line in (run / "RUN.md").read_text().splitlines():
+        if line.startswith("model:"):
+            return line.split(":", 1)[1].strip() or "unknown"
+    return "unknown"
+
+
+def mode_of(run: Path, rows: list[dict[str, str]]) -> str:
+    text = (run / "RUN.md").read_text()
+    match = re.search(r"^mode:\s*(\S+)", text, re.M)
+    chosen = match.group(1) if match else "auto"
+    if chosen in {"main", "subagents"}:
+        return chosen
+    return "subagents" if len(rows) >= 5 else "main"
+
+
+def replace_block(text: str, start: str, end: str, body: str) -> str:
+    block = f"{start}\n{body.rstrip()}\n{end}"
+    pattern = re.compile(re.escape(start) + r".*?" + re.escape(end), re.S)
+    if pattern.search(text):
+        return pattern.sub(block, text, count=1)
+    return text.rstrip() + "\n\n" + block + "\n"
+
+
+def preflight(repo: Path) -> str:
+    lines = [f"- python3: {sys.version.split()[0]}"]
+    if not shutil_which("git"):
+        lines.append("- git: 未安装")
+    else:
+        probe = subprocess.run(["git", "-C", str(repo), "rev-parse", "--is-inside-work-tree"], capture_output=True, text=True)
+        if probe.returncode != 0:
+            lines.append("- git: 当前目录不是仓库")
+        else:
+            branch = subprocess.run(["git", "-C", str(repo), "branch", "--show-current"], capture_output=True, text=True)
+            lines.append(f"- git: 分支 {branch.stdout.strip() or 'detached'}")
+    lines.append(f"- 写入路径: {repo} 下的 .work-docs/runs")
+    lines.append("- context-mode: xr 不探测；curl 被拦截时把事实写入 events.jsonl")
+    lines.append("- apply_patch: 由宿主提供，xr 不代查")
+    for skill in ("x-handoff", "x-worktree", "x-self-check"):
+        present = (repo / "skills" / skill / "SKILL.md").is_file()
+        lines.append(f"- 技能 {skill}: {'仓库内存在' if present else '未在当前仓库'}")
+    check = (repo / "scripts" / "check-repo.sh").is_file()
+    lines.append(f"- 检查命令: {'scripts/check-repo.sh 存在' if check else '未发现 scripts/check-repo.sh'}")
+    lines.append("- 默认允许在 run 分支或 worktree 上做本地 wip 提交，不推送。")
+    return "\n".join(lines)
+
+
+def shutil_which(name: str) -> str | None:
+    from shutil import which
+    return which(name)
+
+
+def skeleton(run_id: str, pre: str) -> str:
+    return f"""# Run {run_id}
+
+model: unknown
+failback: auto
+mode: auto
+
+## Intent
+
+（Frame 阶段写一句话目标）
+
+## Done
+
+（写可数、可检查的完成判据）
+
+## Standing orders
+
+1. 允许在 run 分支或 worktree 上做本地 wip 提交，不推送。
+2. 删除数据、强推、生产数据库迁移、花钱、对外发布、范围变更必须先问。
+
+## Autonomy
+
+<!-- xr:preflight:start -->
+{pre}
+<!-- xr:preflight:end -->
+
+## Budgets
+
+- wall: 未填
+- cost: 未填
+- unit: worker 软 30 分 / 硬 45 分；reviewer 25 分；researcher 与 scout 15 分
+
+## Status
+
+<!-- xr:status:start -->
+idle
+<!-- xr:status:end -->
+
+## Risks
+
+- none
+"""
+
+
+def cmd_init(args: argparse.Namespace) -> None:
+    slug = args.slug
+    if not SLUG_RE.fullmatch(slug) or len(slug) > 40:
+        die("slug 只能用小写字母、数字和短横线。正确命令：xr init my-task")
+    repo = repo_of(args)
+    base = repo / ".work-docs" / "runs"
+    base.mkdir(parents=True, exist_ok=True)
+    run_id = f"{now().strftime('%Y%m%d-%H%M')}-{slug}"
+    path = base / run_id
+    suffix = 2
+    while path.exists():
+        path = base / f"{run_id}-{suffix}"
+        suffix += 1
+        run_id = path.name
+    path.mkdir()
+    (path / "notes").mkdir()
+    (path / "RUN.md").write_text(skeleton(run_id, preflight(repo)))
+    write_tsv(path / "units.tsv", HEADER, [])
+    write_tsv(path / "ledger.tsv", LEDGER, [])
+    write_tsv(path / "decisions.tsv", DECISIONS, [])
+    (path / "gates.md").write_text("# gates\n\n")
+    (path / "events.jsonl").write_text("")
+    (path / "capsule.md").write_text("")
+    (base / "ACTIVE").write_text(run_id + "\n")
+    event(path, {"type": "init", "run": run_id})
+    say(f"ok init {run_id}")
+
+
+def cmd_plan_add(args: argparse.Namespace) -> None:
+    if not ID_RE.fullmatch(args.id):
+        die(f"单元 id 不合法。正确命令：xr plan add {args.id or 'ID'} \"标题\" --deps none --files <路径> --verify \"<命令>\"")
+    if not args.title or not args.verify or not args.files or not args.deps:
+        die("参数不够。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\"")
+    kind = args.kind or "impl"
+    if kind not in KINDS:
+        die("kind 只能是 impl、review、research、bugfix。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" --kind impl")
+    check_scope(args.files)
+    deps = "none" if args.deps.strip() == "none" else ",".join(part.strip() for part in args.deps.split(",") if part.strip())
+    repo = repo_of(args)
+    run = run_dir(repo)
+    rows = units(run)
+    known = {row["id"] for row in rows}
+    if deps != "none":
+        missing = [item for item in deps.split(",") if item not in known and item != args.id]
+        if missing:
+            die(f"依赖还不存在：{','.join(missing)}。正确命令：先 xr plan add 依赖，再加这个单元")
+    timebox = str(args.timebox if args.timebox is not None else (25 if kind == "review" else 15 if kind == "research" else 45))
+    fresh = {
+        "id": args.id, "title": cell(args.title), "state": "todo", "deps": deps, "scope": args.files,
+        "timebox_min": timebox, "attempts": "0", "owner": "unassigned", "model": model_of(run),
+        "verify_cmd": cell(args.verify), "evidence": "none", "updated": stamp(), "kind": kind,
+    }
+    replaced = False
+    for index, row in enumerate(rows):
+        if row["id"] == args.id:
+            if row["state"] not in {"todo", "failed", "abandoned"}:
+                die(f"单元 {args.id} 正在 {row['state']}，不能改。正确命令：xr status")
+            fresh["attempts"] = row["attempts"]
+            fresh["evidence"] = row["evidence"]
+            rows[index] = fresh
+            replaced = True
+    if not replaced:
+        rows.append(fresh)
+    if cycles(rows):
+        die("依赖有环，已拒绝。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\"")
+    save_units(run, rows)
+    if len(rows) >= 5 and mode_of(run, rows) == "subagents":
+        record_decision(run, "mode", "不少于 5 个单元，走子代理", "主会话执行", "Y")
+    event(run, {"type": "plan", "unit": args.id, "replaced": replaced})
+    say(f"ok plan {args.id} {'updated' if replaced else 'added'} units={len(rows)} mode={mode_of(run, rows)}")
+
+
+def ready(row: dict[str, str], rows: list[dict[str, str]]) -> bool:
+    if row["state"] != "todo":
+        return False
+    if row["deps"] == "none":
+        return True
+    by_id = {item["id"]: item for item in rows}
+    return all(by_id[dep]["state"] == "done" for dep in row["deps"].split(",") if dep in by_id)
+
+
+def overlaps(row: dict[str, str], other: dict[str, str]) -> bool:
+    left = [part.strip() for part in row["scope"].split(",") if part.strip()]
+    right = [part.strip() for part in other["scope"].split(",") if part.strip()]
+    return any(frontier.overlap(a, b) for a in left for b in right)
+
+
+def cmd_next(args: argparse.Namespace) -> None:
+    run = run_dir(repo_of(args))
+    rows = units(run)
+    readers, writers, total = limits()
+    doing = [row for row in rows if row["state"] == "doing"]
+    if len(doing) >= total:
+        say("ok next none concurrency")
+        return
+    for row in rows:
+        if not ready(row, rows):
+            continue
+        if any(overlaps(row, other) for other in doing):
+            continue
+        writer = is_writer(row["kind"])
+        if writer and sum(1 for item in doing if is_writer(item["kind"])) >= writers:
+            continue
+        if not writer and sum(1 for item in doing if not is_writer(item["kind"])) >= readers:
+            continue
+        row["state"] = "doing"
+        row["updated"] = stamp()
+        save_units(run, rows)
+        event(run, {"type": "next", "unit": row["id"]})
+        say(f"ok next {row['id']} doing")
+        return
+    say("ok next none")
+
+
+def ledger_rows(run: Path) -> list[dict[str, str]]:
+    return read_tsv(run / "ledger.tsv", LEDGER)
+
+
+def cmd_verify(args: argparse.Namespace) -> None:
+    repo = repo_of(args)
+    run = run_dir(repo)
+    rows = units(run)
+    row = find_unit(rows, args.id)
+    digest = tree_hash(repo, row["scope"])
+    existing = ledger_rows(run)
+    prior = [item for item in existing if item["unit"] == args.id and item["tree_hash"] == digest and item["verdict"] == "VERIFIED"]
+    if prior:
+        say(f"ok verify {args.id} VERIFIED {digest} cached")
+        return
+    timeout = int(args.timeout) if args.timeout else 180
+    try:
+        result = subprocess.run(row["verify_cmd"], shell=True, cwd=repo, capture_output=True, text=True, timeout=timeout)
+        code = result.returncode
+        output = (result.stdout or "") + (result.stderr or "")
+    except subprocess.TimeoutExpired as error:
+        code = 124
+        output = (error.stdout or "") if isinstance(error.stdout, str) else ""
+    evidence = run / "notes" / f"verify-{args.id}.log"
+    evidence.write_text(output)
+    verdict = "VERIFIED" if code == 0 else "FAILED"
+    existing.append({
+        "unit": args.id, "tree_hash": digest, "verdict": verdict, "cmd": row["verify_cmd"].replace("\t", " "),
+        "exit_code": str(code), "evidence_path": evidence.relative_to(run).as_posix(),
+        "model": row["model"] or model_of(run), "ts": stamp(),
+    })
+    write_tsv(run / "ledger.tsv", LEDGER, existing)
+    if verdict == "VERIFIED" and row["state"] == "doing":
+        row["state"] = "verifying"
+        row["updated"] = stamp()
+        save_units(run, rows)
+    event(run, {"type": "verify", "unit": args.id, "verdict": verdict, "exit": code})
+    say(f"ok verify {args.id} {verdict} {digest}")
+
+
+def verified_now(repo: Path, run: Path, row: dict[str, str]) -> bool:
+    digest = tree_hash(repo, row["scope"])
+    return any(item["unit"] == row["id"] and item["tree_hash"] == digest and item["verdict"] == "VERIFIED" for item in ledger_rows(run))
+
+
+def cmd_done(args: argparse.Namespace) -> None:
+    repo = repo_of(args)
+    run = run_dir(repo)
+    rows = units(run)
+    row = find_unit(rows, args.id)
+    if row["state"] == "done":
+        say(f"ok done {args.id} unchanged")
+        return
+    if not verified_now(repo, run, row):
+        die(f"没有对应当前文件的 VERIFIED ledger，不能 done。正确命令：xr verify {args.id}")
+    row["state"] = "done"
+    row["updated"] = stamp()
+    save_units(run, rows)
+    (run / "pending-boundary.json").write_text(json.dumps({
+        "nonce": f"{args.id}-{stamp()}",
+        "dependsOnReasoning": False,
+        "unrelated": False,
+        "unattended": False,
+    }))
+    event(run, {"type": "done", "unit": args.id})
+    refresh_status(run)
+    say(f"ok done {args.id}")
+
+
+def cmd_fail(args: argparse.Namespace) -> None:
+    if args.kind not in FAIL_KINDS:
+        die("kind 只能是 cap、net、tool、logic、verify、unknown。正确命令：xr fail <id> --kind net")
+    run = run_dir(repo_of(args))
+    rows = units(run)
+    row = find_unit(rows, args.id)
+    attempts = int(row["attempts"]) + 1
+    row["attempts"] = str(attempts)
+    row["evidence"] = f"kind:{args.kind}"
+    row["updated"] = stamp()
+    retry = args.kind in {"net", "tool", "unknown"} and attempts < 2 and args.kind != "cap"
+    if args.kind == "cap":
+        row["state"] = "abandoned"
+        hint = f"xr plan add {args.id}b \"拆小后的标题\" --deps none --files {row['scope']} --verify \"{row['verify_cmd']}\""
+    elif retry:
+        row["state"] = "todo"
+        hint = f"xr next"
+    else:
+        row["state"] = "abandoned"
+        hint = "xr plan add <新id> \"重新规划\" --deps none --files <路径> --verify \"<命令>\""
+    save_units(run, rows)
+    event(run, {"type": "fail", "unit": args.id, "kind": args.kind, "state": row["state"]})
+    say(f"ok fail {args.id} {row['state']} attempts={attempts}")
+    say(f"正确命令：{hint}")
+
+
+def record_decision(run: Path, unit: str, decision: str, reason: str, reversible: str) -> bool:
+    rows = read_tsv(run / "decisions.tsv", DECISIONS)
+    if rows and rows[-1]["decision"] == decision and rows[-1]["reason"] == reason and rows[-1]["unit"] == unit:
+        return False
+    rows.append({
+        "ts": stamp(), "unit": unit, "decision": cell(decision), "reason": cell(reason),
+        "alternatives": "none", "reversible": reversible, "by_model": model_of(run),
+    })
+    write_tsv(run / "decisions.tsv", DECISIONS, rows)
+    return True
+
+
+def cmd_decide(args: argparse.Namespace) -> None:
+    if not args.text or not args.why:
+        die("参数不够。正确命令：xr decide \"决定\" --why \"理由\"")
+    run = run_dir(repo_of(args))
+    wrote = record_decision(run, args.unit or "run", args.text, args.why, "Y" if args.reversible else "N")
+    say(f"ok decide {'unchanged' if not wrote else 'recorded'}")
+
+
+def cmd_gate(args: argparse.Namespace) -> None:
+    if not args.text or not args.default:
+        die("参数不够。正确命令：xr gate \"问题\" --default \"默认做法\"")
+    run = run_dir(repo_of(args))
+    text = (run / "gates.md").read_text()
+    if f"- question: {args.text}" in text and "status: open" in text:
+        say("ok gate unchanged")
+        return
+    number = text.count("\n## G") + 1
+    block = (
+        f"## G{number}\n"
+        f"- question: {args.text}\n"
+        f"- default: {args.default}\n"
+        f"- deadline: Land 前无答复即按默认执行\n"
+        f"- units: {args.unit or 'none'}\n"
+        f"- status: open\n\n"
+    )
+    (run / "gates.md").write_text(text + block)
+    if args.unit:
+        rows = units(run)
+        row = find_unit(rows, args.unit)
+        row["state"] = "blocked"
+        row["updated"] = stamp()
+        save_units(run, rows)
+    event(run, {"type": "gate", "unit": args.unit or "none"})
+    say(f"ok gate G{number}")
+
+
+def status_body(run: Path) -> str:
+    rows = units(run)
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row["state"]] = counts.get(row["state"], 0) + 1
+    lines = [f"run: {run.name}", f"mode: {mode_of(run, rows)}", f"units: {len(rows)}"]
+    for state in ("todo", "doing", "verifying", "done", "failed", "blocked", "abandoned"):
+        lines.append(f"{state}: {counts.get(state, 0)}")
+    doing = [row["id"] for row in rows if row["state"] == "doing"]
+    lines.append("doing_ids: " + (",".join(doing) if doing else "none"))
+    return "\n".join(lines)
+
+
+def refresh_status(run: Path) -> str:
+    body = status_body(run)
+    text = (run / "RUN.md").read_text()
+    (run / "RUN.md").write_text(replace_block(text, "<!-- xr:status:start -->", "<!-- xr:status:end -->", body))
+    return body
+
+
+def cmd_status(args: argparse.Namespace) -> None:
+    run = run_dir(repo_of(args))
+    before = (run / "RUN.md").read_text()
+    body = refresh_status(run)
+    after = (run / "RUN.md").read_text()
+    if before == after:
+        say("ok status unchanged")
+    else:
+        say("ok status")
+    say(body)
+
+
+def section(text: str, title: str) -> str:
+    match = re.search(rf"^## {re.escape(title)}\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+    return match.group(1).strip() if match else ""
+
+
+def cmd_capsule(args: argparse.Namespace) -> None:
+    run = run_dir(repo_of(args))
+    run_md = (run / "RUN.md").read_text()
+    rows = units(run)
+    current = next((row for row in rows if row["state"] == "doing"), None)
+    if current is None:
+        current = next((row for row in rows if row["state"] in {"todo", "failed", "verifying"}), None)
+    decisions = read_tsv(run / "decisions.tsv", DECISIONS)[-3:]
+    verified = [row["id"] for row in rows if row["state"] == "done"]
+    if current and current["state"] == "doing":
+        nxt = f"继续 {current['id']}，然后 xr verify {current['id']}"
+    elif any(row["state"] == "todo" for row in rows):
+        nxt = "xr next"
+    else:
+        nxt = "读 stages/review.md"
+    lines = [
+        f"# capsule {run.name}",
+        "",
+        "目标：" + one_line(section(run_md, "Intent"), 180),
+        "Done：" + one_line(section(run_md, "Done"), 220),
+        "当前：" + (f"{current['id']} {current['state']} {current['title']}" if current else "无"),
+        "已完成：" + (",".join(verified[-12:]) if verified else "无"),
+        "下一步：" + nxt,
+        "文件：RUN.md units.tsv ledger.tsv",
+        "模型：" + model_of(run),
+        "决策：" + (" | ".join(item["decision"] for item in decisions) if decisions else "无"),
+    ]
+    text = "\n".join(lines) + "\n"
+    encoded = text.encode()
+    if len(encoded) > 2048:
+        text = encoded[:2048].decode(errors="ignore").rstrip() + "\n"
+    (run / "capsule.md").write_text(text)
+    say(f"ok capsule bytes={len(text.encode())}")
+
+
+def one_line(text: str, limit: int) -> str:
+    flat = " ".join(text.split())
+    return flat[:limit] if flat else "未填"
+
+
+def sha_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def cmd_import(args: argparse.Namespace) -> None:
+    repo = repo_of(args)
+    task = repo / ".work-docs" / "tasks" / args.task_id
+    contract = task / "contract.md"
+    state = task / "state.md"
+    if not contract.is_file():
+        die(f"找不到 {contract}。正确命令：xr import <task-id>")
+    before = {str(path.relative_to(repo)): sha_file(path) for path in (contract, state) if path.is_file()}
+    text = contract.read_text()
+    objective = "imported"
+    for line in text.splitlines():
+        if line.startswith("objective:"):
+            objective = line.split(":", 1)[1].strip() or objective
+    # 复用一次 init 的目录规则，但不覆盖 ACTIVE 以外的旧任务文件。
+    slug = re.sub(r"[^a-z0-9]+", "-", args.task_id.lower()).strip("-")[:40] or "import"
+    ns = argparse.Namespace(slug=slug, repo=str(repo))
+    cmd_init(ns)
+    run = run_dir(repo)
+    rows = units(run)
+    imported = 0
+    for line in text.splitlines():
+        if not line.startswith("work_item:"):
+            continue
+        name, *segments = line[len("work_item:"):].split("|")
+        fields = {}
+        for segment in segments:
+            if "=" in segment:
+                key, value = segment.split("=", 1)
+                fields[key] = value
+        if not ID_RE.fullmatch(name):
+            continue
+        scope = fields.get("scope") or "README.md"
+        try:
+            check_scope(scope)
+        except SystemExit:
+            scope = "README.md"
+        rows.append({
+            "id": name, "title": fields.get("title", name), "state": "todo", "deps": fields.get("depends") or "none",
+            "scope": scope, "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown",
+            "verify_cmd": "true", "evidence": f"imported:{args.task_id}", "updated": stamp(), "kind": "impl",
+        })
+        imported += 1
+    if imported == 0:
+        rows.append({
+            "id": "imported", "title": objective[:80], "state": "todo", "deps": "none", "scope": "README.md",
+            "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown", "verify_cmd": "true",
+            "evidence": f"imported:{args.task_id}", "updated": stamp(), "kind": "impl",
+        })
+    if not cycles(rows):
+        save_units(run, rows)
+    after = {str(path.relative_to(repo)): sha_file(path) for path in (contract, state) if path.is_file()}
+    if before != after:
+        die("导入改动了旧任务文件，已停止")
+    event(run, {"type": "import", "task": args.task_id, "units": len(rows)})
+    say(f"ok import {args.task_id} units={len(rows)}")
+
+
+def build() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="xr", add_help=True)
+    parser.add_argument("--repo", default=None)
+    sub = parser.add_subparsers(dest="verb")
+    init = sub.add_parser("init")
+    init.add_argument("slug")
+    init.set_defaults(func=cmd_init)
+    plan = sub.add_parser("plan")
+    plan_sub = plan.add_subparsers(dest="plan_verb")
+    add = plan_sub.add_parser("add")
+    add.add_argument("id")
+    add.add_argument("title")
+    add.add_argument("--deps", default=None)
+    add.add_argument("--files", default=None)
+    add.add_argument("--verify", default=None)
+    add.add_argument("--kind", default="impl")
+    add.add_argument("--timebox", type=int)
+    add.set_defaults(func=cmd_plan_add)
+    nxt = sub.add_parser("next")
+    nxt.set_defaults(func=cmd_next)
+    verify = sub.add_parser("verify")
+    verify.add_argument("id")
+    verify.add_argument("--timeout", type=int)
+    verify.set_defaults(func=cmd_verify)
+    done = sub.add_parser("done")
+    done.add_argument("id")
+    done.set_defaults(func=cmd_done)
+    fail = sub.add_parser("fail")
+    fail.add_argument("id")
+    fail.add_argument("--kind", required=True)
+    fail.set_defaults(func=cmd_fail)
+    decide = sub.add_parser("decide")
+    decide.add_argument("text")
+    decide.add_argument("--why", required=True)
+    decide.add_argument("--unit", default="run")
+    decide.add_argument("--reversible", action="store_true")
+    decide.set_defaults(func=cmd_decide)
+    gate = sub.add_parser("gate")
+    gate.add_argument("text")
+    gate.add_argument("--default", required=True)
+    gate.add_argument("--unit")
+    gate.set_defaults(func=cmd_gate)
+    status = sub.add_parser("status")
+    status.set_defaults(func=cmd_status)
+    capsule = sub.add_parser("capsule")
+    capsule.set_defaults(func=cmd_capsule)
+    imp = sub.add_parser("import")
+    imp.add_argument("task_id")
+    imp.set_defaults(func=cmd_import)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    raw = list(sys.argv[1:] if argv is None else argv)
+    repo = None
+    cleaned: list[str] = []
+    index = 0
+    while index < len(raw):
+        if raw[index] == "--repo" and index + 1 < len(raw):
+            repo = raw[index + 1]
+            index += 2
+            continue
+        cleaned.append(raw[index])
+        index += 1
+    parser = build()
+    try:
+        args = parser.parse_args(cleaned)
+    except SystemExit as error:
+        if error.code not in (0, None):
+            die("参数不对。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net | xr decide \"决定\" --why \"理由\" | xr gate \"问题\" --default \"默认\" | xr status | xr capsule | xr import <task-id>")
+        raise
+    args.repo = repo
+    if not getattr(args, "func", None):
+        die("未知或不完整的命令。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net | xr decide \"决定\" --why \"理由\" | xr gate \"问题\" --default \"默认\" | xr status | xr capsule | xr import <task-id>")
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
