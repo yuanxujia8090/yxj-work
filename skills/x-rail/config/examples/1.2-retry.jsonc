@@ -1,0 +1,15 @@
+// 合并进 ~/.pi/agent/settings.json。
+// 不要单独启用：没有 x-failover 时，重试从 5 次降到 1 次会让会话更早停住。
+{
+  "retry": {
+    "enabled": true,
+    "maxRetries": 1,
+    "baseDelayMs": 5000,
+    "maxAgentDelayMs": 30000,
+    "provider": {
+      "timeoutMs": 300000,
+      "maxRetries": 0,
+      "maxRetryDelayMs": 80000
+    }
+  }
+}
