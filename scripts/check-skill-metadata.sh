@@ -65,7 +65,9 @@ while IFS= read -r file; do
       if (!closed) error("missing closing frontmatter delimiter")
       if (!seen["name"]) error("missing name")
       if (!seen["description"]) error("missing description")
-      if (!seen["disable-model-invocation"]) error("missing invocation boundary")
+      if (expected == "x-rail") {
+        if (seen["disable-model-invocation"]) error("x-rail must not set disable-model-invocation")
+      } else if (!seen["disable-model-invocation"]) error("missing invocation boundary")
     }
   ' "$file" || exit 1
 done < <(find "$ROOT/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -print | sort)
