@@ -26,6 +26,8 @@ import { markWatchdog } from "./watchdog.ts";
 
 let lastTokenAt = Date.now();
 let userAbort = false;
+// 工具执行期间（尤其是同步子代理）模型不出 token，看门狗不能把这段时间算作“卡住”。
+let activeTools = 0;
 let watchdogTimer: ReturnType<typeof setTimeout> | undefined;
 
 export default function (pi: ExtensionAPI) {
@@ -43,12 +45,32 @@ export default function (pi: ExtensionAPI) {
     lastTokenAt = Date.now();
   });
 
+  pi.on("tool_execution_start", async () => {
+    activeTools += 1;
+    lastTokenAt = Date.now();
+  });
+
+  pi.on("tool_execution_update", async () => {
+    lastTokenAt = Date.now();
+  });
+
+  pi.on("tool_execution_end", async () => {
+    activeTools = Math.max(0, activeTools - 1);
+    lastTokenAt = Date.now();
+  });
+
   pi.on("agent_start", async (_event, ctx) => {
     userAbort = false;
+    activeTools = 0;
     lastTokenAt = Date.now();
     if (watchdogTimer) clearTimeout(watchdogTimer);
     const arm = () => {
       watchdogTimer = setTimeout(() => {
+        if (activeTools > 0) {
+          lastTokenAt = Date.now();
+          arm();
+          return;
+        }
         if (watchdogDue(lastTokenAt, Date.now(), userAbort)) {
           markWatchdog();
           ctx.abort();
