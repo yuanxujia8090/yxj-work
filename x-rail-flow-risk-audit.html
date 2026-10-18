@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>x-rail 流程与风险全景图</title>
+<style>
+  :root {
+    --bg: #0b0c0e;
+    --surface: #141519;
+    --surface2: #191b21;
+    --border: #26282e;
+    --border2: #34363e;
+    --text: #e6e7ea;
+    --text2: #9a9da6;
+    --text3: #6b6e78;
+    --yellow: #ffd60a;
+    --yellow-dim: #8a7500;
+    --blue: #6ea8fe;
+    --green: #4ade80;
+    --red: #f87171;
+    --purple: #c084fc;
+    --orange: #fb923c;
+    --cyan: #22d3ee;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: rgba(255, 214, 10, .25); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 100px; overflow-wrap: anywhere; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 64px 0 40px; border-bottom: 1px solid var(--border); }
+  .hero .kicker {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--yellow); margin-bottom: 18px;
+  }
+  .hero h1 { font-size: 38px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
+  .hero h1 .crown { color: var(--yellow); }
+  .hero .sub { margin-top: 14px; color: var(--text2); max-width: 820px; font-size: 15px; }
+  .hero .meta { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .chip {
+    font-family: var(--mono); font-size: 11.5px; color: var(--text2);
+    border: 1px solid var(--border2); border-radius: 999px; padding: 4px 12px;
+  }
+  .chip b { color: var(--yellow); font-weight: 600; }
+
+  /* ---------- Nav ---------- */
+  nav.toc {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(11,12,14,.88); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    margin: 0 -28px; padding: 10px 28px;
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  nav.toc a {
+    color: var(--text2); text-decoration: none; font-size: 12.5px;
+    font-family: var(--mono); padding: 5px 10px; border-radius: 7px; white-space: nowrap;
+  }
+  nav.toc a:hover { color: var(--yellow); background: var(--surface2); }
+
+  /* ---------- Sections ---------- */
+  section { padding-top: 64px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+  .sec-num {
+    font-family: var(--mono); font-size: 13px; color: var(--bg);
+    background: var(--yellow); border-radius: 6px; padding: 2px 9px; font-weight: 700;
+  }
+  .sec-head h2 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+  .sec-desc { color: var(--text2); margin-bottom: 26px; max-width: 880px; }
+  .sec-desc code, .m { font-family: var(--mono); font-size: .92em; color: var(--cyan); }
+
+  /* ---------- Cards & boxes ---------- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 22px; margin-bottom: 14px;
+  }
+  .card h3 { font-size: 16px; font-weight: 650; margin-bottom: 8px; }
+  .card h3 .badge { margin-right: 8px; }
+  .card p { color: var(--text2); }
+  .card ul { margin: 8px 0 0 18px; color: var(--text2); }
+  .card ul li { margin-bottom: 5px; }
+  .card ul li::marker { color: var(--text3); }
+  .card ul ul { margin-top: 4px; margin-bottom: 4px; }
+
+  .badge {
+    display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px; vertical-align: 2px;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--yellow);
+  }
+  .badge.b-blue { color: var(--blue); } .badge.b-green { color: var(--green); }
+  .badge.b-red { color: var(--red); } .badge.b-purple { color: var(--purple); }
+  .badge.b-orange { color: var(--orange); } .badge.b-cyan { color: var(--cyan); }
+
+  /* ---------- Pipeline (main spine) ---------- */
+  .pipe { display: flex; flex-direction: column; gap: 0; margin: 20px 0 8px; }
+  .pstep { display: flex; gap: 18px; position: relative; }
+  .pstep .rail { display: flex; flex-direction: column; align-items: center; width: 36px; flex-shrink: 0; }
+  .pstep .dot {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    background: var(--surface2); border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--yellow);
+  }
+  .pstep .line { width: 2px; flex: 1; background: var(--border); margin: 4px 0; min-height: 14px; }
+  .pstep:last-child .line { display: none; }
+  .pstep .body { padding: 4px 0 26px; flex: 1; min-width: 0; }
+  .pstep .body h4 { font-size: 15px; font-weight: 650; margin-bottom: 5px; }
+  .pstep .body p { color: var(--text2); font-size: 13.5px; max-width: 880px; }
+  .pstep .body .sub { color: var(--text3); font-size: 12.5px; margin-top: 6px; font-family: var(--mono); }
+
+  /* ---------- Grid ---------- */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+  /* ---------- Decision cards ---------- */
+  .dec {
+    border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+    margin-bottom: 26px; background: var(--surface);
+  }
+  .dec-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 22px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface2), var(--surface));
+  }
+  .dec-head .q {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--yellow);
+    border: 1px solid var(--yellow-dim); border-radius: 6px; padding: 3px 8px;
+    flex-shrink: 0;
+  }
+  .dec-head h3 { font-size: 17px; font-weight: 700; }
+  .dec-body { padding: 20px 22px; }
+  .dec-body > p { color: var(--text2); margin-bottom: 14px; }
+  .rule {
+    display: grid; grid-template-columns: 220px 1fr; gap: 8px 18px;
+    padding: 9px 0; border-bottom: 1px dashed var(--border);
+    font-size: 13.5px;
+  }
+  .rule:last-child { border-bottom: none; }
+  .rule .k { color: var(--yellow); font-family: var(--mono); font-size: 12.5px; padding-top: 2px; }
+  .rule .v { color: var(--text2); }
+  .rule .v b { color: var(--text); font-weight: 600; }
+  @media (max-width: 700px) {
+    .rule { grid-template-columns: 1fr; gap: 2px; }
+    nav.toc { flex-wrap: nowrap; overflow-x: auto; }
+  }
+
+  /* ---------- Decision tree ---------- */
+  .tree { font-size: 13.5px; }
+  .tree ul { list-style: none; margin-left: 22px; padding-left: 18px; border-left: 1px solid var(--border2); }
+  .tree > ul { margin-left: 0; border-left: none; padding-left: 0; }
+  .tree li { position: relative; padding: 5px 0 5px 0; }
+  .tree ul li::before {
+    content: ""; position: absolute; left: -18px; top: 15px;
+    width: 12px; height: 1px; background: var(--border2);
+  }
+  .tree .cond { color: var(--text); }
+  .tree .cond::before {
+    content: "▸ "; color: var(--text3); font-size: 10px;
+  }
+  .leaf {
+    display: inline-block; font-family: var(--mono); font-size: 12.5px;
+    border: 1px solid var(--border2); border-radius: 6px;
+    padding: 1px 8px; margin-left: 4px; background: var(--surface2);
+    color: var(--orange); font-weight: 600; white-space: nowrap;
+  }
+  .leaf.l-build { color: var(--green); } .leaf.l-diag { color: var(--red); }
+  .leaf.l-ship { color: var(--blue); } .leaf.l-auto { color: var(--purple); }
+  .leaf.l-meta { color: var(--cyan); }
+  .tree .note { color: var(--text3); font-size: 12px; }
+
+  /* ---------- Flow boxes (generic flow diagram) ---------- */
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin: 16px 0; }
+  .fbox {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 10px 14px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    min-width: 0;
+  }
+  .fbox .t { font-weight: 650; }
+  .fbox .d { color: var(--text3); font-size: 11.5px; font-family: var(--mono); margin-top: 2px; }
+  .farr {
+    display: flex; align-items: center; padding: 0 8px; color: var(--text3);
+    font-family: var(--mono); font-size: 16px; flex-shrink: 0;
+  }
+  .fbox.accent { border-color: var(--yellow-dim); }
+  .fbox.accent .t { color: var(--yellow); }
+
+  /* ---------- Table ---------- */
+  table.rt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.rt th {
+    text-align: left; font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text3); font-weight: 600;
+    padding: 8px 12px; border-bottom: 1px solid var(--border2);
+  }
+  table.rt td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text2); }
+  table.rt tr:last-child td { border-bottom: none; }
+  table.rt td:first-child { color: var(--text); font-weight: 550; white-space: nowrap; }
+  @media (max-width: 700px) { table.rt td:first-child { white-space: normal; } }
+  table.rt .mono { font-family: var(--mono); font-size: 12px; }
+  table.rt a { color: var(--yellow); text-decoration: none; }
+  .tblwrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; overflow-y: hidden; margin-bottom: 14px; }
+  .tblwrap .cap { padding: 13px 16px 2px; font-size: 14px; font-weight: 650; }
+  .tblwrap .cap small { color: var(--text3); font-weight: 400; margin-left: 8px; font-family: var(--mono); font-size: 11.5px; }
+
+  /* ---------- Playbook grid ---------- */
+  .pb-group { margin-bottom: 22px; }
+  .pb-group h4 {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 10px;
+  }
+  .pb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 10px; }
+  .pb {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 15px; font-size: 13px;
+  }
+  .pb .n { font-weight: 650; margin-bottom: 3px; display: flex; align-items: center; gap: 7px; }
+  .pb .n .dotc { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .pb .d { color: var(--text3); font-size: 12.5px; line-height: 1.55; }
+  .pb .file { font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin-top: 6px; display: block; }
+
+  /* ---------- Principle list ---------- */
+  .pr-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 900px) { .pr-list { grid-template-columns: 1fr; } }
+  .pr {
+    display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 9px; padding: 10px 14px; font-size: 13px;
+  }
+  .pr .pname { font-weight: 600; white-space: nowrap; color: var(--text); }
+  .pr .pdesc { color: var(--text3); font-size: 12.5px; }
+  .pr .g {
+    flex-shrink: 0; font-family: var(--mono); font-size: 10px; padding: 2px 6px;
+    border-radius: 5px; height: fit-content; border: 1px solid var(--border2);
+  }
+
+  /* ---------- Swimlane (verification) ---------- */
+  .lanes { display: flex; flex-direction: column; gap: 7px; margin: 14px 0; }
+  .lane {
+    display: flex; align-items: center; gap: 12px;
+    border-radius: 9px; padding: 9px 14px; font-size: 13px;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .lane .ln { font-family: var(--mono); font-size: 11px; font-weight: 700; border-radius: 5px; padding: 2px 7px; flex-shrink: 0; }
+  .lane .ld { color: var(--text2); flex: 1; min-width: 0; }
+  .lane .lv { font-family: var(--mono); font-size: 11.5px; color: var(--text3); white-space: nowrap; }
+
+  /* ---------- Orchestrate topology ---------- */
+  .topo { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 20px 0; }
+  .topo-node {
+    border: 1px solid var(--border2); border-radius: 11px; background: var(--surface2);
+    padding: 12px 20px; text-align: center; min-width: 300px;
+  }
+  .topo-node .tt { font-weight: 650; font-size: 14px; }
+  .topo-node .td { color: var(--text3); font-size: 12px; font-family: var(--mono); margin-top: 3px; }
+  .topo-vline { width: 2px; height: 22px; background: var(--border2); }
+  .topo-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+  /* ---------- Callout ---------- */
+  .callout {
+    border-left: 3px solid var(--yellow); background: rgba(255,214,10,.05);
+    border-radius: 0 10px 10px 0; padding: 12px 18px; margin: 14px 0;
+    font-size: 13.5px; color: var(--text2);
+  }
+  .callout b { color: var(--text); }
+  .callout.red { border-left-color: var(--red); background: rgba(248,113,113,.05); }
+  .callout.green { border-left-color: var(--green); background: rgba(74,222,128,.05); }
+  .callout.blue { border-left-color: var(--blue); background: rgba(110,168,254,.05); }
+  .callout.orange { border-left-color: var(--orange); background: rgba(251,146,60,.05); }
+
+  .mono-block {
+    font-family: var(--mono); font-size: 12.5px; background: #0e0f12;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; color: var(--text2); overflow-x: auto;
+    white-space: pre; line-height: 1.7; margin: 12px 0;
+  }
+  .mono-block .ck { color: var(--yellow); }
+  .mono-block .cg { color: var(--green); }
+  .mono-block .cb { color: var(--blue); }
+  .mono-block .cr { color: var(--red); }
+  .mono-block .cp { color: var(--purple); }
+  .mono-block .cc { color: var(--text3); }
+
+  /* ---------- Risk cards & missing markers ---------- */
+  .card .ev {
+    margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border);
+    font-size: 12.5px; color: var(--text3);
+  }
+  .card .ev .m { color: var(--text3); }
+  .card .rid {
+    font-family: var(--mono); font-size: 12.5px; color: var(--text3);
+    font-weight: 600; margin-right: 2px;
+  }
+  .card .lbl { color: var(--yellow); font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; }
+  .miss {
+    display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px; vertical-align: 2px;
+    color: var(--red); border: 1px solid rgba(248,113,113,.5); background: rgba(248,113,113,.08);
+  }
+  .miss.partial { color: var(--orange); border-color: rgba(251,146,60,.5); background: rgba(251,146,60,.08); }
+  .ok {
+    display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px; vertical-align: 2px;
+    color: var(--green); border: 1px solid rgba(74,222,128,.5); background: rgba(74,222,128,.08);
+  }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text3); font-size: 12.5px; }
+  footer a { color: var(--text2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="kicker">x-rail / 独立工作流技能仓库 — 流程解剖与风险审计</div>
+  <h1><span class="crown">♛</span> x-rail 流程与风险全景图</h1>
+  <p class="sub">
+    x-rail 把"一次任务"做成一条有记录的流水线。入口 <span class="m">/x-rail</span> 先按交付结果分流，
+    再用两问决定记录强度：普通任务零留存直做，严格任务走完整生命周期（契约 → 封存 → 取证 → 验证 → 审查 → 完成门）。
+    本图完整呈现主链路、<b style="color:var(--yellow)">9 个关键决策点</b>与 26 条风险，并与 pstack 结构逐项对照标注缺失。
+  </p>
+  <div class="meta">
+    <span class="chip"><b>36</b> 技能目录（4 入口 + 32 辅助）</span>
+    <span class="chip"><b>11</b> playbook + <b>3</b> 模板</span>
+    <span class="chip"><b>26</b> 风险（3 P0 / 10 P1 / 13 P2）</span>
+    <span class="chip">出口 <b>done + 索引更新</b></span>
+    <span class="chip">核对版本 <b>ce02ac1</b></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#spine">01 主链路</a>
+  <a href="#d1">D1 路由</a>
+  <a href="#d2">D2 记录强度</a>
+  <a href="#d3">D3 拆分与工作项</a>
+  <a href="#d4">D4 委派与执行</a>
+  <a href="#d5">D5 确认与成本</a>
+  <a href="#d6">D6 验证裁决</a>
+  <a href="#d7">D7 审查策略</a>
+  <a href="#d8">D8 预算与恢复</a>
+  <a href="#d9">D9 完成门</a>
+  <a href="#topo">08 记录拓扑</a>
+  <a href="#playbooks">09 阶段全表</a>
+  <a href="#skills">10 技能索引</a>
+  <a href="#risks">11 风险全表</a>
+  <a href="#gaps">12 缺失对照</a>
+</nav>
+
+<!-- ============ 01 SPINE ============ -->
+<section id="spine">
+  <div class="sec-head"><span class="sec-num">01</span><h2>主链路：严格任务从取号到落地</h2></div>
+  <p class="sec-desc">
+    所有任务先共用一段"分叉前"的骨架：<b>入口 → 路由（按交付结果）→ 记录强度两问</b>。
+    普通任务到此结束（零留存直做）；严格任务继续走完整生命周期，每一步都有脚本可查的产物：
+    <span class="m">contract.md → state.md → evidence → 完成门</span>。
+  </p>
+
+  <div class="pipe">
+    <div class="pstep">
+      <div class="rail"><div class="dot">1</div><div class="line"></div></div>
+      <div class="body">
+        <h4>入口：用户给出目标</h4>
+        <p><span class="m">/x-rail</span> 普通入口；<span class="m">/x-rail-long</span> 用于跨会话、外部等待或独立依赖汇总。
+        用户只要分析时只在回复里交付，不创建任务或目标文件；要写文档时只写授权目录。</p>
+        <div class="sub">/x-rail &lt;goal&gt;　·　用户禁止、更高规则和宿主限制优先</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">2</div><div class="line"></div></div>
+      <div class="body">
+        <h4>路由：按交付结果分流 <span class="badge">决策点 D1</span></h4>
+        <p>先看要交付什么（解释 / 调查 / 研究 / 方案 / 审查 / 修改 / 操作 / 组合），再决定记录强度。
+        "按当前未知选最短路径"，不要求默认走完整阶段链路。</p>
+        <div class="sub">SKILL.md → routing 模块（阶段、说明文件和按需参考映射）</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">3</div><div class="line"></div></div>
+      <div class="body">
+        <h4>记录强度判定：两问 <span class="badge b-purple">决策点 D2</span></h4>
+        <p><span class="m">failure_cost_high?</span> 与 <span class="m">recovery_or_handoff_needed?</span> 都否 → 普通路径（零留存）；
+        任一真、敏感动作、外部等待或用户要求 → 严格路径。不能确定时选严格。</p>
+        <div class="sub">普通任务不创建 contract / state / 封存快照 / 输入摘要 / 候选状态</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">4</div><div class="line"></div></div>
+      <div class="body">
+        <h4>取号与写契约</h4>
+        <p>读 <span class="m">.work-docs/index.md</span> 分配 task-id（<span class="m">{YYYYMMDD}-{NN}-{slug}</span>，当日自增不回收），
+        写 <span class="m">contract.md</span>：目标、范围、禁止动作、风险、审查策略、Acceptance（编号验收）、Decision Gates、变更。</p>
+        <div class="sub">已有严格任务必须续接原契约，不得用普通流程降级</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">5</div><div class="line"></div></div>
+      <div class="body">
+        <h4>封存与 start</h4>
+        <p><span class="m">check-contract.sh</span> 校验契约 → <span class="m">task.py start</span> 校验字段、封存快照（绑定契约指纹与修订号）、
+        生成 <span class="m">state.md</span>。start 拒绝覆盖已有状态。</p>
+        <div class="sub">python3 &lt;skill-dir&gt;/scripts/task.py start &lt;task-dir&gt;</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">6</div><div class="line"></div></div>
+      <div class="body">
+        <h4>实施与取证 <span class="badge b-green">决策点 D6</span></h4>
+        <p>按 task_type 选 playbook 实施；取证三通道：<span class="m">run</span> 自动验收（执行命令 + expect 匹配 → evidence + 输入摘要）、
+        <span class="m">capture + record</span> 人工验收、<span class="m">record --review</span> 审查报告。</p>
+        <div class="sub">每次 run 使用新证据名；失败保留失败输出，旧证据不覆盖</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">7</div><div class="line"></div></div>
+      <div class="body">
+        <h4>更新与 finish</h4>
+        <p><span class="m">task.py update</span> 记录进度、阻塞、恢复第一步与工作项状态；<span class="m">task.py finish</span> 生成 done 候选（不执行验证命令，只调用原有完成检查）。</p>
+        <div class="sub">整体 next_action 只写第一动作，其余在各项；部分受阻不等于全部停工</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">8</div><div class="line"></div></div>
+      <div class="body">
+        <h4>完成门与交付 <span class="badge b-red">决策点 D9</span></h4>
+        <p><span class="m">task.py complete</span> 全量校验（验收、依赖、工作项、快照链、预算、deadline）→ 候选 <span class="m">status: done</span> →
+        更新 <span class="m">index.md</span>。失败保留正式状态、索引和候选。</p>
+        <div class="sub">候选必须 status: done；完成前再次核对契约、状态、候选字节和证据输入</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>普通路径对照：</b>两问都否 → <b>目标 → 读 → 最小改动 → 实际验证 → 交付</b>，不建 contract / state / 快照，零留存。
+    命令时间线（严格）：<span class="m">start → (run | capture+record | record --review) × N → update × N → finish → complete</span>。
+    任何一步失败停在原地，由模型读报错修正后重试；失败候选留在 <span class="m">tmp/</span>。
+  </div>
+</section>
+
+<!-- ============ D1 ============ -->
+<section id="d1">
+  <div class="sec-head"><span class="sec-num">D1</span><h2>决策点：按交付结果路由</h2></div>
+  <p class="sec-desc">
+    路由来自 <span class="m">SKILL.md → routing</span> 模块。核心规则：<b>先看要交付什么，再决定记录强度</b>；
+    只读分析在回复列项、不落盘；仅要方案文档只写授权位置。<span class="badge b-orange">R-01</span> 路由是纯语义裁量，无脚本校验。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">判定树</span><h3>交付结果 → 路径匹配树</h3></div>
+    <div class="dec-body">
+      <div class="tree">
+        <ul>
+          <li><span class="cond">简单解释或单一事实？</span>
+            <span class="leaf">fast-answer</span> <span class="note">直接回答，不建任务目录</span>
+          </li>
+          <li><span class="cond">调查？（怎么工作 / 为什么 / 是否确定）</span>
+            <span class="leaf l-diag">investigate</span> <span class="note">只读，回复列项不落盘</span>
+          </li>
+          <li><span class="cond">研究 / 方案 / 审查？</span>
+            <ul>
+              <li><span class="cond">研究</span> <span class="leaf l-diag">research</span></li>
+              <li><span class="cond">方案设计</span> <span class="leaf l-diag">design</span> <span class="note">仅要方案文档只写授权位置</span></li>
+              <li><span class="cond">审查</span> <span class="leaf l-diag">review</span> <span class="note">按风险、覆盖不足、需求分歧或关键逻辑重改触发</span></li>
+            </ul>
+          </li>
+          <li><span class="cond">低风险、可逆的小修改或文档？</span>
+            <ul>
+              <li><span class="cond">缺陷修复</span> <span class="leaf l-build">bugfix</span></li>
+              <li><span class="cond">实施</span> <span class="leaf l-build">exec</span> <span class="note">复杂或大范围实施先拆工作项（见 D3）</span></li>
+              <li><span class="cond">计划</span> <span class="leaf l-build">plan</span></li>
+            </ul>
+          </li>
+          <li><span class="cond">操作指引？</span>
+            <span class="leaf">ops</span> <span class="note">敏感动作先确认（见 D5）</span>
+          </li>
+          <li><span class="cond">组合任务？</span>
+            <span class="leaf">mixed</span> <span class="note">多阶段混合，按主导交付结果记类型</span>
+          </li>
+          <li><span class="cond">复杂或大范围实施 / 跨会话 / 外部等待 / 必需依赖汇总 / 敏感动作？</span>
+            <span class="leaf l-ship">对应阶段 + 严格记录</span> <span class="note">/x-rail-long；多个阶段本身不触发长模式</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">升级/降级</span><h3>偏离最直观匹配的规则</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">升级 · 严格记录</div><div class="v">复杂或大范围实施、跨会话、外部等待、必需依赖汇总或敏感动作 → <b>对应阶段 + 严格记录</b>。复杂但当前会话可完成的任务不自动进入长模式。</div></div>
+      <div class="rule"><div class="k">降级 · 最短路径</div><div class="v">解决当前未知的最短路径优先，<b>不要求默认完整阶段链路</b>；简单解释直接 fast-answer。</div></div>
+      <div class="rule"><div class="k">续接规则</div><div class="v">已有严格任务必须<b>续接原契约</b>，不得用普通流程降级；同范围进行中任务续用编号。</div></div>
+      <div class="rule"><div class="k">只读边界</div><div class="v">investigate / research / review 是只读的：在回复列项、不落盘，不顺手改代码；用户要写文档时只写授权目录。</div></div>
+      <div class="rule"><div class="k">参考技能读取</div><div class="v">chain-unknown / impact-unknown 等触发条件由模型自查（<span class="badge b-orange">R-02</span>）；TypeScript 规则仅在项目规范不足且当前代码使用该语言时读取。</div></div>
+    </div>
+  </div>
+
+  <div class="callout red">
+    <b>R-01（P1）· 路由与阶段选择是纯语义裁量。</b>"交付结果 → 阶段"的映射与"选最短路径"全部由模型判断；跳阶段（该 plan 直接 exec）、错分类（实施任务标成 investigate）不触发任何校验。
+    <span class="m">test-flow.sh</span> 只做关键词静态断言，其自身注释也承认"仅检查规则表达与引用，不代表模型已遵守"。证据：<span class="m">skills/x-rail/SKILL.md</span>（routing 表）· <span class="m">scripts/test-flow.sh</span>（末尾自注）。
+  </div>
+</section>
+
+<!-- ============ D2 ============ -->
+<section id="d2">
+  <div class="sec-head"><span class="sec-num">D2</span><h2>决策点：记录强度两问（核心分叉）</h2></div>
+  <p class="sec-desc">
+    全体系最重要的分叉：两个问题决定任务是否留下任何记录。都否 → 普通路径零留存；任一真 → 严格路径完整生命周期。
+    <b>不能确定选严格</b>——兜底防过度自信，但防不住"悄悄低估"（<span class="badge b-orange">R-03</span>）。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">判定树</span><h3>两问 → 普通 / 严格</h3></div>
+    <div class="dec-body">
+      <div class="tree">
+        <ul>
+          <li><span class="cond">失败代价高？（failure_cost_high?）</span></li>
+          <li><span class="cond">需要恢复或交接？（recovery_or_handoff_needed?）</span></li>
+          <li><span class="cond">都否，且未触发条件</span>
+            <span class="leaf l-build">普通路径</span> <span class="note">目标 → 读 → 最小改动 → 实际验证 → 交付；不建任何文件</span>
+          </li>
+          <li><span class="cond">任一真 / 敏感动作 / 外部等待 / 用户要求</span>
+            <span class="leaf">严格路径</span> <span class="note">contract + state + 证据 + 完成门（见图 01 主链路）</span>
+          </li>
+          <li><span class="cond">不确定</span>
+            <span class="leaf l-ship">选严格</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">对照</span><h3>普通 vs 严格：行为差异</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">普通任务</div><div class="v">不创建 <b>contract.md / state.md / 封存快照 / 输入摘要 / 候选状态</b>；按实际完成条件验证，不创建预算状态。</div></div>
+      <div class="rule"><div class="k">严格任务</div><div class="v">完整证据链：契约记录目标、范围、禁止动作、风险、审查策略；每条验收有 outcome / verification / verification_type / layer / required；可选项必须预先写 skip_reason。</div></div>
+      <div class="rule"><div class="k">规模 ≠ 强度</div><div class="v">任务规模 <b>L1/L2/L3 是预算</b>，不等于记录强度；复杂但当前会话可完成的任务不自动进入长模式。</div></div>
+      <div class="rule"><div class="k">字段纪律</div><div class="v">契约字段从第一列写 <span class="m">key: value</span>，不是 Markdown 列表；确认只针对不可逆、支出、对外发布、需求范围变化。</div></div>
+    </div>
+  </div>
+
+  <div class="callout red">
+    <b>R-03（P1）· 两问判定无客观标准；低估即零留存，事后不可审计。</b>
+    "失败代价高""需要恢复/交接"没有可测边界；模型低估一次，整个任务就没有 contract、没有证据、没有审计轨迹。
+    兜底规则"不能确定选严格"能防过度自信，但无法发现"悄悄低估"；普通路径下没有任何机制能在事后回答"当初是否应该走严格"。
+    证据：<span class="m">skills/x-rail/SKILL.md</span> L24-27（记录强度两问）· <span class="m">playbooks/verification.md</span>（普通/严格对照）。
+  </div>
+</section>
+
+<!-- ============ D3 ============ -->
+<section id="d3">
+  <div class="sec-head"><span class="sec-num">D3</span><h2>决策点：拆分与工作项状态机</h2></div>
+  <p class="sec-desc">
+    新严格实施契约在首个二级标题前采用 <span class="m">work_items_schema: 1</span>，把需求（R）拆成工作项（W）并关联验收（A）。
+    拆分判定全定性（<span class="badge b-orange">R-10</span>）；start 仅对 <span class="m">task_type ∈ {exec, bugfix}</span> 强制此字段——换类型即可绕过（<span class="badge b-red">R-08</span>）。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">拆分条件</span><h3>什么时候必须拆</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">必须拆</div><div class="v">复杂或大范围实施按<b>逻辑独立性、复杂度、范围和依赖</b>拆成可验证工作项并持久记录；多个独立复杂逻辑、一个跨模块大范围需求、单需求内权限/并发/多步写入，都不能因需求少免拆。</div></div>
+      <div class="rule"><div class="k">可以合</div><div class="v">多个局部简单同源改动可合项<b>并说明依据</b>；不按五个、六个数量分流。</div></div>
+      <div class="rule"><div class="k">复用</div><div class="v">已有合格计划核对覆盖后复用；只读分析在回复列项、不落盘；仅要方案文档只写授权位置。</div></div>
+      <div class="rule"><div class="k">覆盖校验</div><div class="v">每个需求至少被一项覆盖，每项至少关联一条验收；依赖无环，未知引用、重复标识或缺失状态拒绝（<span class="m">work_items.py definitions</span>）。</div></div>
+      <div class="rule"><div class="k">记录位置</div><div class="v">契约记 W 的名称与范围；状态记执行者与进度。工作项名称和范围走契约变更，执行者和进度走状态更新。</div></div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">状态机</span><h3>工作项七状态 · 21 条合法转移</h3></div>
+    <div class="dec-body">
+      <div class="flow">
+        <div class="fbox"><span class="t">pending</span><span class="d">等待开始</span></div>
+        <div class="farr">→</div>
+        <div class="fbox"><span class="t">in_progress</span><span class="d">实施中</span></div>
+        <div class="farr">→</div>
+        <div class="fbox"><span class="t">awaiting_verification</span><span class="d">待验证</span></div>
+        <div class="farr">→</div>
+        <div class="fbox accent"><span class="t">verified</span><span class="d">过门</span></div>
+      </div>
+      <p style="color:var(--text3);font-size:12.5px;margin-bottom:12px">主路径之外还有 needs_fix（定向修复）、blocked（阻塞）、skipped（跳过）三个旁路状态。实现已有先待验证，失败需修复。</p>
+      <table class="rt">
+        <tr><th>从</th><th>到</th><th>触发条件</th></tr>
+        <tr><td class="mono" style="color:var(--yellow)">pending</td><td>in_progress</td><td>开始</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">pending</td><td>blocked</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">pending</td><td>skipped</td><td>契约理由</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">in_progress</td><td>awaiting_verification</td><td>实施完成</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">in_progress</td><td>needs_fix</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">in_progress</td><td>blocked</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">in_progress</td><td>skipped</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">awaiting_verification</td><td>verified</td><td>证据 + 验收 + 审查全部通过</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">awaiting_verification</td><td>needs_fix</td><td>必修问题</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">awaiting_verification</td><td>blocked</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">awaiting_verification</td><td>skipped</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">needs_fix</td><td>in_progress</td><td>定向修复</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">needs_fix</td><td>blocked</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">needs_fix</td><td>skipped</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">verified</td><td>awaiting_verification</td><td>证据过期退回</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">verified</td><td>needs_fix</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">blocked</td><td>pending</td><td>解除阻塞</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">blocked</td><td>in_progress</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">blocked</td><td>awaiting_verification</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">blocked</td><td>needs_fix</td><td>—</td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">blocked</td><td>skipped</td><td>—</td></tr>
+      </table>
+      <div class="rule"><div class="k">verified 过门</div><div class="v">关联验收及证据<b>当前有效</b>；必需项不能跳过；可选项 skipped 自动引用契约非空且非 none 的 skip_reason，并保留本次 item-reason 动作说明。</div></div>
+      <div class="rule"><div class="k">证据过期</div><div class="v">输入变化只读摘要显示过期，<b>不暗改状态</b>；执行者退回待验证或需修复。前置证据过期可直接退回，无须先逐项阻塞后继。</div></div>
+      <div class="rule"><div class="k">级联</div><div class="v">工作项级联到任务级：任一工作项进入 needs_fix / blocked，任务必须暂停并记录原因；<span class="m">active_work_items</span> 由 in_progress 项自动生成并校验一致。</div></div>
+    </div>
+  </div>
+
+  <div class="callout red">
+    <b>R-08（P0）· 类型绕过：mixed / ops 不强制 work_items_schema，换类型即跳过拆分记录。</b>
+    <span class="m">task.py start</span> 仅当 <span class="m">task_type ∈ {exec, bugfix}</span> 时强制 <span class="m">work_items_schema: 1</span>；
+    一个本应拆分的实施任务标注为 <span class="m">mixed</span> 或 <span class="m">ops</span>，整个工作项状态机（七状态、verified 过门、active_work_items 检查）全部失效。
+    文档声明"不能换类型绕过"，脚本不拦——声明与机制脱节。
+    证据：<span class="m">scripts/task.py</span> start 中 <span class="m">task_type in {'exec','bugfix'} and work_items is None → raise</span>。
+  </div>
+
+  <div class="callout">
+    <b>R-10（P1）· 拆分判定全定性；工作项清单质量决定整个状态机的有效性。</b>
+    是否拆分全靠判断；一个工作项糊住三个需求也能过校验（覆盖只需引用，不限制粒度）；反向地，粒度太细会让 review 指针与证据管理成本爆炸。
+    粒度标准"一个工作项对应一个可独立验证的交付"没有可执行边界。证据：<span class="m">skills/x-rail/SKILL.md</span>（work_items 拆分条件）· <span class="m">scripts/work_items.py</span> definitions。
+  </div>
+</section>
+
+<!-- ============ D4 ============ -->
+<section id="d4">
+  <div class="sec-head"><span class="sec-num">D4</span><h2>决策点：委派与执行纪律</h2></div>
+  <p class="sec-desc">
+    调用 <span class="m">/x-rail</span> 即授权当前目标范围内默认主动委派完整执行单元；目标、读写范围与验收明确时，
+    <b>默认把完整执行单元交给子代理</b>，不等逐次点名。共享写入由同一子代理承接；短小且主会话已掌握材料时直接完成。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">委派规则</span><h3>授权、边界与接力</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">授权范围</div><div class="v">调用入口即授权默认主动委派；<b>不代表</b>无限成本、新购买、生产、不可逆、发布或范围变更。用户禁止、更高规则和宿主限制优先。</div></div>
+      <div class="rule"><div class="k">并行 / 接力</div><div class="v">独立且资源隔离的项可并行，有依赖项在前置满足后接力；不可并行或文件共享不是父会话包办理由，共享写入由同一子代理承接。父状态<b>仅主会话一个写入者</b>。</div></div>
+      <div class="rule"><div class="k">直接完成</div><div class="v">短小且主会话已掌握材料、交接成本明显更高时直接完成；紧密耦合的实现由同一位执行者承接（<span class="badge b-orange">R-12</span>：成本感知主观）。</div></div>
+      <div class="rule"><div class="k">子代理时限</div><div class="v">子代理总时限<b>沿用宿主与代理配置</b>，默认省略 <span class="m">timeoutMs/maxRuntimeMs</span>，不另设运行倒计时；任务记录的总期限与无进展阈值不转换成子代理总时限。</div></div>
+      <div class="rule"><div class="k">接口固定</div><div class="v"><span class="m">templates/child-task.md</span> 固定工作项、输入、允许路径、依赖、验收、权限、成本和正式输出绑定；实现者独立副本，共享接口与配置唯一归属。</div></div>
+      <div class="rule"><div class="k">核对产出</div><div class="v">父会话核对产物、差异和实际验证再更新父状态，<b>通知不自动通过验收</b>；基础设施失败立即报告并暂停原依赖，不换协议、不自动重发、不冒充独立审查。</div></div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">执行纪律</span><h3>TDD 与报告分层</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">TDD 默认</div><div class="v">新增或改变条件、解析、权限、金额和数据写入等非平凡逻辑<b>默认先写失败测试</b>；纯文档、文案、简单样式按内容或渲染核对（<span class="badge b-orange">R-11</span>：边界模糊，失败前证据缺失不拦完成）。</div></div>
+      <div class="rule"><div class="k">用户路径</div><div class="v">影响用户流程时按验收沿登录、页面入口、操作、请求和结果检查必要路径；没有先失败与后通过证据，不声称使用了 TDD。</div></div>
+      <div class="rule"><div class="k">报告分层</div><div class="v">代码写入、检查通过、使用路径已验证、全部必需验收满足<b>分别报告</b>；完成任务不自动包含上线。</div></div>
+      <div class="rule"><div class="k">大输出</div><div class="v">预计超过 8KB 的工具输出先保留原始结果到任务允许的证据路径，上下文只带命令、退出码、通过数量与证据路径；不能判断全局结果时停止，不用尾部截断掩盖失败。</div></div>
+    </div>
+  </div>
+
+  <div class="callout red">
+    <span class="miss">缺失</span> <b>按角色模型分配。</b>pstack 为每个子代理角色分配显式模型（role → model 表，verifier 用不同模型族做独立验证）；
+    x-rail <b>未定义模型分配机制</b>——委派仅授权完整执行单元，子代理模型与总时限沿用宿主与代理配置（SKILL.md L102）。
+    已检索 <span class="m">skills/</span> 全目录与 <span class="m">templates/child-task.md</span>，未发现 role→model 配置。
+  </div>
+  <div class="callout orange">
+    <span class="miss partial">部分缺失</span> <b>PR / babysit / 发布编排。</b>pstack 有 <span class="m">Opening a PR → Babysit → Shipping</span> 完整交付链路；
+    x-rail 交付止于 done 状态 + 索引更新，<b>无 PR 创建、babysit、发布编排流程</b>。
+    （<span class="m">x-worktree</span>、<span class="m">x-resolving-merge-conflicts</span> 为辅助技能，不构成编排链路。）
+  </div>
+
+  <div class="callout">
+    <b>R-11（P1）· TDD 边界模糊；"失败前证据"缺失不影响完成。</b>
+    完成门校验的是"证据存在且自洽"，不是"证据强度"；一个跑在实现之后的测试同样能让 run 通过——TDD 纪律完全依赖自律。
+    证据：<span class="m">skills/x-rail/SKILL.md</span>（execution/TDD 条款）· <span class="m">playbooks/exec.md</span>。
+  </div>
+</section>
+
+<!-- ============ D5 ============ -->
+<section id="d5">
+  <div class="sec-head"><span class="sec-num">D5</span><h2>决策点：确认红线与成本授权</h2></div>
+  <p class="sec-desc">
+    确认只针对四类敏感动作：<b>不可逆、支出、对外发布、需求范围变化</b>。<span class="m">action_categories: none</span> 可以豁免确认，不豁免所需审查；
+    有敏感动作时必须绑定当前动作的用户确认来源。
+  </p>
+
+  <div class="grid2">
+    <div class="card" style="border-color: rgba(248,113,113,.4)">
+      <h3><span class="badge b-red">敏感动作</span>必须绑定用户确认</h3>
+      <ul>
+        <li><b>不可逆</b>操作（删除、覆盖类）</li>
+        <li><b>支出</b>（新购买或订阅单独确认）</li>
+        <li><b>对外发布</b>（面向外部系统的动作）</li>
+        <li><b>需求范围变化</b>（scope-change）</li>
+      </ul>
+      <p style="margin-top:10px;font-size:12.5px;color:var(--text3)">确认来源写入契约：confirmation_by / confirmation_at / confirmation_source，绑定当前动作。</p>
+    </div>
+    <div class="card" style="border-color: rgba(74,222,128,.4)">
+      <h3><span class="badge b-green">成本授权</span>unlimited 语义</h3>
+      <ul>
+        <li>用户明确"解除成本限制 / 不限制成本 / 不计成本" → 本任务持续不限成本，阶段切换、恢复和已授权委派都沿用。</li>
+        <li>取消默认费用、调用/资料次数、总时长上限和文档 6/20 次收口；同范围执行费用不重复确认。</li>
+        <li>无进展、重复错误、必需验收和敏感操作边界<b>仍生效</b>；宿主或账户硬限制只能报告。</li>
+        <li>否定句、引用、假设和"解除阻塞"<b>不构成授权</b>。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="dec" style="margin-top:16px">
+    <div class="dec-head"><span class="q">记录字段</span><h3>授权与确认的落盘方式</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">cost_control</div><div class="v">严格任务在 contract 顶部记录 <span class="m">cost_control: unlimited</span> 和 <span class="m">cost_authorization: 当前用户原话及来源</span>；start 生成 <span class="m">budget: unlimited</span>，不加默认总期限。</div></div>
+      <div class="rule"><div class="k">Decision Gates</div><div class="v">契约的 Decision Gates 记录授权；风险决定审查强度。有敏感动作时必须绑定当前动作的用户确认来源。</div></div>
+      <div class="rule"><div class="k">旧任务</div><div class="v">按契约版本规则登记授权；检查器不再以旧数值预算或总期限超限阻断。来源是否真实由执行者核对，脚本只检查记录。</div></div>
+      <div class="rule"><div class="k">普通任务</div><div class="v">沿用当前授权，不为此创建状态；不创建预算状态。</div></div>
+    </div>
+  </div>
+
+  <div class="callout red">
+    <b>R-05（P0）· 契约变更的批准缺口：扩大 scope / 放宽审查 / 降低 risk 都不需要批准。</b>
+    契约修订链只对"旧 required 验收被弱化"强制 <span class="m">approved_by ≠ none</span>。其他任何修订——扩大 scope、把 <span class="m">review_policy</span> 从 user-confirm 改成 auto、
+    把 <span class="m">risk</span> 从 medium 降到 low、移除 forbidden 项——只要求 Contract Changes 记录字段非空。
+    <span class="m">scope-change</span> 是四类敏感动作之一，但修订路径可以绕过确认门：写一份变更记录、<span class="m">approved_by: none</span> 即可。
+    组合后果：一个 medium 任务可在执行中合法变成 low + auto 审查，完全绕开独立审查要求——<b>全体系最值钱的绕过口子</b>。
+    证据：<span class="m">scripts/task_checks.py</span> 契约修订校验（weakened 判定仅覆盖旧 required 验收）· <span class="m">SKILL.md</span>（敏感动作 action_categories）。
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-orange">R-06</span>P2 · 顶层字段错位被静默忽略</h3>
+      <p>契约头部字段只从第一个 <span class="m">## </span> 之前解析。把 <span class="m">cost_control</span> 等可选字段误写到某个 section 之后 → 不报错，按默认值处理。
+      想声明 unlimited 却写错位置，任务照常以 8h deadline 运行，到超期才发现（撞上 R-18 死锁）。</p>
+      <div class="ev">证据：<span class="m">scripts/task_checks.py</span> 头部字段解析（只取首个 ## 前）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-07</span>P1 · 确认与授权的"证据"由执行者自填</h3>
+      <p><span class="m">confirmation_by / confirmation_at / confirmation_source</span>、<span class="m">cost_authorization</span> 全部由模型写入契约，脚本只校验字段存在且非空；
+      无法证明"用户确实确认过"。设计文档自认"防误操作，不抵御同等写权限的执行者"——这是确认机制的天花板。</p>
+      <div class="ev">证据：<span class="m">scripts/task_checks.py</span> 契约字段校验 · <span class="m">SKILL.md</span>（authority 边界说明）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D6 ============ -->
+<section id="d6">
+  <div class="sec-head"><span class="sec-num">D6</span><h2>决策点：验证裁决与取证三通道</h2></div>
+  <p class="sec-desc">
+    严格任务的验证由三条取证通道构成：<b>run 自动验收 / capture + record 人工验收 / record --review 审查报告</b>。
+    新状态必须 <span class="m">evidence_schema: 2</span>，绑定 contract_revision 和 contract_fingerprint；每条 passed 必需验收绑定唯一非空证据。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">三通道</span><h3>取证：命令 → 证据 → 状态</h3></div>
+    <div class="dec-body">
+      <div class="flow">
+        <div class="fbox"><span class="t">task.py run</span><span class="d">自动验收：执行命令 + expect 匹配 → evidence/*.txt + *.inputs.json</span></div>
+        <div class="farr">→</div>
+        <div class="fbox"><span class="t">capture + record</span><span class="d">非自动：先采集输入快照 → 实际观察 → 登记</span></div>
+        <div class="farr">→</div>
+        <div class="fbox accent"><span class="t">record --review</span><span class="d">审查报告：policy ≠ auto 时必过</span></div>
+      </div>
+      <div class="rule"><div class="k">run 通过条件</div><div class="v">退出码 0 且所有 <span class="m">--expect</span> 子串出现在输出里；<b>至少一个 expect</b>（不能只靠退出码）。run 只接受 <span class="m">verification_type: automatic</span> 验收。</div></div>
+      <div class="rule"><div class="k">输入摘要</div><div class="v">记录版本、契约版本、绝对 workspace_root、相关文件相对路径、存在状态和原字节 SHA-256；只绑定该项相关材料，允许无关文件变化；已删除文件记录 absent；状态、证据和快照不自我绑定；路径不能越界。</div></div>
+      <div class="rule"><div class="k">时间线</div><div class="v">staleness 判定 = <span class="m">run_at ≥ 输入文件最大 mtime</span>（last_edit）；时间带时区，转换 UTC 后比较。审查报告同样绑定输入、契约版本和时间。</div></div>
+      <div class="rule"><div class="k">登记纪律</div><div class="v">每次 run 使用新的证据名，失败保留失败输出，旧证据不覆盖；<span class="m">--used</span> 仅为兼容旧调用的可选观察值，写入 tool_count_note，不参与预算、完成门或效率结论。</div></div>
+      <div class="rule"><div class="k">边界</div><div class="v">run 不替代人工、消费端、外部服务或独立审查；命令文本是数据，校验器不执行；脚本不证明人工结论真实、审查独立或验收范围完整。</div></div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">观察面</span><h3>五类观察面（verification.md）</h3></div>
+    <div class="dec-body">
+      <p>五类观察面不是新的任务等级；契约仍只使用现有 <span class="m">layer</span>（验证所处环境）和 <span class="m">verification_type</span>（谁 / 怎样验证）。像验收一条网页功能：先看零件装对，再看插口能用，再沿用户路径走完，最后确认交给别人后能照做。</p>
+      <div class="lanes">
+        <div class="lane"><span class="ln" style="background:rgba(110,168,254,.15);color:var(--blue)">零件层</span><span class="ld">语法与静态：零件装对了吗（编译 / 类型 / lint）</span><span class="lv">syntax / static</span></div>
+        <div class="lane"><span class="ln" style="background:rgba(34,211,238,.15);color:var(--cyan)">接口层</span><span class="ld">配置与契约：插口能用吗（字段 / 配置 / 接口对齐）</span><span class="lv">config</span></div>
+        <div class="lane"><span class="ln" style="background:rgba(74,222,128,.15);color:var(--green)">路径层</span><span class="ld">沿用户路径走完（登录 / 入口 / 操作 / 请求 / 结果）</span><span class="lv">local</span></div>
+        <div class="lane"><span class="ln" style="background:rgba(251,146,60,.15);color:var(--orange)">运行层</span><span class="ld">真实行为发生：外部服务 / 真实运行环境</span><span class="lv">runtime / external</span></div>
+        <div class="lane"><span class="ln" style="background:rgba(192,132,252,.15);color:var(--purple)">交付层</span><span class="ld">交给别人能照做（消费端 / 可复现 / 交接）</span><span class="lv">consumer</span></div>
+      </div>
+      <div class="rule"><div class="k">required 语义</div><div class="v">run / record 除原 required=yes 外，仅对 work_items_schema=1 清单中被 work_item.acceptances 引用的 required=no 可选验收开放登记，未引用的可选验收仍拒绝。</div></div>
+      <div class="rule"><div class="k">not_run</div><div class="v"><span class="m">not_run</span> 可以没有证据文件，不能制造空白通过记录；提交或子代理通知不是通过证据。</div></div>
+    </div>
+  </div>
+
+  <div class="callout red">
+    <b>R-13（P1）· expect 是子串包含匹配，弱断言轻松通过。</b>
+    通过条件 = 退出码 0 且所有 expect 子串出现（<span class="m">all(value in observed for value in expect)</span>）；<span class="m">--expect ok</span> 这种弱断言几乎必然通过。
+    文档规定"文本包含不能证明行为正确、expect 必须指向行为特征"——纯自律。证据强度是整条链上最容易被"合规地"稀释的一环，且稀释后看不出破绽。
+    证据：<span class="m">scripts/task.py</span> run · <span class="m">playbooks/verification.md</span>（expect 强度规则）。
+  </div>
+  <div class="callout orange">
+    <span class="miss partial">部分缺失</span> <b>swarm 多路独立裁决。</b>pstack 在每个 code-ready SHA 上 fan out 10+ lanes（gates / live / perf / audit）聚合成一个 verdict；
+    x-rail 只有单审查者记录（<span class="m">record --review</span>）+ 可选独立审查（需委派授权），<b>无多 lane 并行裁决机制</b>。
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-orange">R-14</span>P2 · 输入文件 mtime 在未来 → 永久 stale</h3>
+      <p>时钟漂移、拷贝保留未来时间戳、归档恢复等场景下，证据永远"过期"，且没有命令能修正（只能等真实时间追上 mtime，或重跑）。</p>
+      <div class="ev">证据：<span class="m">scripts/task.py</span> run（last_edit 取输入 max mtime）· <span class="m">task_checks.py</span>（evidence stale 检查）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-15</span>P2 · 证据无 TTL：external 层证据不随时间失效</h3>
+      <p>证据只在"输入文件变化"时失效；外部系统状态变化（环境漂移、数据过期、权限变更）不触发失效。文档要求"外部证据写明时效要求"并人工判断，无机制；长周期任务收尾时可能用三个月前的外部验证过门。</p>
+      <div class="ev">证据：<span class="m">playbooks/verification.md</span>（外部证据时效条款）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D7 ============ -->
+<section id="d7">
+  <div class="sec-head"><span class="sec-num">D7</span><h2>决策点：审查策略与独立审查</h2></div>
+  <p class="sec-desc">
+    <b>风险决定审查强度</b>。契约里的 <span class="m">review_policy</span> 三档：<span class="m">auto</span>（低风险，无审查要求）、
+    <span class="m">user-confirm</span>（用户确认后继续）、<span class="m">full-review</span>（独立审查必须）。
+    <span class="m">policy ≠ auto</span> 时，done 门要求一条 passed 的 review 证据。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">审查策略</span><h3>三档策略与独立审查规则</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">auto</div><div class="v">低风险默认；无独立审查要求。</div></div>
+      <div class="rule"><div class="k">user-confirm</div><div class="v">审查结论需用户确认后继续；done 门要求 passed 的 review 证据。</div></div>
+      <div class="rule"><div class="k">full-review</div><div class="v">独立审查必须；高风险或用户明确要求时采用。</div></div>
+      <div class="rule"><div class="k">review 触发</div><div class="v">按风险、覆盖不足、需求分歧、用户要求或关键逻辑重改触发。</div></div>
+      <div class="rule"><div class="k">独立审查</div><div class="v">独立审查<b>需要委派授权</b>；未获授权单列阻塞，不能把主会话核对冒充独立审查。</div></div>
+      <div class="rule"><div class="k">审查绑定</div><div class="v">审查报告绑定输入、契约版本和时间；不能以旧报告为改后的代码放行。实现自检后固定输入，审查集中交回必修问题，集中修复并重跑受影响检查。</div></div>
+      <div class="rule"><div class="k">修复后复核</div><div class="v">优先恢复原审查运行定向复核，不可恢复记录原因并按宿主规则替代；不能替代必要的独立最终审查，不能把必修改可选。</div></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-orange">R-16</span>P1 · 无降级路径：卡死或违约二选一</h3>
+      <p><span class="m">review_policy ≠ auto</span> 时 done 门要求 passed 的 review 证据；独立审查需要委派授权，没有授权时文档要求"单列阻塞，不能把主会话核对冒充独立审查"。
+      官方<b>没有降级通道</b>：改 policy 需要契约变更——回到 R-05 的批准缺口，降级反而比阻塞"容易"。
+      结果是<b>合规姿势卡死、违规姿势畅通，激励方向反了</b>。</p>
+      <div class="ev">证据：<span class="m">SKILL.md</span>（decision_policy）· <span class="m">task_checks.py</span> check_review · <span class="m">playbooks/review.md</span>（无授权则 blocked）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-17</span>P2 · 单 review 指针 × 多工作项时序耦合</h3>
+      <p>任务级只有一条最新 <span class="m">review_evidence</span>；每个工作项转 verified 时都要求"当前 review 有效 + 该工作项引用的验收全 passed + 证据输入未变"。
+      审查后修复任一必修项 → 所有已 verified 工作项引用的证据输入集合需要重新核对；时序做错会集体失效（fail-closed 能发现，但流程复杂、容易返工）。</p>
+      <div class="ev">证据：<span class="m">task_checks.py</span> check_work_item_evidence · <span class="m">task.py</span> record --review</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D8 ============ -->
+<section id="d8">
+  <div class="sec-head"><span class="sec-num">D8</span><h2>决策点：预算、熔断与恢复</h2></div>
+  <p class="sec-desc">
+    任务规模 <span class="m">L1/L2/L3</span> 是预算不是记录强度；60/150/400 是<b>离线记录提示</b>（未接入宿主真实计数时不填写）。
+    无进展提醒 20/60 次；长任务另有 30 分钟无进展和 8 小时总上限（非 unlimited）。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">预算与熔断</span><h3>阈值一览与暂停纪律</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">调用预算 L1/L2/L3</div><div class="v"><span class="m">60 / 150 / 400</span> 次——离线记录提示；真实计数不可用时按连续无进展、重复错误、时间和验证失败判断是否暂停。不把提示当作效率证明或完成门。</div></div>
+      <div class="rule"><div class="k">无进展阈值</div><div class="v">20/60 次提醒；长任务 <span class="m">updated_at − last_progress_at ≥ 1800s</span> 时 in_progress 直接 fail（30 分钟）。<span class="m">update --progress --reason --next-action</span> 重置计时。</div></div>
+      <div class="rule"><div class="k">deadline</div><div class="v">long / L3 且非 unlimited：默认 <span class="m">started_at + 8h</span>。超期后无法 resume、无法 done——见 R-18。</div></div>
+      <div class="rule"><div class="k">unlimited</div><div class="v">解除成本限制后取消默认费用、调用/资料次数、总时长上限；无进展、重复错误、必需验收和敏感操作边界<b>仍生效</b>；宿主或账户硬限制只能报告。</div></div>
+      <div class="rule"><div class="k">暂停纪律</div><div class="v">暂停和等待用户分开记录；停止保留准确错误、原运行、产物、已知/未知和恢复第一步。恢复续用原任务编号，读索引、contract、state、最近 checkpoint、handoff、audit/runs.json 与相关 evidence，核对工作区与输入。</div></div>
+      <div class="rule"><div class="k">恢复外部运行</div><div class="v">原外部运行先查再恢复，不可查时 unknown 或 blocked，<b>不重复启动</b>。阶段、提交、会话或工作项变化不新建任务。</div></div>
+    </div>
+  </div>
+
+  <div class="callout red">
+    <b>R-18（P0）· deadline 死锁：超 8 小时后无法恢复、无法完成。</b>
+    long / L3 且非 unlimited 的任务默认 <span class="m">deadline = started_at + 8h</span>。超期后：
+    <b>转回 in_progress</b> → 候选 <span class="m">updated_at &gt; deadline</span> → fail（deadline exceeded; state must be paused）；
+    <b>转 done</b> → 直接 fail（done state exceeded deadline）；连普通字段更新（stage 等）也会因为候选 updated_at 刷新而 fail。
+    唯一合法出路是转 blocked/stopped/cancelled，或用户解除成本限制 + 手工契约变更（改 state 的 cost_control 需要手改——又是手工操作）。
+    一个健康的 8 小时任务在第 9 小时想收尾，<b>会被自己的状态机锁死</b>。这是最硬的机制缺陷。
+    证据：<span class="m">scripts/task.py</span> start（deadline 计算）· <span class="m">task_checks.py</span> check_state（<span class="m">observed &gt; deadline</span> 对 in_progress 与 done 双分支 fail）。
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-orange">R-19</span>P1 · calls_since_progress 没有递增方 → 无进展预算不可触发</h3>
+      <p>无进展熔断阈值 20/60 次基于 <span class="m">calls_since_progress</span>；该计数器只在 start 初始化、在 <span class="m">--progress</span> / run passed / record passed 时重置为 0。
+      全代码库<b>没有任何递增路径</b>（除非手工编辑 state.md）→ 阈值永远不会达到 → 无进展熔断是死代码。</p>
+      <p>同理 60/150/400 的调用预算与真实调用计数完全脱节——写进 state、展示在 summary，但没有任何真实来源。预算体系目前是半成品。</p>
+      <div class="ev">证据：<span class="m">scripts/task.py</span>（start 写 0 / update、run、record 重置 0，无递增）· <span class="m">task_checks.py</span> check_state（calls 阈值校验）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-20</span>P2 · 预算超限同样无法恢复</h3>
+      <p><span class="m">used &gt; limit</span> 且尝试转 in_progress → fail；<span class="m">used == limit</span> 且仍在 in_progress 也 fail（预算耗尽）。
+      因无递增接口（R-19），现实中多为手工填数触发；一旦触发与 deadline 一样无合法恢复路径。与 R-18 是同一个"恢复语义缺失"问题的两个实例。</p>
+      <div class="ev">证据：<span class="m">task_checks.py</span> check_state（budget 超限分支）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-21</span>P2 · --progress 以任意文本声明"真实新结论"</h3>
+      <p><span class="m">update --progress --reason ... --next-action ...</span> 即可重置无进展计时，内容不验证。30 分钟硬校验的时间压力可能诱导模型在无实质结论时写下形式化的 progress 文本——记录在、实质无。</p>
+      <div class="ev">证据：<span class="m">scripts/task.py</span> update --progress · <span class="m">task_checks.py</span> check_state（30 分钟无进展检查）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-22</span>P2 · runs.json 与契约 Dependencies 强绑定</h3>
+      <p>runs.json 每条记录必须匹配契约当前 Dependencies 的 key + task_id。契约变更（合法）删除某个依赖后，历史 run 行变成"非法记录"直接 fail，且没有提示"去清理 runs.json"。变更与历史数据的联动清理未文档化。</p>
+      <div class="ev">证据：<span class="m">task_checks.py</span>（runs 行与 dependencies 匹配校验）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D9 ============ -->
+<section id="d9">
+  <div class="sec-head"><span class="sec-num">D9</span><h2>决策点：完成门（done 全量校验）</h2></div>
+  <p class="sec-desc">
+    两级过门：<b>工作项 verified</b>（关联验收及证据当前有效）→ <b>任务 done</b>（八项全量校验）。
+    候选必须 <span class="m">status: done</span>；<span class="m">finish</span> 不执行验证命令，只调用原有完成检查。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">done 门</span><h3>P1–P8 八项校验</h3></div>
+    <div class="dec-body">
+      <div class="tree">
+        <ul>
+          <li><span class="cond">state.status = done 的全量校验</span>
+            <ul>
+              <li><b>P1</b> required 验收全部 passed：证据行完整 + 输入 sha256 有效 + run_at ≥ last_edit</li>
+              <li><b>P2</b> review_evidence passed（policy ≠ auto 时必须有）</li>
+              <li><b>P3</b> Dependencies 全部 done：递归校验子任务（strict 模式）<span class="badge b-orange" style="margin-left:6px">R-23</span></li>
+              <li><b>P4</b> 工作项全部 verified / skipped，无 active_work_items</li>
+              <li><b>P5</b> 契约指纹与修订号匹配，封存快照链完整</li>
+              <li><b>P6</b> 预算 / 无进展阈值未超 <span class="badge b-orange" style="margin-left:6px">R-19 / R-20</span></li>
+              <li><b>P7</b> deadline 未超（done 超期直接拒绝）<span class="badge b-red" style="margin-left:6px">R-18</span></li>
+              <li><b>P8</b> 工作项任务：next_action 已更新为交付 / 结束说明</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="rule" style="margin-top:14px"><div class="k">子任务边界</div><div class="v">子任务 done <b>不自动通过父验收</b>；完成要求全部必需验收、必需依赖、授权、快照、输入与预算通过。</div></div>
+      <div class="rule"><div class="k">候选与索引</div><div class="v">失败保留正式状态、索引和候选；complete 成功后 state = done + index.md 正则修复（见 08 节 R-04）。</div></div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3><span class="badge b-orange">R-23</span>P2 · legacy 子任务卡父任务</h3>
+      <p>父任务 done 时递归 <span class="m">check_state</span> 子任务，以 strict 模式运行——legacy（旧格式）子任务会被 "strict state requires evidence_schema: 2" 拒绝。
+      旧记录能查、能读，但一旦被新任务依赖就卡住父任务。迁移期问题，修法未文档化。</p>
+      <div class="ev">证据：<span class="m">task_checks.py</span> check_state（依赖递归调用 strict）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-24</span>P2 · needed_acceptances 行为差异</h3>
+      <p>无工作项时，<span class="m">required=no</span> 的 passed 验收也参与 inputs 校验；有工作项时，仅"未被 skip 的工作项所引用"的验收参与。
+      两种模式下"哪些验收被校验"集合不同，文档未说明；后补工作项可能改变既有验收的校验行为。</p>
+      <div class="ev">证据：<span class="m">task_checks.py</span> check_state（needed_acceptances 计算分支）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-09</span>P2 · ready 模式不查封存一致性</h3>
+      <p>"封存快照 vs 当前契约字节比对"只在 seal / locked 模式做；实施前跑的 <span class="m">check-contract.sh</span> 默认 ready 模式不做此检查。
+      契约被改但未提升 revision，ready 检查看不出来，要等下一次 run/update（locked）才爆。不会漏过最终门，但"检查点"语义比预期弱。</p>
+      <div class="ev">证据：<span class="m">scripts/check-contract.sh</span> L5（MODE 默认 ready）· <span class="m">task_checks.py</span> L228（seal/locked 分支才做快照比对）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 08 TOPO ============ -->
+<section id="topo">
+  <div class="sec-head"><span class="sec-num">08</span><h2>记录拓扑：.work-docs 目录结构</h2></div>
+  <p class="sec-desc">
+    正式任务在命令实际执行目录下创建 <span class="m">.work-docs/tasks/&lt;task-id&gt;/</span>。工作流记录只写该目录；
+    <span class="m">index.md</span> 是任务发现（summary / 恢复 / handoff）的<b>唯一入口</b>——它的守护强度决定恢复能力。
+  </p>
+
+  <div class="topo">
+    <div class="topo-node"><span class="tt">.work-docs/index.md</span><span class="td">任务登记表 · 取号 / 状态行 / 完成更新（手工）</span></div>
+    <div class="topo-vline"></div>
+    <div class="topo-node"><span class="tt">.work-docs/tasks/&lt;task-id&gt;/</span><span class="td">{YYYYMMDD}-{NN}-{slug}</span></div>
+    <div class="topo-vline"></div>
+    <div class="topo-row">
+      <div class="topo-node" style="min-width:auto"><span class="tt">contract.md</span><span class="td">目标 / 验收 / 授权</span></div>
+      <div class="topo-node" style="min-width:auto"><span class="tt">state.md</span><span class="td">状态 / 工作项 / 预算</span></div>
+      <div class="topo-node" style="min-width:auto"><span class="tt">evidence/</span><span class="td">输出 + 输入摘要</span></div>
+      <div class="topo-node" style="min-width:auto"><span class="tt">audit/</span><span class="td">audit.jsonl / runs.json</span></div>
+      <div class="topo-node" style="min-width:auto"><span class="tt">handoff.md</span><span class="td">交接</span></div>
+      <div class="topo-node" style="min-width:auto"><span class="tt">outputs/ · tmp/</span><span class="td">产物 / 候选</span></div>
+    </div>
+  </div>
+
+  <div class="tblwrap">
+    <div class="cap">产物与校验分工 <small>谁写 × 谁校验 × 强度</small></div>
+    <table class="rt">
+      <tr><th>产物</th><th>谁写</th><th>谁校验</th><th>校验强度</th></tr>
+      <tr><td class="mono">index.md</td><td>模型手工（取号、登记、完成更新）</td><td>无脚本（complete 只做一次正则修复尝试）</td><td>≈ 0，见 R-04</td></tr>
+      <tr><td class="mono">contract.md</td><td>模型</td><td class="mono">check-contract.sh / task.py（locked）</td><td>严格（字段 / schema / fail-closed）</td></tr>
+      <tr><td class="mono">state.md</td><td class="mono">start 生成，update 修改</td><td>写前宽松（stale 证据不阻止保存）；complete 全量</td><td>状态机严格；输入校验延后到完成门</td></tr>
+      <tr><td class="mono">evidence/*</td><td class="mono">run（自动）/ record（人工）</td><td>done 门校验 sha256 + 时间线</td><td>严格（内容质量靠模型，见 R-13）</td></tr>
+      <tr><td class="mono">audit.jsonl / runs.json</td><td>脚本自动追加</td><td>结构校验</td><td>严格</td></tr>
+    </table>
+  </div>
+
+  <div class="callout">
+    <b>R-04（P1）· index.md / 取号 / 并发完全手工，零脚本守护。</b>
+    task-id 格式 <span class="m">{YYYYMMDD}-{NN}-{slug}</span>、取号（读 index 取最大序号 +1）、索引登记、并发冲突复查、完成时更新索引行——全部是文档约定，由模型手工执行。
+    <span class="m">task.py start</span> 只校验 <span class="m">contract.task_id == 目录名</span>；<span class="m">check_state</span> 从不读 index；<span class="m">complete</span> 对索引的"修复"是一次脆弱正则替换（只覆盖 <span class="m">| id | … | in_progress |</span> 格式行）；
+    仅读写异常（OSError）打 stderr，正则不匹配或 index.md 不存在时<b>完全静默</b>。编号冲突检测靠"事后复查"，无原子操作。
+    index 是任务发现的唯一入口，它漂移了没人知道。
+    证据：<span class="m">scripts/task.py</span> complete 的 index 正则修复 · start（只查 dirname）· <span class="m">SKILL.md</span>（task_directory 章节）。
+  </div>
+
+  <div class="callout orange">
+    <span class="miss partial">部分缺失</span> <b>安装侧守护。</b>pstack 的安装 / 分发有完整校验链；x-rail 的 <span class="m">install.sh --update</span> 对已标记目录先 <span class="m">rm -rf</span> 再复制、无交互确认（R-25，详见 11 节）。
+    copy 模式的"先验证后写入"做得较严；删除型安装仅靠文档约定"需事先授权"。
+  </div>
+</section>
+
+<!-- ============ 09 PLAYBOOKS ============ -->
+<section id="playbooks">
+  <div class="sec-head"><span class="sec-num">09</span><h2>阶段全表：路由映射与 11 个 playbook</h2></div>
+  <p class="sec-desc">
+    playbook 是各阶段的执行细则；严格任务按 <span class="m">task_type</span> 选 playbook，普通任务直接按短流程执行。
+    路由先看交付目标，再决定记录强度——<b>按当前未知选最短路径</b>，不要求默认走完整阶段链路。
+  </p>
+
+  <div class="tblwrap">
+    <div class="cap">任务分流 <small>交付目标 → 默认路径 → 默认记录</small></div>
+    <table class="rt">
+      <tr><th>交付目标</th><th>默认路径</th><th>默认记录</th></tr>
+      <tr><td>简单解释或单一事实</td><td class="mono">fast-answer</td><td>直接回答，不建任务目录</td></tr>
+      <tr><td>调查、研究、方案或审查</td><td class="mono">investigate / research / design / review</td><td>只读任务默认直接交付；需要跨会话或用户明确要求时才建严格记录</td></tr>
+      <tr><td>低风险、可逆的小修改或文档</td><td class="mono">bugfix / exec / plan</td><td>普通短流程：先读、最小改动、实际验证</td></tr>
+      <tr><td>复杂或大范围实施、跨会话、外部等待、必需依赖汇总或敏感动作</td><td class="mono">对应阶段 + 严格记录</td><td>contract.md、state.md、证据和完成门</td></tr>
+    </table>
+  </div>
+
+  <div class="pb-group">
+    <h4>理解与调查</h4>
+    <div class="pb-grid">
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--blue)"></span>investigate</div>
+        <div class="d">调查事实与现状；只读交付，回复列项不落盘。</div>
+        <span class="file">playbooks/investigate.md</span>
+      </div>
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--cyan)"></span>research</div>
+        <div class="d">研究外部资料与依据，形成可核对的研究结论。</div>
+        <span class="file">playbooks/research.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>设计与计划</h4>
+    <div class="pb-grid">
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--purple)"></span>design</div>
+        <div class="d">方案设计：目标、取舍与边界；只写授权位置。</div>
+        <span class="file">playbooks/design.md</span>
+      </div>
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--purple)"></span>plan</div>
+        <div class="d">实施计划：步骤、依赖与验收；已有合格计划核对覆盖后复用。</div>
+        <span class="file">playbooks/plan.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>实施与修复</h4>
+    <div class="pb-grid">
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--green)"></span>exec</div>
+        <div class="d">执行实施：TDD 纪律、用户路径验收、委派细则。</div>
+        <span class="file">playbooks/exec.md</span>
+      </div>
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--green)"></span>bugfix</div>
+        <div class="d">缺陷修复：复现、根因、最小修复。</div>
+        <span class="file">playbooks/bugfix.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>审查与验证</h4>
+    <div class="pb-grid">
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--orange)"></span>review</div>
+        <div class="d">审查：按风险与覆盖触发；无委派授权则单列阻塞。</div>
+        <span class="file">playbooks/review.md</span>
+      </div>
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--yellow)"></span>verification</div>
+        <div class="d">验证说明：run / capture / record 参数与完成门细节。</div>
+        <span class="file">playbooks/verification.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>操作与组合</h4>
+    <div class="pb-grid">
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--cyan)"></span>ops</div>
+        <div class="d">操作指引：敏感动作先确认（不可逆 / 支出 / 对外发布 / 范围变化）。</div>
+        <span class="file">playbooks/ops.md</span>
+      </div>
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--blue)"></span>mixed</div>
+        <div class="d">组合任务：多阶段混合执行的衔接规则。</div>
+        <span class="file">playbooks/mixed.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>支撑</h4>
+    <div class="pb-grid">
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--text3)"></span>third-party-skill</div>
+        <div class="d">第三方技能接入与使用边界。</div>
+        <span class="file">playbooks/third-party-skill.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>模板</h4>
+    <div class="pb-grid">
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--text3)"></span>child-task</div>
+        <div class="d">子任务接口：工作项、输入、允许路径、依赖、验收、权限、成本。</div>
+        <span class="file">templates/child-task.md</span>
+      </div>
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--text3)"></span>document-task</div>
+        <div class="d">严格文档任务模板：既有材料整理专用。</div>
+        <span class="file">templates/document-task.md</span>
+      </div>
+      <div class="pb">
+        <div class="n"><span class="dotc" style="background:var(--text3)"></span>long-task</div>
+        <div class="d">长任务模板：依赖与外部运行的引用格式。</div>
+        <span class="file">templates/long-task.md</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10 SKILLS ============ -->
+<section id="skills">
+  <div class="sec-head"><span class="sec-num">10</span><h2>技能索引：36 个技能目录</h2></div>
+  <p class="sec-desc">
+    <b>4 个入口 + 32 个辅助</b>（13 条原则 + 19 个工具技能）。所有技能设 <span class="m">disable-model-invocation: true</span>，
+    不会由任务内容自动唤起；<span class="m">scripts/runtime-skills.txt</span> 是安装范围的唯一来源。
+  </p>
+
+  <div class="pb-group">
+    <h4>入口 · 4</h4>
+    <div class="pr-list">
+      <div class="pr"><span class="pname">x-rail</span><span class="pdesc">按交付结果分流的独立任务入口；普通任务直接实施与验证，严格记录用 .work-docs。</span></div>
+      <div class="pr"><span class="pname">x-rail-long</span><span class="pdesc">跨会话、外部等待或独立依赖汇总入口；保存可恢复的阶段记录。</span></div>
+      <div class="pr"><span class="pname">x-handoff</span><span class="pdesc">把当前任务真实状态与恢复第一步写入授权 handoff.md。</span></div>
+      <div class="pr"><span class="pname">x-self-check</span><span class="pdesc">只读分析最近 7 日或 3 周记录，输出有证据的改进建议。</span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>原则 · 13（x-principle-*）</h4>
+    <div class="pr-list">
+      <div class="pr"><span class="g" style="color:var(--yellow)">核心</span><span class="pname">attack-the-premise</span><span class="pdesc">同一前提的多个修复在同一门失败时：先普查失衡方，质疑前提，而不是再写一个假设它的修复。</span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">核心</span><span class="pname">fix-root-causes</span><span class="pdesc">调试：先复现，逐症状追到根因并在根因处修；抵制静默崩溃的 nil 守卫。</span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">核心</span><span class="pname">foundational-thinking</span><span class="pdesc">写逻辑前定核心类型与数据结构；数据结构对了，下游代码自然明显。</span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">核心</span><span class="pname">outcome-oriented-execution</span><span class="pdesc">重写与迁移向目标架构收敛；不为平滑中间态保留一次性兼容代码。</span></div>
+      <div class="pr"><span class="g" style="color:var(--purple)">架构</span><span class="pname">redesign-from-first-principles</span><span class="pdesc">新需求当从第一天就存在的基础假设来重设计，而不是外挂。</span></div>
+      <div class="pr"><span class="g" style="color:var(--purple)">架构</span><span class="pname">boundary-discipline</span><span class="pdesc">守卫集中在系统边界（CLI / 配置 / 网络 / 外部 API）；信任内部类型，业务逻辑保持纯函数。</span></div>
+      <div class="pr"><span class="g" style="color:var(--purple)">架构</span><span class="pname">separate-before-serializing-shared-state</span><span class="pdesc">先消除共享；只有单写入者是真不变量时才做结构性串行化。</span></div>
+      <div class="pr"><span class="g" style="color:var(--green)">验证</span><span class="pname">prove-it-works</span><span class="pdesc">宣布完成前对照真实工件验证（跑功能、读真实值、看 diff），不是代理、自述或"能编译"。</span></div>
+      <div class="pr"><span class="g" style="color:var(--green)">验证</span><span class="pname">type-system-discipline</span><span class="pdesc">让非法状态不可表达；品牌化语义原语；边界处解析外部数据；穷尽变体。</span></div>
+      <div class="pr"><span class="g" style="color:var(--green)">验证</span><span class="pname">encode-lessons-in-structure</span><span class="pdesc">同一指令第二次出现时：编码成 lint / 元数据 / 运行时检查 / 脚本，而不是更多文本。</span></div>
+      <div class="pr"><span class="g" style="color:var(--cyan)">效率</span><span class="pname">build-the-lever</span><span class="pdesc">非平凡工作先造工具（codemod / 脚本 / 生成器 / 子代理技能）；工具是审查者可重跑的工件。</span></div>
+      <div class="pr"><span class="g" style="color:var(--cyan)">效率</span><span class="pname">laziness-protocol</span><span class="pdesc">重构与评估 diff 时偏向删除与最小改动；抵制抽象、层与信号穿透。</span></div>
+      <div class="pr"><span class="g" style="color:var(--cyan)">效率</span><span class="pname">guard-the-context-window</span><span class="pdesc">上下文将满：工具内聚合大输出、有界摘要、仅显式授权时委派。</span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>辅助 · 19</h4>
+    <div class="pr-list">
+      <div class="pr"><span class="pname">x-architect</span><span class="pdesc">写码前勾勒类型、签名与模块结构，实施中保持在线。</span></div>
+      <div class="pr"><span class="pname">x-arena</span><span class="pdesc">同一任务并行 N 个候选，选基底，嫁接失败者最强部分。</span></div>
+      <div class="pr"><span class="pname">x-blast-radius</span><span class="pdesc">上线前找出改动可能破坏的远处事物，用真实运行证明安全所依赖的事实。</span></div>
+      <div class="pr"><span class="pname">x-codebase-design</span><span class="pdesc">深模块设计共享词汇：接口、加深机会、接缝、可测试性。</span></div>
+      <div class="pr"><span class="pname">x-create-verification-skill</span><span class="pdesc">生成项目本地验证技能，像用户一样驱动应用。</span></div>
+      <div class="pr"><span class="pname">x-how</span><span class="pdesc">解释子系统架构与运行时流程；"X 如何工作"、改前走读、放置 / 归属 / 分层。</span></div>
+      <div class="pr"><span class="pname">x-html</span><span class="pdesc">把主题或文档做成自包含中文图文 HTML（图为主，受控短句）。</span></div>
+      <div class="pr"><span class="pname">x-interrogate</span><span class="pdesc">对抗性多模型审查：多个审查者从独立角度挑战改动。</span></div>
+      <div class="pr"><span class="pname">x-prototype</span><span class="pdesc">一次性原型回答设计问题（状态模型、逻辑手感、UI 样子）。</span></div>
+      <div class="pr"><span class="pname">x-receiving-code-review</span><span class="pdesc">收到审查反馈时：技术严谨与验证，不表演式同意。</span></div>
+      <div class="pr"><span class="pname">x-requesting-code-review</span><span class="pdesc">完成任务或合并前：验证工作符合要求。</span></div>
+      <div class="pr"><span class="pname">x-resolving-merge-conflicts</span><span class="pdesc">解决进行中的 git merge / rebase 冲突。</span></div>
+      <div class="pr"><span class="pname">x-teach</span><span class="pdesc">把工作讲明白：运行 x-how + x-why，编织成一个清晰解释。</span></div>
+      <div class="pr"><span class="pname">x-technical-writing</span><span class="pdesc">分层写作标准：Diátaxis、Google 风格、STE 指令规则、Global English。</span></div>
+      <div class="pr"><span class="pname">x-typescript-best-practices</span><span class="pdesc">读写 .ts / .tsx 时的 TypeScript 最佳实践。</span></div>
+      <div class="pr"><span class="pname">x-unslop</span><span class="pdesc">从任何写作中剪掉 AI 痕迹。</span></div>
+      <div class="pr"><span class="pname">x-why</span><span class="pdesc">"为什么这样"、设计理由、回归、复盘、数据阈值；并行查询证据源后给出带引用的解读。</span></div>
+      <div class="pr"><span class="pname">x-wizard</span><span class="pdesc">生成交互式 bash 向导，引导人类完成只有人类能做的步骤。</span></div>
+      <div class="pr"><span class="pname">x-worktree</span><span class="pdesc">用户主动调用时创建同名分支工作区（.worktrees/），复制 .env.local。</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11 RISKS ============ -->
+<section id="risks">
+  <div class="sec-head"><span class="sec-num">11</span><h2>风险全表（26 条）</h2></div>
+  <p class="sec-desc">
+    26 条风险中 22 条已在对应决策点就地展开；本表为全量索引，并补齐 R-02 / R-12 / R-25 / R-26 四条。
+    类型口径：<b>绕过</b> 合规路径可被静默跳过 · <b>死锁</b> 无法恢复或完成 · <b>裁量</b> 靠模型判断无验证 ·
+    <b>机制</b> 脚本缺守护 · <b>体系</b> 记录与行为脱节 · <b>语义</b> 字段 / 行为不一致 · <b>边缘</b> 罕见但真实 · <b>迁移</b> 历史兼容。
+  </p>
+
+  <div class="tblwrap">
+    <table class="rt">
+      <tr><th>级别</th><th>编号</th><th>一句话</th><th>类型</th><th>详情</th></tr>
+      <tr><td><span class="badge b-red">P0</span></td><td class="mono">R-05</td><td>契约变更批准缺口：扩 scope / 放宽审查 / 降 risk 无需批准</td><td>绕过</td><td><a href="#d5">D5</a></td></tr>
+      <tr><td><span class="badge b-red">P0</span></td><td class="mono">R-08</td><td>mixed / ops 不强制 work_items_schema，换类型绕过拆分</td><td>绕过</td><td><a href="#d3">D3</a></td></tr>
+      <tr><td><span class="badge b-red">P0</span></td><td class="mono">R-18</td><td>deadline 超期死锁：无法 resume、无法 done</td><td>死锁</td><td><a href="#d8">D8</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-01</td><td>路由 / 阶段选择纯语义，无验证</td><td>裁量</td><td><a href="#d1">D1</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-03</td><td>记录强度两问无标准，低估即零留存</td><td>裁量</td><td><a href="#d2">D2</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-04</td><td>index.md / 取号 / 并发零脚本守护</td><td>机制</td><td><a href="#topo">08</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-07</td><td>确认与授权证据自填，只查非空</td><td>体系</td><td><a href="#d5">D5</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-10</td><td>拆分判定全定性，粒度无边界</td><td>裁量</td><td><a href="#d3">D3</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-11</td><td>TDD 边界模糊，失败前证据缺失不拦</td><td>裁量</td><td><a href="#d4">D4</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-13</td><td>expect 子串匹配，弱断言轻松过门</td><td>机制</td><td><a href="#d6">D6</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-16</td><td>审查无降级路径：卡死或违约二选一</td><td>机制</td><td><a href="#d7">D7</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-19</td><td>calls 计数器无递增方，无进展熔断失效</td><td>机制</td><td><a href="#d8">D8</a></td></tr>
+      <tr><td><span class="badge b-orange">P1</span></td><td class="mono">R-26</td><td>元风险：记录自洽 ≠ 行为强制</td><td>体系</td><td>本页</td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-02</td><td>参考技能读取时机完全靠自评</td><td>裁量</td><td>本页</td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-06</td><td>顶层字段错位被静默忽略</td><td>语义</td><td><a href="#d5">D5</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-09</td><td>ready 模式不查封存一致性</td><td>语义</td><td><a href="#d9">D9</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-12</td><td>委派判定成本感知主观</td><td>裁量</td><td>本页</td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-14</td><td>输入 mtime 在未来 → 永久 stale</td><td>边缘</td><td><a href="#d6">D6</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-15</td><td>证据无 TTL：external 层证据不随时间失效</td><td>边缘</td><td><a href="#d6">D6</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-17</td><td>单 review 指针 × 多工作项时序耦合</td><td>机制</td><td><a href="#d7">D7</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-20</td><td>预算超限同样无法恢复</td><td>死锁</td><td><a href="#d8">D8</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-21</td><td>--progress 任意文本声明"真实新结论"</td><td>裁量</td><td><a href="#d8">D8</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-22</td><td>runs.json 与 Dependencies 强绑定</td><td>语义</td><td><a href="#d8">D8</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-23</td><td>legacy 子任务卡父任务</td><td>迁移</td><td><a href="#d9">D9</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-24</td><td>needed_acceptances 行为差异</td><td>语义</td><td><a href="#d9">D9</a></td></tr>
+      <tr><td><span class="badge b-orange">P2</span></td><td class="mono">R-25</td><td>install --update 无交互确认，直接删除已标记目录</td><td>边缘</td><td>本页</td></tr>
+    </table>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-orange">R-02</span>P2 · 参考技能读取时机（when 条件）完全靠自评</h3>
+      <p>chain-unknown / impact-unknown 等触发条件由模型自查，"该读不读 / 读多读少"无验证。影响输出质量而非流程正确性，无法观测；属于设计边界，记录在案。</p>
+      <div class="ev">证据：<span class="m">skills/x-rail/SKILL.md</span>（参考读取章节）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-12</span>P2 · 委派判定（授权 / 成本 / 短小直接做）成本感知主观</h3>
+      <p>"交接成本明显更高时直接完成""未获授权直接执行并记录权限原因"靠模型判断。无观测手段；记录里的"权限原因"是自述文本，属设计边界。</p>
+      <div class="ev">证据：<span class="m">playbooks/exec.md</span>（委派章节）</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-orange">R-25</span>P2 · install --update 无交互确认，直接删除已标记目录</h3>
+      <p><span class="m">--update</span> 对已标记目录先 <span class="m">rm -rf</span> 再复制；脚本无确认提示，"删除型安装需事先授权"只是文档约定。误敲一条命令即可删掉运行时目录——标记只防"来源不符"，不防目标目录内的本地修改（整体替换会一并丢弃；copy 模式的"先验证后写入"做得较严）。</p>
+      <div class="ev">证据：<span class="m">scripts/install.sh</span>（--update 分支）</div>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">R-26</span>P1 · 体系本质：记录自洽校验 ≠ 行为强制</h3>
+      <p>脚本能 fail-closed 地校验"记录之间是否自洽"（sha256、时间线、状态机、快照链），但不能验证"行为是否真实发生"（真确认、真独立审查、真进展、强断言）。这不是 bug，是设计前提——也是绝大多数"裁量类风险"的共同根源：能靠"写得合规"通过的门，等于没有门。</p>
+      <p>建议方向：凡是影响完成门结果的判定，要么有机器可查的锚点（文件、sha、计数），要么在报告里显式标记为"自述"。</p>
+      <div class="ev">证据：<span class="m">SKILL.md</span>（authority 边界）· <span class="m">playbooks/verification.md</span>（自述与机器校验的划分）</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>三个风险热点（优先处理顺序建议）：</b>
+    <p>1. <b>机制缺口三连（R-05 / R-08 / R-18）</b>——前两个让合规路径被静默绕过，第三个让合规路径直接走不通。都是小改动可修：变更批准面扩展（scope / risk / policy 弱化纳入批准）、start 对"声明为实施类"的补充判定或至少 warning、deadline 增加"超期后允许 pause → 带解释恢复"的出口。</p>
+    <p>2. <b>判定不可验证层（R-03 / R-10 / R-16）</b>——记录强度、拆分、审查触发是三大裁量点。短期无法机器化，但可以在记录里强制"判定理由"（为什么普通 / 为什么这样拆 / 为什么不需要独立审查），把不可验证变成"可事后审计的自述"。</p>
+    <p>3. <b>预算体系半成品（R-19 / R-20 / R-21）</b>——数字写进 state、显示在 summary、定义了阈值，但没有真实来源。要么接入真实计数，要么明确降级为"展示性字段，不做门"。现状介于两者之间，是最容易误导后续开发者的一块。</p>
+  </div>
+</section>
+
+<!-- ============ 12 GAPS ============ -->
+<section id="gaps">
+  <div class="sec-head"><span class="sec-num">12</span><h2>缺失对照：pstack → x-rail</h2></div>
+  <p class="sec-desc">
+    逐模块对照 <span class="m">pstack-flow.html</span> 的 13 个章节与 x-rail 的对应实现。
+    状态口径：<span class="ok">已有</span> 等价机制 · <span class="miss partial">部分缺失</span> 有对应但不完整 · <span class="miss">缺失</span> 无对应物。
+  </p>
+
+  <div class="tblwrap">
+    <table class="rt">
+      <tr><th>pstack 模块</th><th>x-rail 对应物</th><th>状态</th></tr>
+      <tr><td>01 主链路：一次任务从进入到落地</td><td>01 主链路（本页）</td><td><span class="ok">已有</span></td></tr>
+      <tr><td>D1 如何选择 playbook</td><td>路由：按交付结果分流（<a href="#d1">D1</a>）</td><td><span class="ok">已有</span></td></tr>
+      <tr><td>D2 是否使用 subagent / 如何扇出</td><td>委派授权 + 独立并行 / 依赖接力（<a href="#d4">D4</a>）</td><td><span class="ok">已有</span></td></tr>
+      <tr><td>D3 subagent 用什么模型</td><td>—</td><td><span class="miss">缺失</span></td></tr>
+      <tr><td>D4 问人还是自己决定</td><td>四类敏感动作确认 + Decision Gates（<a href="#d5">D5</a>）</td><td><span class="ok">已有</span></td></tr>
+      <tr><td>D5 暂停红线与会话授权</td><td>确认红线 + cost_control: unlimited（<a href="#d5">D5</a>）</td><td><span class="ok">已有</span></td></tr>
+      <tr><td>D6 验证严格度 &amp; swarm 裁决</td><td>三通道取证 + 五观察面；swarm 无对应（<a href="#d6">D6</a>）</td><td><span class="miss partial">部分缺失</span></td></tr>
+      <tr><td>D7 交付编排（自主四件套）</td><td>交付止于 done + 索引更新（<a href="#d9">D9</a>）</td><td><span class="miss partial">部分缺失</span></td></tr>
+      <tr><td>D8 Babysit 的四种模式</td><td>—</td><td><span class="miss">缺失</span></td></tr>
+      <tr><td>D9 Forge 解析（PR 操作前置）</td><td>—</td><td><span class="miss">缺失</span></td></tr>
+      <tr><td>08 Orchestrate 三层拓扑</td><td>单写入者 + .work-docs 记录拓扑（<a href="#topo">08</a>）</td><td><span class="ok">已有</span> · 结构不同</td></tr>
+      <tr><td>09 Playbook 全表（23 个 · 五族）</td><td>11 playbook + 3 模板（<a href="#playbooks">09</a>）</td><td><span class="ok">已有</span> · 规模小</td></tr>
+      <tr><td>10 原则索引（24 条 · 6 组）</td><td>13 原则 · 4 组（<a href="#skills">10</a>）</td><td><span class="ok">已有</span> · 规模小</td></tr>
+    </table>
+  </div>
+
+  <div class="callout orange">
+    <b>三项实质缺口（已在正文就地标注）：</b>
+    <p>1. <b>按角色模型分配</b>（对应 pstack D3）——<span class="miss">缺失</span>。x-rail 子代理模型与总时限沿用宿主与代理配置，无 role → model 分配机制。</p>
+    <p>2. <b>PR / babysit / 发布编排</b>（对应 pstack D7–D9）——<span class="miss partial">部分缺失</span>。x-rail 交付止于 done 状态 + 索引更新，无 PR 创建、babysit、forge 解析流程。</p>
+    <p>3. <b>swarm 多路独立裁决</b>（对应 pstack D6）——<span class="miss partial">部分缺失</span>。x-rail 只有单审查者记录 + 可选独立审查，无多 lane 并行裁决。</p>
+  </div>
+</section>
+
+<footer>
+  报告生成于 2026-10-16 · 仅基于源码推导 · 未修改任何代码与既有文档<br/>
+  机制与风险引用对应工作区当前版本（ce02ac1），可直接对照核对。
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,946 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]: pstack / poteto-mode — skill 流程解剖
+    - heading "♛ pstack 流程与决策全景图" [level=1] [ref=e5]
+    - paragraph [ref=e6]: pstack（作者 poteto，Cursor）把编程 agent 变成一个真正的工程团队。入口只有一个： /poteto-mode。它读取任务 → 匹配一个 playbook → 把 playbook 步骤逐字复制进 todo 列表 → 在步骤触发时路由到其它 skill → 每个 subagent 都经过 role 化模型分配 → 验证通过后才允许 PR 与落地。 本图完整呈现主链路与 9 个关键决策点。
+    - generic [ref=e7]:
+      - generic [ref=e8]: 23 playbooks
+      - generic [ref=e9]: 24 principles
+      - generic [ref=e10]: 50+ skills
+      - generic [ref=e11]: 入口 /poteto-mode
+      - generic [ref=e12]: 出口 Opening a PR → Babysit → Shipping
+  - navigation [ref=e13]:
+    - link "01 主链路" [ref=e14] [cursor=pointer]:
+      - /url: "#spine"
+    - link "D1 选 Playbook" [ref=e15] [cursor=pointer]:
+      - /url: "#d1"
+    - link "D2 用不用 Subagent" [ref=e16] [cursor=pointer]:
+      - /url: "#d2"
+    - link "D3 模型分配" [ref=e17] [cursor=pointer]:
+      - /url: "#d3"
+    - link "D4 问人 vs 自主" [ref=e18] [cursor=pointer]:
+      - /url: "#d4"
+    - link "D5 暂停红线" [ref=e19] [cursor=pointer]:
+      - /url: "#d5"
+    - link "D6 验证裁决" [ref=e20] [cursor=pointer]:
+      - /url: "#d6"
+    - link "D7 交付编排" [ref=e21] [cursor=pointer]:
+      - /url: "#d7"
+    - link "D8 Babysit 模式" [ref=e22] [cursor=pointer]:
+      - /url: "#d8"
+    - link "D9 Forge 选择" [ref=e23] [cursor=pointer]:
+      - /url: "#d9"
+    - link "大程序拓扑" [ref=e24] [cursor=pointer]:
+      - /url: "#topo"
+    - link "Playbook 全表" [ref=e25] [cursor=pointer]:
+      - /url: "#playbooks"
+    - link "原则索引" [ref=e26] [cursor=pointer]:
+      - /url: "#principles"
+  - generic [ref=e27]:
+    - generic [ref=e28]:
+      - generic [ref=e29]: "01"
+      - heading "主链路：一次任务从进入到落地" [level=2] [ref=e30]
+    - paragraph [ref=e31]: 所有任务共用一条主干。playbook 决定分支细节，但每个 playbook 都遵循同样的骨架： 先开 todo（步骤逐字复制）→ 执行步骤（按需触发 skills）→ 委托/验证 → Opening a PR。 "回复工程"贯穿始终：每条结论自带证据标签（measured / inferred / guess）。
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: "1"
+        - generic [ref=e37]:
+          - heading "入口：用户给出目标 + 验收信号" [level=4] [ref=e38]
+          - paragraph [ref=e39]: 用自然语言描述意图和"怎么算完成"（如"repro first, then fix and verify"）。不需要指定 playbook、不需要列 skills。
+          - generic [ref=e40]: /poteto-mode <goal> [+ checkable outcome] · mode 常驻则每轮自动裁决是否介入
+      - generic [ref=e41]:
+        - generic [ref=e42]: "2"
+        - generic [ref=e45]:
+          - heading "分类路由：匹配 playbook 决策点 D1" [level=4] [ref=e46]:
+            - text: 分类路由：匹配 playbook
+            - generic [ref=e47]: 决策点 D1
+          - paragraph [ref=e48]: 读取请求 → 从 23 个 playbook 中匹配一个（无匹配则 figure-it-out 设计定制流程；项目级则 orchestrate）。 同时做前置裁决：架构问题先 how；跨函数边界 → architect；并行扇出 → swarm。
+          - generic [ref=e49]: SKILL.md → Playbooks 段（逐条匹配规则）
+      - generic [ref=e50]:
+        - generic [ref=e51]: "3"
+        - generic [ref=e54]:
+          - heading "开 todo 列表：playbook 步骤逐字复制" [level=4] [ref=e55]
+          - paragraph [ref=e56]: "playbook 的每个 step 原样拷贝为 todo 的第一批条目（跳过项保留并标注 skip: <reason>），之后才加任务专属 todo。todo 即执行合同。"
+          - generic [ref=e57]: 这是硬性要求：steps copied in verbatim, before any task-specific todos
+      - generic [ref=e58]:
+        - generic [ref=e59]: "4"
+        - generic [ref=e62]:
+          - heading "逐步执行：步骤触发 skill 路由" [level=4] [ref=e63]
+          - paragraph [ref=e64]: 每个 step 声明它需要哪些 skill，agent 按需加载：理解 → how / why；设计 → architect / arena / prototype； 并发 → swarm；争议 → interrogate；写作 → unslop / technical-writing / no-comments；数字 → benchmark-checklist。
+          - generic [ref=e65]: 回复中必须点名"哪个原则影响了哪个决定"，且只引用本会话真正读过的原则
+      - generic [ref=e66]:
+        - generic [ref=e67]: "5"
+        - generic [ref=e70]:
+          - heading "委托：subagent 扇出 决策点 D2 + D3" [level=4] [ref=e71]:
+            - text: 委托：subagent 扇出
+            - generic [ref=e72]: 决策点 D2 + D3
+          - paragraph [ref=e73]: 用 throughput checkpoint 四问决定扇出结构；默认 fresh subagent + consolidated scope；每个角色分配显式模型； bulk 数据交给 subagent，主线程只留摘要（guard-the-context-window）。
+          - generic [ref=e74]: "playbook 内子代理：subagent_type: \"poteto-agent\"，run_in_background: true"
+      - generic [ref=e75]:
+        - generic [ref=e76]: "6"
+        - generic [ref=e79]:
+          - heading "验证：真实表面 + 三方证据 决策点 D6" [level=4] [ref=e80]:
+            - text: 验证：真实表面 + 三方证据
+            - generic [ref=e81]: 决策点 D6
+          - paragraph [ref=e82]: 铁律："仅有测试不算验证。PR 的 unit / live / perf 三栏全勾才算 verified。" live lane 强制（真应用 + control skill + 截图）；大型交付用 swarm 扇出 10+ lanes 独立裁决。
+          - generic [ref=e83]: "\"Inconclusive\" 或 \"wrong surface\" 不算通过——必须标记出来"
+      - generic [ref=e84]:
+        - generic [ref=e85]: "7"
+        - generic [ref=e88]:
+          - heading "收尾：Opening a PR（每个 playbook 的终点）" [level=4] [ref=e89]
+          - paragraph [ref=e90]: worktree 隔离 → /deslop → /no-comments → Conventional Commits 标题 + briefing 式 PR body → 开 ready 不开 draft。开 PR 不自动进入 babysit。
+          - generic [ref=e91]: 优先 5 个窄 PR 而不是 1 个大 PR；stack 子分支 rebase 到父分支 tip
+      - generic [ref=e92]:
+        - generic [ref=e93]: "8"
+        - generic [ref=e95]:
+          - heading "交付循环：Babysit → Shipping（用户显式触发）" [level=4] [ref=e96]
+          - paragraph [ref=e97]: Babysit 把 PR/stack 驱到 merge-ready（冲突、review 线程、CI）；Shipping 独立逐 PR 验证后， 只落地"从底部开始的连续已验证段"。两者都不许 babysit 越权 merge。
+          - generic [ref=e98]: Green ≠ safe。Nothing gets armed before an independent per-PR verdict
+    - generic [ref=e99]: 贯穿全局的三条纪律：① tier 由证据决定——每行代码都能回溯到运行时证据；② 回复面即 prose 面——所有输出过 unslop 规则（短句、无长破折号、不用冒号连接）； ③ 你拥有每个 subagent 的产出——亲自审 diff、亲自写总结，不转述下属报告。
+  - generic [ref=e100]:
+    - generic [ref=e101]:
+      - generic [ref=e102]: D1
+      - heading "决策点：如何选择 playbook" [level=2] [ref=e103]
+    - paragraph [ref=e104]: 匹配规则来自 SKILL.md → Playbooks 段。核心原则：先看任务动词（诊断/构建/交付/自主），再看规模与风险，最后看有没有现成 playbook。 语言信号（"repro first"、"going to bed"、"check on PR X"）也是路由信号。
+    - generic [ref=e105]:
+      - generic [ref=e106]:
+        - generic [ref=e107]: Decision Tree
+        - heading "任务 → playbook 匹配树" [level=3] [ref=e108]
+      - list [ref=e111]:
+        - listitem [ref=e112]:
+          - text: ▸ 任务是只读问题？（怎么工作、为什么这么建、是否确定）
+          - generic [ref=e113]: Investigation
+          - text: read-only，输出引用式答案，无 PR
+        - listitem [ref=e114]:
+          - text: ▸ 有报告缺陷要复现、根因、修复？
+          - generic [ref=e115]: Bug fix
+          - text: 有廉价本地测试路径时叠加 tdd：先写失败测试
+        - listitem [ref=e116]:
+          - text: ▸ 测量到明确变慢？
+          - list [ref=e117]:
+            - listitem [ref=e118]:
+              - text: ▸ 一次性修复
+              - generic [ref=e119]: Perf issue
+              - text: 7 条性能咒语按序尝试，最早达成目标即止
+            - listitem [ref=e120]:
+              - text: ▸ 对单一指标持续逼近目标（循环假设 + 前后测量 + 每次只留一个 commit）
+              - generic [ref=e121]: Hillclimb
+        - listitem [ref=e122]:
+          - text: ▸ 诊断运行中症状（泄漏、空转 CPU、渲染毛刺）？
+          - generic [ref=e123]: Runtime forensics
+          - text: 活体插桩，交付诊断不交付修复
+        - listitem [ref=e124]:
+          - text: ▸ 手里已有 profiling 工件（cpuprofile / trace / spindump / heap snapshot）？
+          - generic [ref=e125]: Trace forensics
+          - text: 固定数据集，读它，不重跑
+        - listitem [ref=e126]:
+          - text: ▸ 新增或改变行为？
+          - generic [ref=e127]: Feature
+          - text: 先命名数据形状；多合法形状 → arena
+        - listitem [ref=e128]:
+          - text: ▸ 保行为改结构（重命名/抽取/内联/去重/迁移）？
+          - generic [ref=e129]: Refactoring
+          - text: 先钉住行为契约再动结构；大范围 → figure-it-out
+        - listitem [ref=e130]:
+          - text: ▸ 要用最低成本做一个设计/行为决策？（"试试这个布局"）
+          - generic [ref=e131]: Prototype
+          - text: 唯一一条"质量不重要"的 playbook；决策做完交给 Feature
+        - listitem [ref=e132]:
+          - text: ▸ 两个实现的像素级 UI 等价？
+          - generic [ref=e133]: Visual parity
+          - text: image diff 归零才算过，base 不动
+        - listitem [ref=e134]:
+          - text: ▸ 写/改 SKILL.md？
+          - generic [ref=e135]: Authoring a skill
+        - listitem [ref=e136]:
+          - text: ▸ 评估 skill/prompt 改动对 agent 行为的影响？
+          - generic [ref=e137]: Eval
+          - text: 盲法：目录名、prompt、judge 全部去标识
+        - listitem [ref=e138]:
+          - text: ▸ PR/stack 状态请求？（"check on PR X"、"get it green"）
+          - generic [ref=e139]: Babysit
+          - text: 4 种模式，见 D8；绝不路由到 Cursor 内置 babysit
+        - listitem [ref=e140]:
+          - text: ▸ 要落地一个已绿的 stack？（"ship it"、"land it"）
+          - generic [ref=e141]: Shipping
+          - text: 独立验证 + 连续已验证段 bottom-up
+        - listitem [ref=e142]:
+          - text: ▸ 长任务、跑到谓词满足才停？（"/loop until X"、"run until done"）
+          - generic [ref=e143]: Autonomous run
+        - listitem [ref=e144]:
+          - text: ▸ 独立 PR 队列、全授权直通 merge？
+          - generic [ref=e145]: Autopilot-full
+          - text: 每 PR 一 owner；root 每轮 swarm 裁决
+        - listitem [ref=e146]:
+          - text: ▸ 队列要构建成 stack 交操作员 review 后自己落地？
+          - generic [ref=e147]: Autopilot-stack
+          - text: owner 不 merge，root 只 append
+        - listitem [ref=e148]:
+          - text: ▸ 项目级常驻程序？（多日、多 stack、agent 舰队、人每天看两次）
+          - generic [ref=e149]: Orchestrate
+          - text: coordinator 不写代码；见第 08 节
+        - listitem [ref=e150]:
+          - text: ▸ 恢复/接管前一个 agent 的进行中工作？
+          - generic [ref=e151]: Session pickup
+          - text: 先读 trail，不重做已完成工作
+        - listitem [ref=e152]:
+          - text: ▸ 要干净地暂停？
+          - generic [ref=e153]: Pause safely
+          - text: 只有显式要求才暂停；wip commit + resume note
+        - listitem [ref=e154]:
+          - text: ▸ 跨 phase / 多 stacked PR 的规划？
+          - generic [ref=e155]: Multi-phase plan
+          - text: 计划即交付物，不实现；1-2 文件且方案显然 → 跳过
+        - listitem [ref=e156]:
+          - text: ▸ 回收磁盘（worktree / 模拟器）？
+          - generic [ref=e157]: Worktree cleanup
+          - text: 唯一无代码审查兜底的破坏性 playbook
+        - listitem [ref=e158]:
+          - text: ▸ 没有匹配的 playbook？或大规模迁移 / 跨切面修改 / 人离开后要审计？
+          - generic [ref=e159]: figure-it-out
+          - text: 定制一个严格、可审计的 playbook
+        - listitem [ref=e160]:
+          - text: ▸ 任何 playbook 走到最后
+          - generic [ref=e161]: Opening a PR
+          - text: 所有 playbook 的公共终点
+    - generic [ref=e162]:
+      - generic [ref=e163]:
+        - generic [ref=e164]: Escalation
+        - heading "升级/降级规则：什么时候偏离最直观的匹配" [level=3] [ref=e165]
+      - generic [ref=e166]:
+        - generic [ref=e167]:
+          - generic [ref=e168]: 规模升级
+          - generic [ref=e169]: 跨大量调用点的迁移、宏大的多部分修改、人离开要事后信任的工作 → figure-it-out，即使 Feature 等窄 playbook 名义匹配。
+        - generic [ref=e170]:
+          - generic [ref=e171]: 项目升级
+          - generic [ref=e172]: 多日、多个 stacked PR、一支 subagent 舰队的常驻项目 → Orchestrate。figure-it-out 设计"一次定制 run"，orchestrate 跑"一个项目程序"。
+        - generic [ref=e173]:
+          - generic [ref=e174]: 降级判定
+          - generic [ref=e175]: 一个 agent 在会话预算内能完成的 → 不进 Orchestrate，无论措辞多像"项目"；进 Autonomous run 或直接做。先算：单元数 × 预算。
+        - generic [ref=e176]:
+          - generic [ref=e177]: 跳过规划
+          - generic [ref=e178]: 改动只碰 1-2 个文件且方案显然 → Multi-phase plan 直接说"不需要"并停止。
+        - generic [ref=e179]:
+          - generic [ref=e180]: 一次 vs 长期
+          - generic [ref=e181]: 性能：一次性 → Perf issue；持续科学逼近指标 → Hillclimb。诊断：活体 → Runtime forensics；事后工件 → Trace forensics。
+        - generic [ref=e182]:
+          - generic [ref=e183]: 测试叠加
+          - generic [ref=e184]: Bug fix 且有廉价测试路径 → 叠加 tdd（失败测试先于修复进入 git 历史）。
+        - generic [ref=e185]:
+          - generic [ref=e186]: 回答边界
+          - generic [ref=e187]: 路由还决定"是否要写代码"：Investigation / forensics 是只读的，交付引用式答案；不要顺手改代码，除非用户要求或后续转 Route。
+    - generic [ref=e188]: 语言即路由信号。"repro first" → Bug fix；"I'm going to bed / land it by morning" → 自主授权 + Autopilot/Shipping； "check on PR 123" → Babysit(check)；"compare them" → Prototype/Arena；"trust it was done right when I'm back" → figure-it-out + show-me-your-work。 写 prompt 时把"怎么算完成"说清楚，比列 skill 清单更有用。
+  - generic [ref=e189]:
+    - generic [ref=e190]:
+      - generic [ref=e191]: D2
+      - heading "决策点：是否使用 subagent / 如何扇出" [level=2] [ref=e192]
+    - paragraph [ref=e193]: 子代理是默认，不是例外——但"用几个、什么形态、fresh 还是 resume"都有判定规则。 来源：SKILL.md → Subagents、Feature 的 throughput checkpoint、swarm/orchestrate 的形态规则。
+    - generic [ref=e194]:
+      - generic [ref=e195]:
+        - generic [ref=e196]: Checkpoint
+        - heading "扇出前必答四问（Feature step 3 的 throughput checkpoint）" [level=3] [ref=e197]
+      - generic [ref=e198]:
+        - paragraph [ref=e199]: "每个 playbook 在动手前必须写出这四项（不适用的也保留条目并标注 n/a: <原因>，不许跳过）："
+        - generic [ref=e200]:
+          - generic [ref=e201]: Q1 Blocking first steps
+          - generic [ref=e202]: 有必须先跑的门禁（架构决策、共享脚手架、基线捕获）吗？→ 门禁全部先行，再谈扇出。
+        - generic [ref=e203]:
+          - generic [ref=e204]: Q2 Independent workstreams
+          - generic [ref=e205]: 存在不相交的文件/服务/层的独立工作流吗？→ 独立流并行；共享写串行。
+        - generic [ref=e206]:
+          - generic [ref=e207]: Q3 Shared mutable state
+          - generic [ref=e208]: 并发角色会写同一个文件/分支/键/对象吗？→ 默认拆分目标（separate-before-serializing-shared-state）；只有真实的单写者不变量才串行。
+        - generic [ref=e209]:
+          - generic [ref=e210]: Q4 Smallest safe decomposition
+          - generic [ref=e211]: 最小安全分解是什么？→ 如果一个 worker 最好，必须写明理由。
+    - generic [ref=e212]:
+      - generic [ref=e213]:
+        - heading "形态选择 单 owner vs 父级扇出" [level=3] [ref=e214]:
+          - generic [ref=e215]: 形态选择
+          - text: 单 owner vs 父级扇出
+        - list [ref=e216]:
+          - listitem [ref=e217]: 代码耦合工作（一个 feature、一次迁移）→ 单个 owner，checkpoint 内联给 owner，owner 在内部自行扇出。
+          - listitem [ref=e218]: 父级扇出只用于产出独立工件的切片：审计、跨子系统调查、竞品实验。
+          - listitem [ref=e219]: phase 边界要重写 checkpoint；继续下一步用 fresh owner，不链式中断（interrupt-chained resume 会静默丢指令）。
+      - generic [ref=e220]:
+        - heading "默认参数 每个 Task 调用的基线" [level=3] [ref=e221]:
+          - generic [ref=e222]: 默认参数
+          - text: 每个 Task 调用的基线
+        - list [ref=e223]:
+          - listitem [ref=e224]: "run_in_background: true；agent 模式（readonly 会剥掉 MCP）。"
+          - listitem [ref=e225]: 文件指针，不内联上下文（file pointers not inlined context）。
+          - listitem [ref=e226]: 每个角色带显式 model（见 D3）。
+          - listitem [ref=e227]: "playbook 步骤内的子代理一律 subagent_type: \"poteto-agent\"；routed skills（how/why/interrogate/reflect/swarm）自设 subagent_type，不许覆盖。"
+      - generic [ref=e228]:
+        - heading "Fresh vs Resume 默认 fresh" [level=3] [ref=e229]:
+          - generic [ref=e230]: Fresh vs Resume
+          - text: 默认 fresh
+        - list [ref=e231]:
+          - listitem [ref=e232]: 默认 fresh：原 brief + 所有后续指令 + 前 agent 报告与分支 = consolidated scope。适用于修复轮、follow-up、retry、下一个队列项。
+          - listitem [ref=e233]: 只有新工作严格依赖现有状态才 resume：本地 checkout、未提交改动、仍在跑的进程（dev server / 模拟器 / watcher）。
+          - listitem [ref=e234]: 给运行中 agent 的 stop/hold 指令不算复用。
+          - listitem [ref=e235]: 禁止 resume-chain；空间换正确：fresh + 完整 scope。
+      - generic [ref=e236]:
+        - heading "上下文守恒 guard-the-context-window" [level=3] [ref=e237]:
+          - generic [ref=e238]: 上下文守恒
+          - text: guard-the-context-window
+        - list [ref=e239]:
+          - listitem [ref=e240]: bulk 数据（大日志、长文件、批量扫描、transcript）→ 全部交给 subagent。
+          - listitem [ref=e241]: 主线程只保留摘要 + 文件指针，绝不落原始 payload。
+          - listitem [ref=e242]: 探活不 resume：读 ledger、units.tsv、gh、已推分支、云面板状态；transcript mtime 不算活。
+    - generic [ref=e243]:
+      - generic [ref=e244]:
+        - generic [ref=e245]: Fan-out Patterns
+        - heading "三种扇出形态对照：pair / swarm / orchestrate" [level=3] [ref=e246]
+      - generic [ref=e247]:
+        - table [ref=e248]:
+          - rowgroup [ref=e249]:
+            - row [ref=e250]:
+              - columnheader "形态" [ref=e251]
+              - columnheader "何时用" [ref=e252]
+              - columnheader "结构" [ref=e253]
+              - columnheader "收敛方式" [ref=e254]
+            - row [ref=e255]:
+              - cell "单 owner + 内部扇出" [ref=e256]
+              - cell "代码耦合：一个 feature / 一次迁移 / 一个 bug 修复，产出物互相依赖" [ref=e257]
+              - cell "Lead 持有任务，阶段间自行 delegate（bug-fix 模型），自审 diff" [ref=e258]
+              - cell "Lead 亲自验证 + 写总结" [ref=e259]
+            - row [ref=e260]:
+              - cell "Swarm（多 worker 并行）" [ref=e261]
+              - cell "覆盖矩阵（每个 slice 一个 worker）、race（同一 brief 多模型）、两者混合" [ref=e262]
+              - cell "N 个 cloud worker 一条消息扇出；每个 brief 自包含；写者各自独立输出" [ref=e263]
+              - cell "聚合为一张报告：结果表 + 一行式问题 + 缺口；race 用事先声明的 first-pass / rank-all / best-of" [ref=e264]
+            - row [ref=e265]:
+              - cell "Orchestrate（程序级）" [ref=e266]
+              - cell "一个项目超出单会话预算：多日、多 stack、几十个 subagent、人每天看两次" [ref=e267]
+              - cell "Coordinator（本地、不写码）→ track 级 sub-coordinator（>1 drain 阈值才设）→ worker/verifier（cloud，深度 ≤3）" [ref=e268]
+              - cell "每次 drain 分类所有指针；ledger 按 PR+SHA 记账；frontier 计算式推进" [ref=e269]
+        - generic [ref=e270]: 验证独立性规则：verifier 永远用与 worker 不同模型族（同 prompt 换模型 = 高信号第二意见）。 swarm race 的每个 arm 事先命名模型；测量类 brief 必须携带精确 SHA 与方法（样本数、样本定义、顺序）。
+    - generic [ref=e271]:
+      - generic [ref=e272]:
+        - generic [ref=e273]: Ownership
+        - heading "委派后的所有权：你仍然拥有一切" [level=3] [ref=e274]
+      - generic [ref=e275]:
+        - generic [ref=e276]:
+          - generic [ref=e277]: 审 diff，写总结
+          - generic [ref=e278]: 每个 subagent 的产出由你复核；亲自写总结，不转述 agent 的自我报告。
+        - generic [ref=e279]:
+          - generic [ref=e280]: 第二意见
+          - generic [ref=e281]: 同一 prompt 换模型跑第二意见；一致 = 高信号。
+        - generic [ref=e282]:
+          - generic [ref=e283]: brief 是产品
+          - generic [ref=e284]: （orchestrate 层级）brief 字段：GOAL / SCOPE / CONTEXT / ACCEPTANCE / VERIFY / TIMEBOX / FORBIDDEN / REPORT / STANDING orders 逐字粘贴。 填不满的字段 = 还没 scoping 的单元，拒发。
+        - generic [ref=e285]:
+          - generic [ref=e286]: 不许沉默加倍
+          - generic [ref=e287]: 丢失的 child 必须记账（arrived / respawned / scope 被显式吸收）；默默重做会掩盖双重浪费和覆盖缺口。
+  - generic [ref=e288]:
+    - generic [ref=e289]:
+      - generic [ref=e290]: D3
+      - heading "决策点：subagent 用什么模型" [level=2] [ref=e291]
+    - paragraph [ref=e292]: 模型按角色分配，不按心情。默认配置由 /setup-pstack 写入 ~/.cursor/rules/pstack-models.mdc； 缺省时回退到硬编码默认。role 行可写 inherit-parent / auto（省略 Task model，跑父模型）。
+    - generic [ref=e293]:
+      - generic [ref=e294]: Role → Model 分配表 默认面板：opus 5.5 / grok
+      - table [ref=e295]:
+        - rowgroup [ref=e296]:
+          - row [ref=e297]:
+            - columnheader "角色" [ref=e298]
+            - columnheader "默认模型" [ref=e299]
+            - columnheader "判定规则" [ref=e300]
+          - row [ref=e301]:
+            - cell "代码委托（feature / refactoring / bug-fix / perf / hillclimb）" [ref=e302]
+            - cell "grok-4.7-xhigh-fast" [ref=e303]
+            - cell "按难度分层。读各自 playbook 对应的 role 行。" [ref=e304]
+          - row [ref=e305]:
+            - cell "最难改动（hardest tasks）" [ref=e306]
+            - cell "claude-opus-5-5-xhigh" [ref=e307]
+            - cell "跨切面设计、棘手的并发、微妙算法。两种都收：需要判断模糊意图的，或需要逐字执行精确步骤序列的。" [ref=e308]
+          - row [ref=e309]:
+            - cell "散文与判断（judgment and prose）" [ref=e310]
+            - cell "claude-opus-5-5-xhigh" [ref=e311]
+            - cell "写作、评审、裁决类角色。" [ref=e312]
+          - row [ref=e313]:
+            - cell "Swarm workers" [ref=e314]
+            - cell "grok-4.7-xhigh-fast" [ref=e315]
+            - cell "读 swarm workers 行；模型 race 时每个 arm 事先命名。" [ref=e316]
+          - row [ref=e317]:
+            - cell "Verifier / judge" [ref=e318]
+            - cell "≠ worker 模型族" [ref=e319]
+            - cell "验证独立性：同 prompt 不同模型 = 高信号第二意见。" [ref=e320]
+          - row [ref=e321]:
+            - cell "机械琐碎编辑" [ref=e322]
+            - cell "fast code model" [ref=e323]
+            - cell "trivial mechanical edits → 最快的代码模型。" [ref=e324]
+    - generic [ref=e325]:
+      - generic [ref=e326]:
+        - heading "回退链 slug 被拒时" [level=3] [ref=e327]:
+          - generic [ref=e328]: 回退链
+          - text: slug 被拒时
+        - list [ref=e329]:
+          - listitem [ref=e330]: Task 工具拒绝 slug → 用默认并说明。
+          - listitem [ref=e331]: 默认也被拒 → 从其报错信息里取同族最近的有效 slug。
+          - listitem [ref=e332]: role 行缺失 → 保持默认；auto / inherit-parent → 省略 model。
+      - generic [ref=e333]:
+        - heading "覆盖优先级 谁盖谁" [level=3] [ref=e334]:
+          - generic [ref=e335]: 覆盖优先级
+          - text: 谁盖谁
+        - list [ref=e336]:
+          - listitem [ref=e337]: setup-pstack 的 per-role 行 覆盖 SKILL.md 默认与 routed skills（how/why/arena/swarm/architect/interrogate/reflect）的模型选择。
+          - listitem [ref=e338]: 默认值变更后，旧规则仍钉住旧默认——删掉对应 role 行或删文件重跑 setup。
+  - generic [ref=e339]:
+    - generic [ref=e340]:
+      - generic [ref=e341]: D4
+      - heading "决策点：问人，还是自己决定" [level=2] [ref=e342]
+    - paragraph [ref=e343]: 核心分类器：如果答案是一个"跑一下就能观察到的事实"，那它就不属于人类回答。 行为、时序、布局、输出、性能、甚至"eval 能否分离两种方案"——全部用 Prototype 让实验结果来定。
+    - generic [ref=e344]:
+      - generic [ref=e345]:
+        - generic [ref=e346]: Classifier
+        - heading "AskQuestion 前的分类决议" [level=3] [ref=e347]
+      - generic [ref=e348]:
+        - generic [ref=e349]:
+          - generic [ref=e350]:
+            - generic [ref=e351]: 想提问 / 想等确认
+            - generic [ref=e352]: "\"which approach…\""
+          - generic [ref=e353]: →
+          - generic [ref=e354]:
+            - generic [ref=e355]: 答案是可观察事实？
+            - generic [ref=e356]: 行为·时序·布局·输出·perf·eval 分离性
+          - generic [ref=e357]: →
+          - generic [ref=e358]:
+            - generic [ref=e359]: Prototype playbook
+            - generic [ref=e360]: sketch → 让结果裁决
+        - generic [ref=e361]:
+          - generic [ref=e362]:
+            - generic [ref=e363]: 只读 Investigation（交付引用答案）
+            - generic [ref=e364]: stay in it
+          - generic [ref=e365]: →
+          - generic [ref=e366]:
+            - generic [ref=e367]: 从证据直接回答
+            - generic [ref=e368]: 不做 sketch
+        - generic [ref=e369]:
+          - generic [ref=e370]:
+            - generic [ref=e371]: 真正的产品/偏好决定
+            - generic [ref=e372]: 无实验可裁决
+          - generic [ref=e373]: →
+          - generic [ref=e374]:
+            - generic [ref=e375]: 才允许问人
+            - generic [ref=e376]: 给选项（never-block 原则）
+        - generic [ref=e377]:
+          - generic [ref=e378]: 全自主授权下
+          - generic [ref=e379]: 授权覆盖的决定 → 直接做并报告，不留提问、不留"要不要我……"的尾巴。
+        - generic [ref=e380]:
+          - generic [ref=e381]: 只有操作员能做的决定
+          - generic [ref=e382]: 在授权下 → 用一个默认值继续，完整解释该默认，并用人话告知操作员可以让你改做什么。不给代号让用户回复。
+        - generic [ref=e383]:
+          - generic [ref=e384]: 例外
+          - generic [ref=e385]: 操作员明示的门禁 + Autonomy 的 Always-pause 清单仍然需要操作员。
+    - generic [ref=e386]:
+      - generic [ref=e387]:
+        - heading "Just do it 直接做，不问" [level=3] [ref=e388]:
+          - generic [ref=e389]: Just do it
+          - text: 直接做，不问
+        - list [ref=e390]:
+          - listitem [ref=e391]: 可逆工作。
+          - listitem [ref=e392]: 外部动作：team chat、ticket 更新、跑评测。
+          - listitem [ref=e393]: 用任意 MCP 工具。
+      - generic [ref=e394]:
+        - heading "AskQuestion 反面清单 绝不阻塞在人身上" [level=3] [ref=e395]:
+          - generic [ref=e396]: AskQuestion 反面清单
+          - text: 绝不阻塞在人身上
+        - list [ref=e397]:
+          - listitem [ref=e398]: "\"should I keep going?\" → 继续。"
+          - listitem [ref=e399]: 可逆的收尾工作 → 不进"留给人"的清单。
+          - listitem [ref=e400]: 自主 run 中发现的中途问题（坏 skill、相关 bug、flakey 验证器、review 噪音）→ 自己修，单独开 PR。
+          - listitem [ref=e401]: 只上报：不可逆动作、无实验可裁决的产品/偏好决定、真正的死胡同。
+    - generic [ref=e402]: "\"No 是可接受的答案。\" 被问\"是否要做某事\"、被邀请加 scope、被展示一个方案时——给出真实判断。可以拒绝、可以反对、可以说\"这个不配拥有它的位置\"。 建议是判断，不是背书；同意不是默认值，坦诚优先于迎合。"
+  - generic [ref=e403]:
+    - generic [ref=e404]:
+      - generic [ref=e405]: D5
+      - heading "决策点：暂停红线与会话授权" [level=2] [ref=e406]
+    - paragraph [ref=e407]: 自治程度由两条清单界定：一条"永远暂停"，一条"会话级覆盖"。
+    - generic [ref=e408]:
+      - generic [ref=e409]:
+        - heading "Always pause 不可逆写入 —— 永远停下确认" [level=3] [ref=e410]:
+          - generic [ref=e411]: Always pause
+          - text: 不可逆写入 —— 永远停下确认
+        - list [ref=e412]:
+          - listitem [ref=e413]: force-push 到共享分支
+          - listitem [ref=e414]: 部署
+          - listitem [ref=e415]: 删除数据
+          - listitem [ref=e416]: 给客户的对外消息
+        - paragraph [ref=e417]: 此外（orchestrate 级）：关闭别人的 PR、影响共享分支的破坏性动作，全部进 gates.md 排队问人。
+      - generic [ref=e418]:
+        - heading "Session override 会话级自治授权" [level=3] [ref=e419]:
+          - generic [ref=e420]: Session override
+          - text: 会话级自治授权
+        - list [ref=e421]:
+          - listitem [ref=e422]: "\"Don't stop\" / \"going to bed\" / \"run until done\" / \"be fully autonomous\" → 持续执行,不再询问。"
+          - listitem [ref=e423]: "\"I want everything merged by morning\" → 覆盖 CI flake 容忍度，直通 Autopilot/Shipping。"
+          - listitem [ref=e424]: 授权 + root 的干净 verdict = merge 的完整授权；单靠 babysitting 永远没有 merge 授权。
+    - generic [ref=e425]: Pause safely 是反向决策：只有显式要求（或即将压缩上下文）才做 checkpoint：停在安全边界 → 不发起新动作、取消嵌套子代理 → wip commit → 写离场 resume note（意图/进度/已验证项/下一步/关键文件/坑）。"keep going" 语境下不暂停。
+  - generic [ref=e426]:
+    - generic [ref=e427]:
+      - generic [ref=e428]: D6
+      - heading "决策点：验证有多严 & swarm 如何裁决" [level=2] [ref=e429]
+    - paragraph [ref=e430]: 验证是 pstack 的承重墙。铁律一：测试单独不够——unit / live / perf 三栏全勾才算 verified。 铁律二：CI 绿不是 verdict，agent 自我报告不是证据，只有独立验证者检查真实工件才算。
+    - generic [ref=e431]:
+      - generic [ref=e432]:
+        - generic [ref=e433]: Iron Rule
+        - heading "三栏验证模型（每个 PR 的验证块都以此开头）" [level=3] [ref=e434]
+      - generic [ref=e435]:
+        - generic [ref=e436]:
+          - generic [ref=e437]:
+            - heading "Unit" [level=3] [ref=e438]
+            - paragraph [ref=e440]: 指定测试文件 + 新增用例 + 运行命令。
+          - generic [ref=e441]:
+            - heading "Live（强制）" [level=3] [ref=e442]
+            - paragraph [ref=e444]: 10 条 lane 在 PR head 驱动真实表面（control-ui / control-cli），每条 lane = 一个场景 + 一张截图 + 一个通过谓词。其中一条必是 Regression lane vs trunk。
+          - generic [ref=e445]:
+            - heading "Perf" [level=3] [ref=e446]
+            - paragraph [ref=e448]: 双侧对比：trunk 与 head 都必须产出指标；先测 trunk 基线；给出会失败的数值规则。场景不同不比 ratio，用绝对预算。
+        - generic [ref=e449]: trunk 缺功能怎么办：记录该事实，将门禁改为"diff 新增的行为 + 用户等待的最终状态"，不许发明一个 trunk 结果。 交互类的 PR 是 review-gated：操作员在 chat 里看截图 + 30-60s 视频后才能 merge。
+    - generic [ref=e450]:
+      - generic [ref=e451]:
+        - generic [ref=e452]: Swarm Gate
+        - heading "合并前的 swarm 裁决结构（每轮 code-ready head SHA）" [level=3] [ref=e453]
+      - generic [ref=e454]:
+        - paragraph [ref=e455]: 每次到达 code-ready head SHA、以及之后每一次改变 patch 的 push，都 fan out 一轮独立验证并聚合为一个 verdict：
+        - generic [ref=e456]:
+          - generic [ref=e457]:
+            - generic [ref=e458]: GATES
+            - generic [ref=e459]: 在该 SHA 重跑仓库门禁（lint / typecheck / tests）
+            - generic [ref=e460]: PASS 必需
+          - generic [ref=e461]:
+            - generic [ref=e462]: LIVE ×10
+            - generic [ref=e463]: 真实表面驱动，含 Regression lane vs trunk（live lane 是地板：没有它的 verdict 不干净）
+            - generic [ref=e464]: 截图 + 谓词
+          - generic [ref=e465]:
+            - generic [ref=e466]: PERF
+            - generic [ref=e467]: trunk 基线 vs head 的指标对比
+            - generic [ref=e468]: 数值规则
+          - generic [ref=e469]:
+            - generic [ref=e470]: AUDIT ×2+
+            - generic [ref=e471]: 读 diff 与 receipts、不信任 PR body 的审查 lane（各自一个焦点：消费者一致性 / 生命周期与竞态 / 数据与配置安全）
+            - generic [ref=e472]: 恶意假定
+        - generic [ref=e473]:
+          - generic [ref=e474]: Clean 条件
+          - generic [ref=e475]: 每一条 lane 都是 PASS。lane 以 note 形式记录下的缺陷也算 finding，照样打回 owner。
+        - generic [ref=e476]:
+          - generic [ref=e477]: finding 回传
+          - generic [ref=e478]: 所有实锤 finding 一次性 fix-forward 给 owner；行为类 finding 要求覆盖所有同缺陷位点的红测试，测不出来的要 repro receipt。
+        - generic [ref=e479]:
+          - generic [ref=e480]: 新 head
+          - generic [ref=e481]: 新 head 拿全新 swarm + 全新 verdict；patch-id 规则（shipping 里）决定旧 lane 结果是否仍有效。
+    - generic [ref=e482]:
+      - generic [ref=e483]:
+        - generic [ref=e484]: Patch-ID Rule
+        - heading "rebase 之后，verdict 何时失效？" [level=3] [ref=e485]
+      - generic [ref=e486]:
+        - paragraph [ref=e487]: verdict 记录三元组：verdict head SHA + base SHA + base→head diff 的稳定 git patch-id。rebase/retarget 重写 SHA，可能静默作废一个 verdict（哪怕没碰任何检查）。落地前必须比对 patch-id：
+        - generic [ref=e488]:
+          - generic [ref=e489]: 仅噪声差异
+          - generic [ref=e490]: 当两个 patch 只在 tests / docs / lint 配置上不同 → build 各 lane 所跑的产物两次（verdict SHA）＋一次（当前 head）。差异若在 verdict SHA 的两次 build 中也出现，或只是内嵌 commit SHA → 判为噪声，该 lane 结果保持有效；checks 和一次变更 review 重新跑。
+        - generic [ref=e491]:
+          - generic [ref=e492]: 禁止复用
+          - generic [ref=e493]: dev server 的 lane 结果（无 build 产物）一律重跑；不许用相同 commit message 或旧 SHA 的绿勾当替代。
+        - generic [ref=e494]:
+          - generic [ref=e495]: patch 变了
+          - generic [ref=e496]: 重验；patch 没变 → 保留代码 verdict，在当前 head 重跑 mergeability 与 CI。
+    - generic [ref=e497]:
+      - generic [ref=e498]:
+        - heading "数字纪律 benchmark-checklist 触发条件" [level=3] [ref=e499]:
+          - generic [ref=e500]: 数字纪律
+          - text: benchmark-checklist 触发条件
+        - paragraph [ref=e501]: 只要你亲自跑了 benchmark、测了性能、要报告提速或回归 → 报告或据此行动前先过 benchmark-checklist：查限速因子、调参、错误数、重复运行、端到端相关性。
+      - generic [ref=e502]:
+        - heading "Forensics 边界 诊断 ≠ 修复" [level=3] [ref=e503]:
+          - generic [ref=e504]: Forensics 边界
+          - text: 诊断 ≠ 修复
+        - paragraph [ref=e505]: Runtime / Trace forensics 的交付物是带引用的诊断，不是修复。确认病因后再 route 回 Bug fix 或 Perf。
+  - generic [ref=e506]:
+    - generic [ref=e507]:
+      - generic [ref=e508]: D7
+      - heading "决策点：交付编排选哪一个（自主四件套）" [level=2] [ref=e509]
+    - paragraph [ref=e510]: Autonomous run / Orchestrate / Autopilot-full / Autopilot-stack —— 四个都"自主"，但分界线很清楚： 看工作是否超出单会话预算、PR 是否独立、落地授权是否给出。
+    - generic [ref=e511]:
+      - generic [ref=e512]:
+        - generic [ref=e513]: Selector
+        - heading "自主编排选择器" [level=3] [ref=e514]
+      - generic [ref=e515]:
+        - list [ref=e517]:
+          - listitem [ref=e518]:
+            - text: ▸ 是"一个任务驱动到一个谓词"？（repro 修好、测试全绿、pixel-diff 归零）
+            - generic [ref=e519]: Autonomous run
+            - text: 你拥有退出条件；迭代循环最小改动 → 验证 → 前进或回退
+          - listitem [ref=e520]:
+            - text: ▸ 是"一个项目程序"？（多日、多 stack、几十个 subagent、人每天看两次）
+            - generic [ref=e521]: Orchestrate
+            - text: coordinator 落地已验证工作，但 worker 永不 merge；见第 08 节
+          - listitem [ref=e522]:
+            - text: ▸ 是"一队独立 PR 队列"？
+            - list [ref=e523]:
+              - listitem [ref=e524]:
+                - text: ▸ PR 互相独立 + 落地授权已给（directly to merged）
+                - generic [ref=e525]: Autopilot-full
+                - text: 每 PR 一个 owner 走完 build→merge 全生命周期；root 每轮 swarm 验证 + 小时级 audit tick
+              - listitem [ref=e526]:
+                - text: ▸ 要 review 后才落地 / 工作有顺序或耦合 / merge 授权被扣留
+                - generic [ref=e527]: Autopilot-stack
+                - text: owner 不 merge；root 是唯一拓扑写者，组装一条线性 stack 交操作员落地
+        - generic [ref=e528]: 共同骨架（Autopilot 双胞胎）：owner 15 分钟内建立 decisions.tsv trail + 推首分支快照 + 开 ready PR → 每个可验证单元后推一次 → code-ready head SHA 上报 → root 的 swarm 每轮裁决 → clean verdict 后 full 交给 owner merge / stack 由 root append。 "State-then-wait"：请求"陈述计划"不是执行指令；只有操作员明确的 go 才开跑。
+    - generic [ref=e529]:
+      - generic [ref=e530]:
+        - heading "Orchestrate vs 其它 词面像程序、实质是任务？" [level=3] [ref=e531]:
+          - generic [ref=e532]: Orchestrate vs 其它
+          - text: 词面像程序、实质是任务？
+        - paragraph [ref=e533]: "\"work one agent could finish inside the session's budget routes there, not here, however program-shaped the phrasing sounds.\" —— 先量化：单元数 × 粗糙工作量 × 墙钟预算。一个 agent 能在预算内完成 → 降级。"
+      - generic [ref=e534]:
+        - heading "Multi-phase plan 的位置 计划先于执行" [level=3] [ref=e535]:
+          - generic [ref=e536]: Multi-phase plan 的位置
+          - text: 计划先于执行
+        - paragraph [ref=e537]: 跨 phase / stacked PR 的工作可先产出计划文件（计划即交付物，不实现）： 原型解决开放问题 → subagent 探索 → 填 skeleton → 过 check-plan 脚本 → 交还给操作员。执行按计划点名的 execution playbook 启动。
+  - generic [ref=e538]:
+    - generic [ref=e539]:
+      - generic [ref=e540]: D8
+      - heading "决策点：Babysit 的四种模式" [level=2] [ref=e541]
+    - paragraph [ref=e542]: 任何 PR 状态请求都走 Babysit playbook（不是 Cursor 内置 babysit，尽管描述词相同）。 第一步永远是声明模式再轮询；未声明默认 drive。
+    - generic [ref=e543]:
+      - generic [ref=e544]: 请求 → 模式映射 Babysit step 1
+      - table [ref=e545]:
+        - rowgroup [ref=e546]:
+          - row [ref=e547]:
+            - columnheader "模式" [ref=e548]
+            - columnheader "触发语" [ref=e549]
+            - columnheader "行为" [ref=e550]
+          - row [ref=e551]:
+            - cell "drive" [ref=e552]
+            - cell "\"babysit this\" / \"get it green\" / \"merge-ready\"" [ref=e553]
+            - cell "跑循环直到 merge-ready（默认模式）" [ref=e554]
+          - row [ref=e555]:
+            - cell "background" [ref=e556]
+            - cell "计划还在执行中，不想被打断" [ref=e557]
+            - cell "triage 但不阻塞" [ref=e558]
+          - row [ref=e559]:
+            - cell "threads-only" [ref=e560]
+            - cell "\"address the bugbot comments\"" [ref=e561]
+            - cell "只回 review 评论，其它不碰" [ref=e562]
+          - row [ref=e563]:
+            - cell "check" [ref=e564]
+            - cell "\"check on X\" / \"is it green\"；小 PR 或纯文档 PR" [ref=e565]
+            - cell "一次状态扫描 + 报告" [ref=e566]
+    - generic [ref=e567]:
+      - generic [ref=e568]:
+        - heading "Babysit 绝不越权" [level=3] [ref=e569]
+        - list [ref=e571]:
+          - listitem [ref=e572]: babysit 不授权 merge；merge/land/ship 的请求一律 route 到 Shipping。
+          - listitem [ref=e573]: watcher 重新 arm 也不授权 merge。
+          - listitem [ref=e574]: 唯一允许的创建：修复的归属 PR 已 merge 时 → 在剩余 stack 顶部开新 PR，绝不重写已 merge 历史。
+          - listitem [ref=e575]: 一次只为一条 stack 做 babysit；只处理 frontier（最低未 merge PR），不许越级。
+      - generic [ref=e576]:
+        - heading "CI 分级纪律" [level=3] [ref=e577]
+        - list [ref=e579]:
+          - listitem [ref=e580]: flake / 基础设施失败 → 一次 fresh build（只一次重试）。
+          - listitem [ref=e581]: 同样的第二次失败 = 从来不是 flake → 重新分级，读子日志。
+          - listitem [ref=e582]: 失败代码在 diff 之外 → 检查 stale base（git merge-base --is-ancestor），报告需要 rebase，不烧重试。
+          - listitem [ref=e583]: 只有失败在 diff 自己的代码里 → 才提交修复。
+    - generic [ref=e584]: Bugbot / 安全评审 = 怀疑姿态：它们既抓真 bug，也报非问题和 nitpick。逐条按事实评估，用具体理由 dismiss 噪音，绝不为了安抚 bot 而 churn 代码。 第三次 pass 起倾向 dismiss 有文档记录的模式，但安全 / 认证 / 计费 / 数据 / 迁移永远升级给人。
+  - generic [ref=e585]:
+    - generic [ref=e586]:
+      - generic [ref=e587]: D9
+      - heading "决策点：Forge 解析（所有 PR 操作的前置）" [level=2] [ref=e588]
+    - paragraph [ref=e589]: 每个涉及 PR 的 playbook 都要先解析一次 forge，然后整个程序保持该选择。
+    - generic [ref=e590]:
+      - generic [ref=e591]:
+        - generic [ref=e592]: 默认 gh
+        - generic [ref=e593]: GitHub CLI
+      - generic [ref=e594]: →
+      - generic [ref=e595]:
+        - generic [ref=e596]: 检测 origin
+        - generic [ref=e597]: command -v origin 且能 resolve 仓库
+      - generic [ref=e598]: →
+      - generic [ref=e599]:
+        - generic [ref=e600]: 改用 origin pr …
+        - generic [ref=e601]: create/edit/view/watch/merge 全套
+    - generic [ref=e602]:
+      - generic [ref=e603]: 回退记录
+      - generic [ref=e604]: Origin 缺失或不能 resolve → 留在 gh 并记录回退。
+    - generic [ref=e605]:
+      - generic [ref=e606]: 硬禁令
+      - generic [ref=e607]: Never require Graphite (gt)。（orchestrate 的 stack 安全例外：栈内重新 stack 由唯一 stacker 用 gt 执行。）
+    - generic [ref=e608]:
+      - generic [ref=e609]: 内置工具优先
+      - generic [ref=e610]: 运行环境提供内置 PR 工具时，创建/编辑/retarget/置 ready 全走它（CLI 会漏掉工具跟踪的元数据）；其余操作走解析出的 forge。
+  - generic [ref=e611]:
+    - generic [ref=e612]:
+      - generic [ref=e613]: "08"
+      - heading "大程序拓扑：Orchestrate 的三层结构" [level=2] [ref=e614]
+    - paragraph [ref=e615]: 当工作超出单会话预算，Orchestrate 把程序拆成三层，深度固定 ≤ 3（更大的扇出靠宽度，不靠深度）。 三条铁律：完成是队列事件不是中断；每次 spawn/resume 逐字携带 standing orders；brief 就是产品（模糊的 brief 会安静地失败，因为 worker 无法向你提问）。
+    - generic [ref=e616]:
+      - generic [ref=e617]:
+        - generic [ref=e618]: Coordinator（本 chat，本地）
+        - generic [ref=e619]: 框定 · 写 brief · 排空 inbox · 拥有对人报告 · 做判断 | 永不写码
+      - generic [ref=e621]:
+        - generic [ref=e622]:
+          - generic [ref=e623]: Sub-coordinator · track A
+          - generic [ref=e624]: 仅当 >1 drain 阈值；本地、耐久、一 track 一个
+        - generic [ref=e625]:
+          - generic [ref=e626]: Sub-coordinator · track B
+          - generic [ref=e627]: 拥有本 track 单元与 board；混发自己的 brief
+      - generic [ref=e629]:
+        - generic [ref=e630]:
+          - generic [ref=e631]: Worker × N
+          - generic [ref=e632]: "environment: cloud"
+        - generic [ref=e633]:
+          - generic [ref=e634]: Verifier
+          - generic [ref=e635]: ≠ worker 模型族
+        - generic [ref=e636]:
+          - generic [ref=e637]: Babysitter × stack
+          - generic [ref=e638]: 一 stack 一个，冻结 frontier
+        - generic [ref=e639]:
+          - generic [ref=e640]: Stacker
+          - generic [ref=e641]: 唯一 gt 持有者
+    - generic [ref=e642]:
+      - generic [ref=e643]:
+        - heading "Store 状态全部外化到磁盘" [level=3] [ref=e644]:
+          - generic [ref=e645]: Store
+          - text: 状态全部外化到磁盘
+        - list [ref=e646]:
+          - listitem [ref=e647]: preferences.md — standing orders 登记处，逐行编号，每条一个约束；spawn/resume 逐字粘贴。
+          - listitem [ref=e648]: units.tsv — 每单元一行：id / track / state / branch / PR / head SHA / brief path。
+          - listitem [ref=e649]: ledger.tsv — 验证账本，一 verdict 一行，键 = PR 号 + head SHA。
+          - listitem [ref=e650]: frontier.json — 计算式 merge frontier（有序 PR 列表 + generation）。
+          - listitem [ref=e651]: inbox/ · gates.md · decisions.tsv · status.md（从表派生，永不手写）。
+      - generic [ref=e652]:
+        - heading "Ledger verdicts 验证状态机" [level=3] [ref=e653]:
+          - generic [ref=e654]: Ledger verdicts
+          - text: 验证状态机
+        - list [ref=e655]:
+          - listitem [ref=e656]: live-ui-verified / unit-test-verified / type-check-only / verifier-blocked / verifier-failed。
+          - listitem [ref=e657]: CI 绿是 verdict 的输入，不是 verdict；行为工作必须好于 type-check-only。
+          - listitem [ref=e658]: verifier-blocked 不是 pass——环境恢复后 respawn；verifier-failed → 开修复单元，不是重验。
+          - listitem [ref=e659]: 新 head SHA 作废旧行——restack 后必须重验。
+      - generic [ref=e660]:
+        - heading "Queue & Drain 排空纪律" [level=3] [ref=e661]:
+          - generic [ref=e662]: Queue & Drain
+          - text: 排空纪律
+        - list [ref=e663]:
+          - listitem [ref=e664]: 完成通知 → orch inbox push 记账 → 回到手头工作。绝不 inline 深审；需要 review 的完成 = 一个 verifier 单元。
+          - listitem [ref=e665]: 四个 drain 点：关键区段结束、track rollup、frontier watcher 唤醒、对人报告之前。
+          - listitem [ref=e666]: 每个 drain 分类所有指针（landed / needs-verify / failed / zombie / noise）→ 写行 → orch status → 一条消息发下一波。
+          - listitem [ref=e667]: drain 回合以三行结束：状态计数、变更、open gates。
+      - generic [ref=e668]:
+        - heading "Liveness 失败与重试分级" [level=3] [ref=e669]:
+          - generic [ref=e670]: Liveness
+          - text: 失败与重试分级
+        - list [ref=e671]:
+          - listitem [ref=e672]: 探活永远只读；永不 resume 一个 agent 去检查它（resume 会重启一个空闲 agent）。
+          - listitem [ref=e673]: 按模式重试：cap-hit/OOM → 缩小 scope respawn；网络 → 原样重试；工具错误 → 换模型；未知 → 重试一次；两次后弃单元并重规划。
+          - listitem [ref=e674]: 迟到 zombie：先对 frontier 与 ledger 校对，通过 fresh 单元抢救独特发现，绝不盲 merge。
+          - listitem [ref=e675]: 连续工具 abort → 停止重试，写终态 handoff（已完成/在哪/恢复命令）并结束运行。
+  - generic [ref=e676]:
+    - generic [ref=e677]:
+      - generic [ref=e678]: "09"
+      - heading "Playbook 全表（23 个 · 五族）" [level=2] [ref=e679]
+    - paragraph [ref=e680]: 每个 playbook 的首行都是"所有权声明"——它明确定义了你拥有什么、不拥有什么。这就是决策点 D1/D2 的裁定依据。
+    - generic [ref=e681]:
+      - heading "理解 & 诊断族 —— 只读或产出诊断，不交付修复" [level=4] [ref=e682]
+      - generic [ref=e683]:
+        - generic [ref=e684]:
+          - generic [ref=e685]: Investigation
+          - generic [ref=e687]: 只读问题：how / why / 是否确定。产出引用式解释或带 tradeoffs 表的建议。
+          - generic [ref=e688]: playbooks/investigation.md
+        - generic [ref=e689]:
+          - generic [ref=e690]: Runtime forensics
+          - generic [ref=e692]: 活体插桩诊断症状（泄漏 / 空转 / 毛刺）。交付诊断。
+          - generic [ref=e693]: playbooks/runtime-forensics.md
+        - generic [ref=e694]:
+          - generic [ref=e695]: Trace forensics
+          - generic [ref=e697]: 事后 profiling 工件（cpuprofile / trace / spindump / heap）。固定数据集，读不重跑。
+          - generic [ref=e698]: playbooks/trace-forensics.md
+        - generic [ref=e699]:
+          - generic [ref=e700]: Bug fix
+          - generic [ref=e702]: 复现 → 二分根因 → architect/interrogate → 委托修复 → 同表面验证。失败 repro 先于修复入史。
+          - generic [ref=e703]: playbooks/bug-fix.md
+        - generic [ref=e704]:
+          - generic [ref=e705]: Perf issue
+          - generic [ref=e707]: 测量到的一次性慢。7 条性能咒语按序，最早达成即止。每数过 checklist。
+          - generic [ref=e708]: playbooks/perf-issue.md
+        - generic [ref=e709]:
+          - generic [ref=e710]: Hillclimb
+          - generic [ref=e712]: 对单一指标的持续科学改进：冻结 harness、决策日志、一 win 一 commit、拒绝 plateau 止步。
+          - generic [ref=e713]: playbooks/hillclimb.md
+    - generic [ref=e714]:
+      - heading "构建族 —— 交付代码变更" [level=4] [ref=e715]
+      - generic [ref=e716]:
+        - generic [ref=e717]:
+          - generic [ref=e718]: Feature
+          - generic [ref=e720]: 新/变行为。先命名数据形状；throughput checkpoint；多合法形状 → arena。
+          - generic [ref=e721]: playbooks/feature.md
+        - generic [ref=e722]:
+          - generic [ref=e723]: Refactoring
+          - generic [ref=e725]: 保行为改结构。先钉契约（characterization/等价 harness），再迁移+删除老 API 一浪完成。
+          - generic [ref=e726]: playbooks/refactoring.md
+        - generic [ref=e727]:
+          - generic [ref=e728]: Prototype
+          - generic [ref=e730]: 为决策服务的抛掷草图。唯一质量不重要、Laziness 反转的 playbook。输出=决策+工件。
+          - generic [ref=e731]: playbooks/prototype.md
+        - generic [ref=e732]:
+          - generic [ref=e733]: Visual parity
+          - generic [ref=e735]: 像素级等价。baseline 是规格不许动；image diff 归零；一组件一 PR。
+          - generic [ref=e736]: playbooks/visual-parity.md
+    - generic [ref=e737]:
+      - heading "交付族 —— PR 与落地" [level=4] [ref=e738]
+      - generic [ref=e739]:
+        - generic [ref=e740]:
+          - generic [ref=e741]: Opening a PR
+          - generic [ref=e743]: 所有 playbook 的终点。worktree / deslop / no-comments / Conventional Commits / briefing body。
+          - generic [ref=e744]: playbooks/opening-a-pr.md
+        - generic [ref=e745]:
+          - generic [ref=e746]: Babysit
+          - generic [ref=e748]: 驱 PR/stack 到 merge-ready。4 模式；CI 分级；Bugbot 怀疑论。不授权 merge。
+          - generic [ref=e749]: playbooks/babysit.md
+        - generic [ref=e750]:
+          - generic [ref=e751]: Shipping
+          - generic [ref=e753]: 独立逐 PR 验证 → patch-id 复核 → 只落地自底部起的连续已验证段。
+          - generic [ref=e754]: playbooks/shipping.md
+    - generic [ref=e755]:
+      - heading "自主与编排族 —— 长时/项目级/离线" [level=4] [ref=e756]
+      - generic [ref=e757]:
+        - generic [ref=e758]:
+          - generic [ref=e759]: Autonomous run
+          - generic [ref=e761]: 单谓词长任务。定义退出条件 → /loop 唤醒 → 每迭代最小改动 → 谓词达成才停。
+          - generic [ref=e762]: playbooks/autonomous-run.md
+        - generic [ref=e763]:
+          - generic [ref=e764]: Orchestrate
+          - generic [ref=e766]: 常驻项目程序。Coordinator 不写码；brief 即产品；queue/drain；frontier 安全。
+          - generic [ref=e767]: playbooks/orchestrate.md
+        - generic [ref=e768]:
+          - generic [ref=e769]: Autopilot-full
+          - generic [ref=e771]: 独立 PR 队列直通 merge。每 PR 一 owner；root 每秒级审计 + 每轮 swarm。
+          - generic [ref=e772]: playbooks/autopilot-full.md
+        - generic [ref=e773]:
+          - generic [ref=e774]: Autopilot-stack
+          - generic [ref=e776]: 队列 → 一条线性 stack 交操作员落地。root 唯一拓扑写者。
+          - generic [ref=e777]: playbooks/autopilot-stack.md
+        - generic [ref=e778]:
+          - generic [ref=e779]: Multi-phase plan
+          - generic [ref=e781]: 跨 phase/stack 的计划文件。计划是交付物，不实现；通过 check-plan 脚本后交还。
+          - generic [ref=e782]: playbooks/multi-phase-plan.md
+        - generic [ref=e783]:
+          - generic [ref=e784]: Session pickup
+          - generic [ref=e786]: 恢复/接管先前 agent 的工作。先读 trail，差集出 resume 点，不重做。
+          - generic [ref=e787]: playbooks/session-pickup.md
+        - generic [ref=e788]:
+          - generic [ref=e789]: Pause safely
+          - generic [ref=e791]: 干净暂停：wip commit + 离场 resume note。只有显式要求才执行。
+          - generic [ref=e792]: playbooks/pause-safely.md
+        - generic [ref=e793]:
+          - generic [ref=e794]: Worktree cleanup
+          - generic [ref=e796]: 磁盘回收。唯一无代码审查兜底的破坏性 playbook；wip/在用一律暂停确认。
+          - generic [ref=e797]: playbooks/worktree-cleanup.md
+    - generic [ref=e798]:
+      - heading "元族 —— 对工具箱自身动手" [level=4] [ref=e799]
+      - generic [ref=e800]:
+        - generic [ref=e801]:
+          - generic [ref=e802]: Authoring a skill
+          - generic [ref=e804]: 写/改 SKILL.md。用 create-skill；校验 frontmatter 与引用；怀疑时删除。
+          - generic [ref=e805]: playbooks/authoring-a-skill.md
+        - generic [ref=e806]:
+          - generic [ref=e807]: Eval
+          - generic [ref=e809]: 盲法测 skill/prompt 变化。去标识环境 + 有机 prompt + 异族 judge + 从 transcript 核验链路。
+          - generic [ref=e810]: playbooks/eval.md
+        - generic [ref=e811]:
+          - generic [ref=e812]: figure-it-out
+          - generic [ref=e814]: 无匹配时的元 playbook：五阶段定制流程（Frame/Design/Loop/Trail/Verify）。
+          - generic [ref=e815]: skills/figure-it-out/SKILL.md
+  - generic [ref=e816]:
+    - generic [ref=e817]:
+      - generic [ref=e818]: "10"
+      - heading "原则索引（24 条 · 6 组）" [level=2] [ref=e819]
+    - paragraph [ref=e820]: 原则是"重新定向 agent"的快捷指令。回复中必须点名：哪个原则塑造了哪个决策、具体改变了什么选择——且只引用本会话真正读过 leaf SKILL.md 的原则。
+    - generic [ref=e821]:
+      - heading "Core · 核心（10）" [level=4] [ref=e822]
+      - generic [ref=e823]:
+        - generic [ref=e824]:
+          - generic [ref=e825]: core
+          - generic [ref=e826]: laziness-protocol 偏向删除与最小改动。
+        - generic [ref=e827]:
+          - generic [ref=e828]: core
+          - generic [ref=e829]: foundational-thinking 写逻辑前定核心类型与数据结构。
+        - generic [ref=e830]:
+          - generic [ref=e831]: core
+          - generic [ref=e832]: redesign-from-first-principles 新需求当成第一天就有的基础假设来重设计。
+        - generic [ref=e833]:
+          - generic [ref=e834]: core
+          - generic [ref=e835]: attack-the-premise ≥2 个同前提修复同门失败 → 普查失衡方，质疑前提。
+        - generic [ref=e836]:
+          - generic [ref=e837]: core
+          - generic [ref=e838]: subtract-before-you-add 先删死重，再在更简基座上构建。
+        - generic [ref=e839]:
+          - generic [ref=e840]: core
+          - generic [ref=e841]: minimize-reader-load 数问答之间的层数与隐藏状态；折叠单调用者包装。
+        - generic [ref=e842]:
+          - generic [ref=e843]: core
+          - generic [ref=e844]: outcome-oriented-execution 迁移/重写收敛到目标架构，不用兼容代码撑中间态。
+        - generic [ref=e845]:
+          - generic [ref=e846]: core
+          - generic [ref=e847]: experience-first 用户愉悦优先于实现便利。
+        - generic [ref=e848]:
+          - generic [ref=e849]: core
+          - generic [ref=e850]: exhaust-the-design-space 承诺前造 2-3 个竞争原型并排对比。
+        - generic [ref=e851]:
+          - generic [ref=e852]: core
+          - generic [ref=e853]: build-the-lever 造工具（codemod/脚本/生成器）来做或证，工具是可复跑的评审工件。
+    - generic [ref=e854]:
+      - heading "Architecture · 架构（6）" [level=4] [ref=e855]
+      - generic [ref=e856]:
+        - generic [ref=e857]:
+          - generic [ref=e858]: arch
+          - generic [ref=e859]: model-the-domain 领域编进结构（状态机/注册表/reducer），别散成条件分支。
+        - generic [ref=e860]:
+          - generic [ref=e861]: arch
+          - generic [ref=e862]: boundary-discipline 卫兵集中在系统边界；内部信任类型，业务逻辑纯函数化。
+        - generic [ref=e863]:
+          - generic [ref=e864]: arch
+          - generic [ref=e865]: type-system-discipline 非法状态不可表示；品牌化原语；边界处解析外部数据。
+        - generic [ref=e866]:
+          - generic [ref=e867]: arch
+          - generic [ref=e868]: make-operations-idempotent 崩溃与重试之间收敛到同一终态。
+        - generic [ref=e869]:
+          - generic [ref=e870]: arch
+          - generic [ref=e871]: migrate-callers-then-delete-legacy-apis 一波迁移完调用者并删除旧 API，不留兼容层。
+        - generic [ref=e872]:
+          - generic [ref=e873]: arch
+          - generic [ref=e874]: separate-before-serializing-shared-state 先消除共享；只有真不变量才结构化串行。
+    - generic [ref=e875]:
+      - heading "Verification · 验证（5）" [level=4] [ref=e876]
+      - generic [ref=e877]:
+        - generic [ref=e878]:
+          - generic [ref=e879]: verify
+          - generic [ref=e880]: prove-it-works 对真实工件验证——跑功能、读真实值、审 diff，不用代理指标或"能编译"。
+        - generic [ref=e881]:
+          - generic [ref=e882]: verify
+          - generic [ref=e883]: fix-root-causes 症状追到根因再修；先复现；抵抗消音式 nil 守卫。
+        - generic [ref=e884]:
+          - generic [ref=e885]: verify
+          - generic [ref=e886]: sequence-verifiable-units 多步工作切成每步可验证的单元；交付顺序让序列自证。
+        - generic [ref=e887]:
+          - generic [ref=e888]: verify
+          - generic [ref=e889]: test-behavior-not-implementation 像用户那样调代码，断言字面期望值；假测试要重写或删。
+        - generic [ref=e890]:
+          - generic [ref=e891]: verify
+          - generic [ref=e892]: explain-the-number 信任/报告/行动一个数字前：找到限速因子，排除测错对象。
+    - generic [ref=e893]:
+      - heading "Delegation · 委派（2） + Meta（1）" [level=4] [ref=e894]
+      - generic [ref=e895]:
+        - generic [ref=e896]:
+          - generic [ref=e897]: deleg
+          - generic [ref=e898]: guard-the-context-window bulk 路由给 subagent；主线程留摘要不落原始 payload。
+        - generic [ref=e899]:
+          - generic [ref=e900]: deleg
+          - generic [ref=e901]: never-block-on-the-human 可逆工作先做后报；确认只留给不可逆动作。
+        - generic [ref=e902]:
+          - generic [ref=e903]: meta
+          - generic [ref=e904]: encode-lessons-in-structure 同一指令写第二遍时 → 编码为 lint / 元数据 / 运行时检查 / 脚本。
+  - contentinfo [ref=e905]:
+    - paragraph [ref=e906]: 基于 pstack（github.com/poteto/pstack 系插件包）源码整理：poteto-mode SKILL.md（147 行）、23 个 playbook 文件、swarm / figure-it-out / shipping / babysit 等 skill 与 docs/guide。生成的 HTML 为单文件、零依赖、可离线打开。
+    - paragraph [ref=e907]: 决策点速查：D1 选 playbook → D2 扇出结构 → D3 模型 → D4 问人 vs 自主 → D5 暂停红线 → D6 验证裁决 → D7 交付编排 → D8 Babysit 模式 → D9 Forge。

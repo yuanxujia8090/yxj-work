@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pstack 流程与决策全景图</title>
+<style>
+  :root {
+    --bg: #0b0c0e;
+    --surface: #141519;
+    --surface2: #191b21;
+    --border: #26282e;
+    --border2: #34363e;
+    --text: #e6e7ea;
+    --text2: #9a9da6;
+    --text3: #6b6e78;
+    --yellow: #ffd60a;
+    --yellow-dim: #8a7500;
+    --blue: #6ea8fe;
+    --green: #4ade80;
+    --red: #f87171;
+    --purple: #c084fc;
+    --orange: #fb923c;
+    --cyan: #22d3ee;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: rgba(255, 214, 10, .25); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 100px; overflow-wrap: anywhere; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 64px 0 40px; border-bottom: 1px solid var(--border); }
+  .hero .kicker {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--yellow); margin-bottom: 18px;
+  }
+  .hero h1 { font-size: 38px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
+  .hero h1 .crown { color: var(--yellow); }
+  .hero .sub { margin-top: 14px; color: var(--text2); max-width: 780px; font-size: 15px; }
+  .hero .meta { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .chip {
+    font-family: var(--mono); font-size: 11.5px; color: var(--text2);
+    border: 1px solid var(--border2); border-radius: 999px; padding: 4px 12px;
+  }
+  .chip b { color: var(--yellow); font-weight: 600; }
+
+  /* ---------- Nav ---------- */
+  nav.toc {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(11,12,14,.88); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    margin: 0 -28px; padding: 10px 28px;
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  nav.toc a {
+    color: var(--text2); text-decoration: none; font-size: 12.5px;
+    font-family: var(--mono); padding: 5px 10px; border-radius: 7px; white-space: nowrap;
+  }
+  nav.toc a:hover { color: var(--yellow); background: var(--surface2); }
+
+  /* ---------- Sections ---------- */
+  section { padding-top: 64px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+  .sec-num {
+    font-family: var(--mono); font-size: 13px; color: var(--bg);
+    background: var(--yellow); border-radius: 6px; padding: 2px 9px; font-weight: 700;
+  }
+  .sec-head h2 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+  .sec-desc { color: var(--text2); margin-bottom: 26px; max-width: 860px; }
+  .sec-desc code, .m { font-family: var(--mono); font-size: .92em; color: var(--cyan); }
+
+  /* ---------- Cards & boxes ---------- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 22px; margin-bottom: 14px;
+  }
+  .card h3 { font-size: 16px; font-weight: 650; margin-bottom: 8px; }
+  .card h3 .badge { margin-right: 8px; }
+  .card p { color: var(--text2); }
+  .card ul { margin: 8px 0 0 18px; color: var(--text2); }
+  .card ul li { margin-bottom: 5px; }
+  .card ul li::marker { color: var(--text3); }
+  .card ul ul { margin-top: 4px; margin-bottom: 4px; }
+
+  .badge {
+    display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px; vertical-align: 2px;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--yellow);
+  }
+  .badge.b-blue { color: var(--blue); } .badge.b-green { color: var(--green); }
+  .badge.b-red { color: var(--red); } .badge.b-purple { color: var(--purple); }
+  .badge.b-orange { color: var(--orange); } .badge.b-cyan { color: var(--cyan); }
+
+  /* ---------- Pipeline (main spine) ---------- */
+  .pipe { display: flex; flex-direction: column; gap: 0; margin: 20px 0 8px; }
+  .pstep { display: flex; gap: 18px; position: relative; }
+  .pstep .rail { display: flex; flex-direction: column; align-items: center; width: 36px; flex-shrink: 0; }
+  .pstep .dot {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    background: var(--surface2); border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--yellow);
+  }
+  .pstep .line { width: 2px; flex: 1; background: var(--border); margin: 4px 0; min-height: 14px; }
+  .pstep:last-child .line { display: none; }
+  .pstep .body { padding: 4px 0 26px; flex: 1; min-width: 0; }
+  .pstep .body h4 { font-size: 15px; font-weight: 650; margin-bottom: 5px; }
+  .pstep .body p { color: var(--text2); font-size: 13.5px; max-width: 880px; }
+  .pstep .body .sub { color: var(--text3); font-size: 12.5px; margin-top: 6px; font-family: var(--mono); }
+
+  /* ---------- Grid ---------- */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+  /* ---------- Decision cards ---------- */
+  .dec {
+    border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+    margin-bottom: 26px; background: var(--surface);
+  }
+  .dec-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 22px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface2), var(--surface));
+  }
+  .dec-head .q {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--yellow);
+    border: 1px solid var(--yellow-dim); border-radius: 6px; padding: 3px 8px;
+    flex-shrink: 0;
+  }
+  .dec-head h3 { font-size: 17px; font-weight: 700; }
+  .dec-body { padding: 20px 22px; }
+  .dec-body > p { color: var(--text2); margin-bottom: 14px; }
+  .rule {
+    display: grid; grid-template-columns: 220px 1fr; gap: 8px 18px;
+    padding: 9px 0; border-bottom: 1px dashed var(--border);
+    font-size: 13.5px;
+  }
+  .rule:last-child { border-bottom: none; }
+  .rule .k { color: var(--yellow); font-family: var(--mono); font-size: 12.5px; padding-top: 2px; }
+  .rule .v { color: var(--text2); }
+  .rule .v b { color: var(--text); font-weight: 600; }
+  @media (max-width: 700px) {
+    .rule { grid-template-columns: 1fr; gap: 2px; }
+    nav.toc { flex-wrap: nowrap; overflow-x: auto; }
+  }
+
+  /* ---------- Decision tree ---------- */
+  .tree { font-size: 13.5px; }
+  .tree ul { list-style: none; margin-left: 22px; padding-left: 18px; border-left: 1px solid var(--border2); }
+  .tree > ul { margin-left: 0; border-left: none; padding-left: 0; }
+  .tree li { position: relative; padding: 5px 0 5px 0; }
+  .tree ul li::before {
+    content: ""; position: absolute; left: -18px; top: 15px;
+    width: 12px; height: 1px; background: var(--border2);
+  }
+  .tree .cond { color: var(--text); }
+  .tree .cond::before {
+    content: "▸ "; color: var(--text3); font-size: 10px;
+  }
+  .leaf {
+    display: inline-block; font-family: var(--mono); font-size: 12.5px;
+    border: 1px solid var(--border2); border-radius: 6px;
+    padding: 1px 8px; margin-left: 4px; background: var(--surface2);
+    color: var(--orange); font-weight: 600; white-space: nowrap;
+  }
+  .leaf.l-build { color: var(--green); } .leaf.l-diag { color: var(--red); }
+  .leaf.l-ship { color: var(--blue); } .leaf.l-auto { color: var(--purple); }
+  .leaf.l-meta { color: var(--cyan); }
+  .tree .note { color: var(--text3); font-size: 12px; }
+
+  /* ---------- Flow boxes (generic flow diagram) ---------- */
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin: 16px 0; }
+  .fbox {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 10px 14px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    min-width: 0;
+  }
+  .fbox .t { font-weight: 650; }
+  .fbox .d { color: var(--text3); font-size: 11.5px; font-family: var(--mono); margin-top: 2px; }
+  .farr {
+    display: flex; align-items: center; padding: 0 8px; color: var(--text3);
+    font-family: var(--mono); font-size: 16px; flex-shrink: 0;
+  }
+  .fbox.accent { border-color: var(--yellow-dim); }
+  .fbox.accent .t { color: var(--yellow); }
+
+  /* ---------- Table ---------- */
+  table.rt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.rt th {
+    text-align: left; font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text3); font-weight: 600;
+    padding: 8px 12px; border-bottom: 1px solid var(--border2);
+  }
+  table.rt td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text2); }
+  table.rt tr:last-child td { border-bottom: none; }
+  table.rt td:first-child { color: var(--text); font-weight: 550; white-space: nowrap; }
+  @media (max-width: 700px) { table.rt td:first-child { white-space: normal; } }
+  table.rt .mono { font-family: var(--mono); font-size: 12px; }
+  .tblwrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; overflow-y: hidden; margin-bottom: 14px; }
+  .tblwrap .cap { padding: 13px 16px 2px; font-size: 14px; font-weight: 650; }
+  .tblwrap .cap small { color: var(--text3); font-weight: 400; margin-left: 8px; font-family: var(--mono); font-size: 11.5px; }
+
+  /* ---------- Playbook grid ---------- */
+  .pb-group { margin-bottom: 22px; }
+  .pb-group h4 {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 10px;
+  }
+  .pb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 10px; }
+  .pb {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 15px; font-size: 13px;
+  }
+  .pb .n { font-weight: 650; margin-bottom: 3px; display: flex; align-items: center; gap: 7px; }
+  .pb .n .dotc { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .pb .d { color: var(--text3); font-size: 12.5px; line-height: 1.55; }
+  .pb .file { font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin-top: 6px; display: block; }
+
+  /* ---------- Principle list ---------- */
+  .pr-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 900px) { .pr-list { grid-template-columns: 1fr; } }
+  .pr {
+    display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 9px; padding: 10px 14px; font-size: 13px;
+  }
+  .pr .pname { font-weight: 600; white-space: nowrap; color: var(--text); }
+  .pr .pdesc { color: var(--text3); font-size: 12.5px; }
+  .pr .g {
+    flex-shrink: 0; font-family: var(--mono); font-size: 10px; padding: 2px 6px;
+    border-radius: 5px; height: fit-content; border: 1px solid var(--border2);
+  }
+
+  /* ---------- Swimlane (verification) ---------- */
+  .lanes { display: flex; flex-direction: column; gap: 7px; margin: 14px 0; }
+  .lane {
+    display: flex; align-items: center; gap: 12px;
+    border-radius: 9px; padding: 9px 14px; font-size: 13px;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .lane .ln { font-family: var(--mono); font-size: 11px; font-weight: 700; border-radius: 5px; padding: 2px 7px; flex-shrink: 0; }
+  .lane .ld { color: var(--text2); flex: 1; min-width: 0; }
+  .lane .lv { font-family: var(--mono); font-size: 11.5px; color: var(--text3); white-space: nowrap; }
+
+  /* ---------- Orchestrate topology ---------- */
+  .topo { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 20px 0; }
+  .topo-node {
+    border: 1px solid var(--border2); border-radius: 11px; background: var(--surface2);
+    padding: 12px 20px; text-align: center; min-width: 300px;
+  }
+  .topo-node .tt { font-weight: 650; font-size: 14px; }
+  .topo-node .td { color: var(--text3); font-size: 12px; font-family: var(--mono); margin-top: 3px; }
+  .topo-vline { width: 2px; height: 22px; background: var(--border2); }
+  .topo-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+  /* ---------- Callout ---------- */
+  .callout {
+    border-left: 3px solid var(--yellow); background: rgba(255,214,10,.05);
+    border-radius: 0 10px 10px 0; padding: 12px 18px; margin: 14px 0;
+    font-size: 13.5px; color: var(--text2);
+  }
+  .callout b { color: var(--text); }
+  .callout.red { border-left-color: var(--red); background: rgba(248,113,113,.05); }
+  .callout.green { border-left-color: var(--green); background: rgba(74,222,128,.05); }
+  .callout.blue { border-left-color: var(--blue); background: rgba(110,168,254,.05); }
+
+  .mono-block {
+    font-family: var(--mono); font-size: 12.5px; background: #0e0f12;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; color: var(--text2); overflow-x: auto;
+    white-space: pre; line-height: 1.7; margin: 12px 0;
+  }
+  .mono-block .ck { color: var(--yellow); }
+  .mono-block .cg { color: var(--green); }
+  .mono-block .cb { color: var(--blue); }
+  .mono-block .cr { color: var(--red); }
+  .mono-block .cp { color: var(--purple); }
+  .mono-block .cc { color: var(--text3); }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text3); font-size: 12.5px; }
+  footer a { color: var(--text2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="kicker">pstack / poteto-mode — skill 流程解剖</div>
+  <h1><span class="crown">♛</span> pstack 流程与决策全景图</h1>
+  <p class="sub">
+    pstack（作者 poteto，Cursor）把编程 agent 变成一个真正的工程团队。入口只有一个：
+    <span class="m">/poteto-mode</span>。它读取任务 → 匹配一个 playbook → 把 playbook 步骤逐字复制进 todo 列表 →
+    在步骤触发时路由到其它 skill → 每个 subagent 都经过 role 化模型分配 → 验证通过后才允许 PR 与落地。
+    本图完整呈现主链路与 <b style="color:var(--yellow)">9 个关键决策点</b>。
+  </p>
+  <div class="meta">
+    <span class="chip"><b>23</b> playbooks</span>
+    <span class="chip"><b>24</b> principles</span>
+    <span class="chip"><b>50+</b> skills</span>
+    <span class="chip">入口 <b>/poteto-mode</b></span>
+    <span class="chip">出口 <b>Opening a PR → Babysit → Shipping</b></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#spine">01 主链路</a>
+  <a href="#d1">D1 选 Playbook</a>
+  <a href="#d2">D2 用不用 Subagent</a>
+  <a href="#d3">D3 模型分配</a>
+  <a href="#d4">D4 问人 vs 自主</a>
+  <a href="#d5">D5 暂停红线</a>
+  <a href="#d6">D6 验证裁决</a>
+  <a href="#d7">D7 交付编排</a>
+  <a href="#d8">D8 Babysit 模式</a>
+  <a href="#d9">D9 Forge 选择</a>
+  <a href="#topo">大程序拓扑</a>
+  <a href="#playbooks">Playbook 全表</a>
+  <a href="#principles">原则索引</a>
+</nav>
+
+<!-- ============ 01 SPINE ============ -->
+<section id="spine">
+  <div class="sec-head"><span class="sec-num">01</span><h2>主链路：一次任务从进入到落地</h2></div>
+  <p class="sec-desc">
+    所有任务共用一条主干。playbook 决定分支细节，但每个 playbook 都遵循同样的骨架：
+    <b>先开 todo（步骤逐字复制）→ 执行步骤（按需触发 skills）→ 委托/验证 → Opening a PR</b>。
+    "回复工程"贯穿始终：每条结论自带证据标签（measured / inferred / guess）。
+  </p>
+
+  <div class="pipe">
+    <div class="pstep">
+      <div class="rail"><div class="dot">1</div><div class="line"></div></div>
+      <div class="body">
+        <h4>入口：用户给出目标 + 验收信号</h4>
+        <p>用自然语言描述意图和"怎么算完成"（如"repro first, then fix and verify"）。不需要指定 playbook、不需要列 skills。</p>
+        <div class="sub">/poteto-mode &lt;goal&gt; [+ checkable outcome]　·　mode 常驻则每轮自动裁决是否介入</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">2</div><div class="line"></div></div>
+      <div class="body">
+        <h4>分类路由：匹配 playbook <span class="badge">决策点 D1</span></h4>
+        <p>读取请求 → 从 23 个 playbook 中匹配一个（无匹配则 <span class="m">figure-it-out</span> 设计定制流程；项目级则 <span class="m">orchestrate</span>）。
+        同时做前置裁决：架构问题先 <span class="m">how</span>；跨函数边界 → <span class="m">architect</span>；并行扇出 → <span class="m">swarm</span>。</p>
+        <div class="sub">SKILL.md → Playbooks 段（逐条匹配规则）</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">3</div><div class="line"></div></div>
+      <div class="body">
+        <h4>开 todo 列表：playbook 步骤逐字复制</h4>
+        <p>playbook 的每个 step 原样拷贝为 todo 的第一批条目（跳过项保留并标注 <span class="m">skip: &lt;reason&gt;</span>），之后才加任务专属 todo。todo 即执行合同。</p>
+        <div class="sub">这是硬性要求：steps copied in verbatim, before any task-specific todos</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">4</div><div class="line"></div></div>
+      <div class="body">
+        <h4>逐步执行：步骤触发 skill 路由</h4>
+        <p>每个 step 声明它需要哪些 skill，agent 按需加载：理解 → <span class="m">how / why</span>；设计 → <span class="m">architect / arena / prototype</span>；
+        并发 → <span class="m">swarm</span>；争议 → <span class="m">interrogate</span>；写作 → <span class="m">unslop / technical-writing / no-comments</span>；数字 → <span class="m">benchmark-checklist</span>。</p>
+        <div class="sub">回复中必须点名"哪个原则影响了哪个决定"，且只引用本会话真正读过的原则</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">5</div><div class="line"></div></div>
+      <div class="body">
+        <h4>委托：subagent 扇出 <span class="badge b-purple">决策点 D2 + D3</span></h4>
+        <p>用 throughput checkpoint 四问决定扇出结构；默认 fresh subagent + consolidated scope；每个角色分配显式模型；
+        bulk 数据交给 subagent，主线程只留摘要（guard-the-context-window）。</p>
+        <div class="sub">playbook 内子代理：subagent_type: "poteto-agent"，run_in_background: true</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">6</div><div class="line"></div></div>
+      <div class="body">
+        <h4>验证：真实表面 + 三方证据 <span class="badge b-green">决策点 D6</span></h4>
+        <p>铁律：<b>"仅有测试不算验证。PR 的 unit / live / perf 三栏全勾才算 verified。"</b>
+        live lane 强制（真应用 + control skill + 截图）；大型交付用 swarm 扇出 10+ lanes 独立裁决。</p>
+        <div class="sub">"Inconclusive" 或 "wrong surface" 不算通过——必须标记出来</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">7</div><div class="line"></div></div>
+      <div class="body">
+        <h4>收尾：Opening a PR（每个 playbook 的终点）</h4>
+        <p>worktree 隔离 → <span class="m">/deslop</span> → <span class="m">/no-comments</span> → Conventional Commits 标题 + briefing 式 PR body →
+        开 ready 不开 draft。开 PR 不自动进入 babysit。</p>
+        <div class="sub">优先 5 个窄 PR 而不是 1 个大 PR；stack 子分支 rebase 到父分支 tip</div>
+      </div>
+    </div>
+    <div class="pstep">
+      <div class="rail"><div class="dot">8</div><div class="line"></div></div>
+      <div class="body">
+        <h4>交付循环：Babysit → Shipping（用户显式触发）</h4>
+        <p><span class="m">Babysit</span> 把 PR/stack 驱到 merge-ready（冲突、review 线程、CI）；<span class="m">Shipping</span> 独立逐 PR 验证后，
+        只落地"从底部开始的连续已验证段"。两者都不许 babysit 越权 merge。</p>
+        <div class="sub">Green ≠ safe。Nothing gets armed before an independent per-PR verdict</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>贯穿全局的三条纪律：</b>① tier 由证据决定——每行代码都能回溯到运行时证据；② 回复面即 prose 面——所有输出过 <span class="m">unslop</span> 规则（短句、无长破折号、不用冒号连接）；
+    ③ 你拥有每个 subagent 的产出——亲自审 diff、亲自写总结，不转述下属报告。
+  </div>
+</section>
+
+<!-- ============ D1 ============ -->
+<section id="d1">
+  <div class="sec-head"><span class="sec-num">D1</span><h2>决策点：如何选择 playbook</h2></div>
+  <p class="sec-desc">
+    匹配规则来自 <span class="m">SKILL.md → Playbooks</span> 段。核心原则：<b>先看任务动词（诊断/构建/交付/自主），再看规模与风险，最后看有没有现成 playbook。
+    </b>语言信号（"repro first"、"going to bed"、"check on PR X"）也是路由信号。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Decision Tree</span><h3>任务 → playbook 匹配树</h3></div>
+    <div class="dec-body">
+      <div class="tree">
+        <ul>
+          <li><span class="cond">任务是只读问题？（怎么工作、为什么这么建、是否确定）</span>
+            <span class="leaf l-diag">Investigation</span> <span class="note">read-only，输出引用式答案，无 PR</span>
+          </li>
+          <li><span class="cond">有报告缺陷要复现、根因、修复？</span>
+            <span class="leaf">Bug fix</span> <span class="note">有廉价本地测试路径时叠加 tdd：先写失败测试</span>
+          </li>
+          <li><span class="cond">测量到明确变慢？</span>
+            <ul>
+              <li><span class="cond">一次性修复</span> <span class="leaf">Perf issue</span> <span class="note">7 条性能咒语按序尝试，最早达成目标即止</span></li>
+              <li><span class="cond">对单一指标持续逼近目标（循环假设 + 前后测量 + 每次只留一个 commit）</span> <span class="leaf">Hillclimb</span></li>
+            </ul>
+          </li>
+          <li><span class="cond">诊断运行中症状（泄漏、空转 CPU、渲染毛刺）？</span>
+            <span class="leaf l-diag">Runtime forensics</span> <span class="note">活体插桩，交付诊断不交付修复</span>
+          </li>
+          <li><span class="cond">手里已有 profiling 工件（cpuprofile / trace / spindump / heap snapshot）？</span>
+            <span class="leaf l-diag">Trace forensics</span> <span class="note">固定数据集，读它，不重跑</span>
+          </li>
+          <li><span class="cond">新增或改变行为？</span>
+            <span class="leaf l-build">Feature</span> <span class="note">先命名数据形状；多合法形状 → arena</span>
+          </li>
+          <li><span class="cond">保行为改结构（重命名/抽取/内联/去重/迁移）？</span>
+            <span class="leaf l-build">Refactoring</span> <span class="note">先钉住行为契约再动结构；大范围 → figure-it-out</span>
+          </li>
+          <li><span class="cond">要用最低成本做一个设计/行为决策？（"试试这个布局"）</span>
+            <span class="leaf l-build">Prototype</span> <span class="note">唯一一条"质量不重要"的 playbook；决策做完交给 Feature</span>
+          </li>
+          <li><span class="cond">两个实现的像素级 UI 等价？</span>
+            <span class="leaf l-build">Visual parity</span> <span class="note">image diff 归零才算过，base 不动</span>
+          </li>
+          <li><span class="cond">写/改 SKILL.md？</span> <span class="leaf l-meta">Authoring a skill</span></li>
+          <li><span class="cond">评估 skill/prompt 改动对 agent 行为的影响？</span>
+            <span class="leaf l-meta">Eval</span> <span class="note">盲法：目录名、prompt、judge 全部去标识</span>
+          </li>
+          <li><span class="cond">PR/stack 状态请求？（"check on PR X"、"get it green"）</span>
+            <span class="leaf l-ship">Babysit</span> <span class="note">4 种模式，见 D8；绝不路由到 Cursor 内置 babysit</span>
+          </li>
+          <li><span class="cond">要落地一个已绿的 stack？（"ship it"、"land it"）</span>
+            <span class="leaf l-ship">Shipping</span> <span class="note">独立验证 + 连续已验证段 bottom-up</span>
+          </li>
+          <li><span class="cond">长任务、跑到谓词满足才停？（"/loop until X"、"run until done"）</span>
+            <span class="leaf l-auto">Autonomous run</span></li>
+          <li><span class="cond">独立 PR 队列、全授权直通 merge？</span>
+            <span class="leaf l-auto">Autopilot-full</span> <span class="note">每 PR 一 owner；root 每轮 swarm 裁决</span></li>
+          <li><span class="cond">队列要构建成 stack 交操作员 review 后自己落地？</span>
+            <span class="leaf l-auto">Autopilot-stack</span> <span class="note">owner 不 merge，root 只 append</span></li>
+          <li><span class="cond">项目级常驻程序？（多日、多 stack、agent 舰队、人每天看两次）</span>
+            <span class="leaf l-auto">Orchestrate</span> <span class="note">coordinator 不写代码；见第 08 节</span></li>
+          <li><span class="cond">恢复/接管前一个 agent 的进行中工作？</span>
+            <span class="leaf">Session pickup</span> <span class="note">先读 trail，不重做已完成工作</span></li>
+          <li><span class="cond">要干净地暂停？</span>
+            <span class="leaf">Pause safely</span> <span class="note">只有显式要求才暂停；wip commit + resume note</span></li>
+          <li><span class="cond">跨 phase / 多 stacked PR 的规划？</span>
+            <span class="leaf">Multi-phase plan</span> <span class="note">计划即交付物，不实现；1-2 文件且方案显然 → 跳过</span></li>
+          <li><span class="cond">回收磁盘（worktree / 模拟器）？</span>
+            <span class="leaf">Worktree cleanup</span> <span class="note">唯一无代码审查兜底的破坏性 playbook</span></li>
+          <li><span class="cond">没有匹配的 playbook？或大规模迁移 / 跨切面修改 / 人离开后要审计？</span>
+            <span class="leaf l-meta">figure-it-out</span> <span class="note">定制一个严格、可审计的 playbook</span>
+          </li>
+          <li><span class="cond">任何 playbook 走到最后</span>
+            <span class="leaf l-ship">Opening a PR</span> <span class="note">所有 playbook 的公共终点</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Escalation</span><h3>升级/降级规则：什么时候偏离最直观的匹配</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">规模升级</div><div class="v">跨大量调用点的迁移、宏大的多部分修改、人离开要事后信任的工作 → <b>figure-it-out</b>，即使 Feature 等窄 playbook 名义匹配。</div></div>
+      <div class="rule"><div class="k">项目升级</div><div class="v">多日、多个 stacked PR、一支 subagent 舰队的常驻项目 → <b>Orchestrate</b>。figure-it-out 设计"一次定制 run"，orchestrate 跑"一个项目程序"。</div></div>
+      <div class="rule"><div class="k">降级判定</div><div class="v">一个 agent 在会话预算内能完成的 → 不进 Orchestrate，无论措辞多像"项目"；进 Autonomous run 或直接做。<b>先算：单元数 × 预算。</b></div></div>
+      <div class="rule"><div class="k">跳过规划</div><div class="v">改动只碰 1-2 个文件且方案显然 → Multi-phase plan 直接说"不需要"并停止。</div></div>
+      <div class="rule"><div class="k">一次 vs 长期</div><div class="v">性能：一次性 → Perf issue；持续科学逼近指标 → Hillclimb。诊断：活体 → Runtime forensics；事后工件 → Trace forensics。</div></div>
+      <div class="rule"><div class="k">测试叠加</div><div class="v">Bug fix 且有廉价测试路径 → 叠加 <b>tdd</b>（失败测试先于修复进入 git 历史）。</div></div>
+      <div class="rule"><div class="k">回答边界</div><div class="v">路由还决定"是否要写代码"：Investigation / forensics 是只读的，交付引用式答案；不要顺手改代码，除非用户要求或后续转 Route。</div></div>
+    </div>
+  </div>
+
+  <div class="callout blue">
+    <b>语言即路由信号。</b>"repro first" → Bug fix；"I'm going to bed / land it by morning" → 自主授权 + Autopilot/Shipping；
+    "check on PR 123" → Babysit(check)；"compare them" → Prototype/Arena；"trust it was done right when I'm back" → figure-it-out + show-me-your-work。
+    写 prompt 时把"怎么算完成"说清楚，比列 skill 清单更有用。
+  </div>
+</section>
+
+<!-- ============ D2 ============ -->
+<section id="d2">
+  <div class="sec-head"><span class="sec-num">D2</span><h2>决策点：是否使用 subagent / 如何扇出</h2></div>
+  <p class="sec-desc">
+    子代理是默认，不是例外——但"用几个、什么形态、fresh 还是 resume"都有判定规则。
+    来源：<span class="m">SKILL.md → Subagents</span>、Feature 的 throughput checkpoint、swarm/orchestrate 的形态规则。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Checkpoint</span><h3>扇出前必答四问（Feature step 3 的 throughput checkpoint）</h3></div>
+    <div class="dec-body">
+      <p>每个 playbook 在动手前必须写出这四项（不适用的也保留条目并标注 <span class="m">n/a: &lt;原因&gt;</span>，不许跳过）：</p>
+      <div class="rule"><div class="k">Q1 Blocking first steps</div><div class="v">有必须先跑的门禁（架构决策、共享脚手架、基线捕获）吗？→ <b>门禁全部先行，再谈扇出。</b></div></div>
+      <div class="rule"><div class="k">Q2 Independent workstreams</div><div class="v">存在不相交的文件/服务/层的独立工作流吗？→ <b>独立流并行；共享写串行。</b></div></div>
+      <div class="rule"><div class="k">Q3 Shared mutable state</div><div class="v">并发角色会写同一个文件/分支/键/对象吗？→ <b>默认拆分目标（separate-before-serializing-shared-state）；只有真实的单写者不变量才串行。</b></div></div>
+      <div class="rule"><div class="k">Q4 Smallest safe decomposition</div><div class="v">最小安全分解是什么？→ <b>如果一个 worker 最好，必须写明理由。</b></div></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-purple">形态选择</span>单 owner vs 父级扇出</h3>
+      <ul>
+        <li><b>代码耦合工作</b>（一个 feature、一次迁移）→ <b>单个 owner</b>，checkpoint 内联给 owner，owner 在内部自行扇出。</li>
+        <li><b>父级扇出</b>只用于产出独立工件的切片：审计、跨子系统调查、竞品实验。</li>
+        <li>phase 边界要<b>重写 checkpoint</b>；继续下一步用 fresh owner，不链式中断（interrupt-chained resume 会静默丢指令）。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-cyan">默认参数</span>每个 Task 调用的基线</h3>
+      <ul>
+        <li><span class="m">run_in_background: true</span>；agent 模式（readonly 会剥掉 MCP）。</li>
+        <li><b>文件指针，不内联上下文</b>（file pointers not inlined context）。</li>
+        <li>每个角色带<b>显式 model</b>（见 D3）。</li>
+        <li>playbook 步骤内的子代理一律 <span class="m">subagent_type: "poteto-agent"</span>；routed skills（how/why/interrogate/reflect/swarm）自设 subagent_type，<b>不许覆盖</b>。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">Fresh vs Resume</span>默认 fresh</h3>
+      <ul>
+        <li><b>默认 fresh</b>：原 brief + 所有后续指令 + 前 agent 报告与分支 = consolidated scope。适用于修复轮、follow-up、retry、下一个队列项。</li>
+        <li><b>只有</b>新工作严格依赖现有状态才 resume：本地 checkout、未提交改动、仍在跑的进程（dev server / 模拟器 / watcher）。</li>
+        <li>给运行中 agent 的 stop/hold 指令<b>不算复用</b>。</li>
+        <li>禁止 resume-chain；空间换正确：fresh + 完整 scope。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-green">上下文守恒</span>guard-the-context-window</h3>
+      <ul>
+        <li>bulk 数据（大日志、长文件、批量扫描、transcript）→ 全部交给 subagent。</li>
+        <li>主线程只保留<b>摘要 + 文件指针</b>，绝不落原始 payload。</li>
+        <li>探活不 resume：读 ledger、units.tsv、gh、已推分支、云面板状态；transcript mtime 不算活。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="dec" style="margin-top:26px">
+    <div class="dec-head"><span class="q">Fan-out Patterns</span><h3>三种扇出形态对照：pair / swarm / orchestrate</h3></div>
+    <div class="dec-body">
+      <table class="rt">
+        <tr><th>形态</th><th>何时用</th><th>结构</th><th>收敛方式</th></tr>
+        <tr>
+          <td>单 owner + 内部扇出</td>
+          <td>代码耦合：一个 feature / 一次迁移 / 一个 bug 修复，产出物互相依赖</td>
+          <td>Lead 持有任务，阶段间自行 delegate（bug-fix 模型），自审 diff</td>
+          <td>Lead 亲自验证 + 写总结</td>
+        </tr>
+        <tr>
+          <td>Swarm（多 worker 并行）</td>
+          <td>覆盖矩阵（每个 slice 一个 worker）、race（同一 brief 多模型）、两者混合</td>
+          <td>N 个 cloud worker 一条消息扇出；每个 brief 自包含；写者各自独立输出</td>
+          <td>聚合为一张报告：结果表 + 一行式问题 + 缺口；race 用事先声明的 first-pass / rank-all / best-of</td>
+        </tr>
+        <tr>
+          <td>Orchestrate（程序级）</td>
+          <td>一个项目超出单会话预算：多日、多 stack、几十个 subagent、人每天看两次</td>
+          <td>Coordinator（本地、不写码）→ track 级 sub-coordinator（>1 drain 阈值才设）→ worker/verifier（cloud，深度 ≤3）</td>
+          <td>每次 drain 分类所有指针；ledger 按 PR+SHA 记账；frontier 计算式推进</td>
+        </tr>
+      </table>
+      <div class="callout green" style="margin-top:16px">
+        <b>验证独立性规则：</b>verifier 永远用与 worker <b>不同模型族</b>（同 prompt 换模型 = 高信号第二意见）。
+        swarm race 的每个 arm 事先命名模型；测量类 brief 必须携带精确 SHA 与方法（样本数、样本定义、顺序）。
+      </div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Ownership</span><h3>委派后的所有权：你仍然拥有一切</h3></div>
+    <div class="dec-body">
+      <div class="rule"><div class="k">审 diff，写总结</div><div class="v">每个 subagent 的产出由你复核；<b>亲自写总结</b>，不转述 agent 的自我报告。</div></div>
+      <div class="rule"><div class="k">第二意见</div><div class="v">同一 prompt 换模型跑第二意见；一致 = 高信号。</div></div>
+      <div class="rule"><div class="k">brief 是产品</div><div class="v">（orchestrate 层级）brief 字段：GOAL / SCOPE / CONTEXT / ACCEPTANCE / VERIFY / TIMEBOX / FORBIDDEN / REPORT / STANDING orders 逐字粘贴。
+      填不满的字段 = 还没 scoping 的单元，拒发。</div></div>
+      <div class="rule"><div class="k">不许沉默加倍</div><div class="v">丢失的 child 必须记账（arrived / respawned / scope 被显式吸收）；默默重做会掩盖双重浪费和覆盖缺口。</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D3 ============ -->
+<section id="d3">
+  <div class="sec-head"><span class="sec-num">D3</span><h2>决策点：subagent 用什么模型</h2></div>
+  <p class="sec-desc">
+    模型按<b>角色</b>分配，不按心情。默认配置由 <span class="m">/setup-pstack</span> 写入 <span class="m">~/.cursor/rules/pstack-models.mdc</span>；
+    缺省时回退到硬编码默认。role 行可写 <span class="m">inherit-parent</span> / <span class="m">auto</span>（省略 Task model，跑父模型）。
+  </p>
+
+  <div class="tblwrap">
+    <div class="cap">Role → Model 分配表 <small>默认面板：opus 5.5 / grok</small></div>
+    <table class="rt">
+      <tr><th>角色</th><th>默认模型</th><th>判定规则</th></tr>
+      <tr>
+        <td>代码委托（feature / refactoring / bug-fix / perf / hillclimb）</td>
+        <td class="mono" style="color:var(--green)">grok-4.7-xhigh-fast</td>
+        <td>按难度分层。读各自 playbook 对应的 role 行。</td>
+      </tr>
+      <tr>
+        <td>最难改动（hardest tasks）</td>
+        <td class="mono" style="color:var(--purple)">claude-opus-5-5-xhigh</td>
+        <td>跨切面设计、棘手的并发、微妙算法。<b>两种都收</b>：需要判断模糊意图的，或需要逐字执行精确步骤序列的。</td>
+      </tr>
+      <tr>
+        <td>散文与判断（judgment and prose）</td>
+        <td class="mono" style="color:var(--purple)">claude-opus-5-5-xhigh</td>
+        <td>写作、评审、裁决类角色。</td>
+      </tr>
+      <tr>
+        <td>Swarm workers</td>
+        <td class="mono" style="color:var(--green)">grok-4.7-xhigh-fast</td>
+        <td>读 swarm workers 行；模型 race 时每个 arm 事先命名。</td>
+      </tr>
+      <tr>
+        <td>Verifier / judge</td>
+        <td class="mono">≠ worker 模型族</td>
+        <td>验证独立性：同 prompt 不同模型 = 高信号第二意见。</td>
+      </tr>
+      <tr>
+        <td>机械琐碎编辑</td>
+        <td class="mono">fast code model</td>
+        <td>trivial mechanical edits → 最快的代码模型。</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge">回退链</span>slug 被拒时</h3>
+      <ul>
+        <li>Task 工具拒绝 slug → 用默认并说明。</li>
+        <li>默认也被拒 → 从其报错信息里取<b>同族最近的有效 slug</b>。</li>
+        <li>role 行缺失 → 保持默认；<span class="m">auto / inherit-parent</span> → 省略 model。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-blue">覆盖优先级</span>谁盖谁</h3>
+      <ul>
+        <li>setup-pstack 的 per-role 行 <b>覆盖</b> SKILL.md 默认与 routed skills（how/why/arena/swarm/architect/interrogate/reflect）的模型选择。</li>
+        <li>默认值变更后，旧规则仍钉住旧默认——删掉对应 role 行或删文件重跑 setup。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D4 ============ -->
+<section id="d4">
+  <div class="sec-head"><span class="sec-num">D4</span><h2>决策点：问人，还是自己决定</h2></div>
+  <p class="sec-desc">
+    核心分类器：<b>如果答案是一个"跑一下就能观察到的事实"，那它就不属于人类回答</b>。
+    行为、时序、布局、输出、性能、甚至"eval 能否分离两种方案"——全部用 Prototype 让实验结果来定。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Classifier</span><h3>AskQuestion 前的分类决议</h3></div>
+    <div class="dec-body">
+      <div class="flow">
+        <div class="fbox"><span class="t">想提问 / 想等确认</span><span class="d">"which approach…"</span></div>
+        <div class="farr">→</div>
+        <div class="fbox"><span class="t">答案是可观察事实？</span><span class="d">行为·时序·布局·输出·perf·eval 分离性</span></div>
+        <div class="farr">→</div>
+        <div class="fbox accent"><span class="t">Prototype playbook</span><span class="d">sketch → 让结果裁决</span></div>
+      </div>
+      <div class="flow">
+        <div class="fbox"><span class="t">只读 Investigation（交付引用答案）</span><span class="d">stay in it</span></div>
+        <div class="farr">→</div>
+        <div class="fbox accent"><span class="t">从证据直接回答</span><span class="d">不做 sketch</span></div>
+      </div>
+      <div class="flow">
+        <div class="fbox"><span class="t">真正的产品/偏好决定</span><span class="d">无实验可裁决</span></div>
+        <div class="farr">→</div>
+        <div class="fbox accent"><span class="t">才允许问人</span><span class="d">给选项（never-block 原则）</span></div>
+      </div>
+      <div class="rule" style="margin-top:12px"><div class="k">全自主授权下</div><div class="v">授权覆盖的决定 → <b>直接做并报告</b>，不留提问、不留"要不要我……"的尾巴。</div></div>
+      <div class="rule"><div class="k">只有操作员能做的决定</div><div class="v">在授权下 → 用一个<b>默认值</b>继续，完整解释该默认，并用人话告知操作员可以让你改做什么。<b>不给代号让用户回复</b>。</div></div>
+      <div class="rule"><div class="k">例外</div><div class="v">操作员明示的门禁 + Autonomy 的 Always-pause 清单仍然需要操作员。</div></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-green">Just do it</span>直接做，不问</h3>
+      <ul>
+        <li>可逆工作。</li>
+        <li>外部动作：team chat、ticket 更新、跑评测。</li>
+        <li>用任意 MCP 工具。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-red">AskQuestion 反面清单</span>绝不阻塞在人身上</h3>
+      <ul>
+        <li>"should I keep going?" → 继续。</li>
+        <li>可逆的收尾工作 → 不进"留给人"的清单。</li>
+        <li>自主 run 中发现的中途问题（坏 skill、相关 bug、flakey 验证器、review 噪音）→ 自己修，单独开 PR。</li>
+        <li>只上报：不可逆动作、无实验可裁决的产品/偏好决定、真正的死胡同。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>"No 是可接受的答案。"</b> 被问"是否要做某事"、被邀请加 scope、被展示一个方案时——给出真实判断。可以拒绝、可以反对、可以说"这个不配拥有它的位置"。
+    建议是判断，不是背书；<b>同意不是默认值，坦诚优先于迎合</b>。
+  </div>
+</section>
+
+<!-- ============ D5 ============ -->
+<section id="d5">
+  <div class="sec-head"><span class="sec-num">D5</span><h2>决策点：暂停红线与会话授权</h2></div>
+  <p class="sec-desc">自治程度由两条清单界定：一条"永远暂停"，一条"会话级覆盖"。</p>
+
+  <div class="grid2">
+    <div class="card" style="border-color: rgba(248,113,113,.4)">
+      <h3><span class="badge b-red">Always pause</span>不可逆写入 —— 永远停下确认</h3>
+      <ul>
+        <li>force-push 到<b>共享</b>分支</li>
+        <li>部署</li>
+        <li>删除数据</li>
+        <li>给客户的对外消息</li>
+      </ul>
+      <p style="margin-top:10px;font-size:12.5px;color:var(--text3)">此外（orchestrate 级）：关闭别人的 PR、影响共享分支的破坏性动作，全部进 gates.md 排队问人。</p>
+    </div>
+    <div class="card" style="border-color: rgba(74,222,128,.4)">
+      <h3><span class="badge b-green">Session override</span>会话级自治授权</h3>
+      <ul>
+        <li>"Don't stop" / "going to bed" / "run until done" / "be fully autonomous" → <b>持续执行,不再询问</b>。</li>
+        <li>"I want everything merged by morning" → 覆盖 CI flake 容忍度，直通 Autopilot/Shipping。</li>
+        <li>授权 + root 的干净 verdict = merge 的完整授权；<b>单靠 babysitting 永远没有 merge 授权</b>。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout red" style="margin-top:16px">
+    <b>Pause safely 是反向决策：</b>只有显式要求（或即将压缩上下文）才做 checkpoint：停在安全边界 → 不发起新动作、取消嵌套子代理 →
+    wip commit → 写离场 resume note（意图/进度/已验证项/下一步/关键文件/坑）。"keep going" 语境下<b>不</b>暂停。
+  </div>
+</section>
+
+<!-- ============ D6 ============ -->
+<section id="d6">
+  <div class="sec-head"><span class="sec-num">D6</span><h2>决策点：验证有多严 & swarm 如何裁决</h2></div>
+  <p class="sec-desc">
+    验证是 pstack 的承重墙。铁律一：<b>测试单独不够——unit / live / perf 三栏全勾才算 verified</b>。
+    铁律二：<b>CI 绿不是 verdict</b>，agent 自我报告不是证据，只有独立验证者检查真实工件才算。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Iron Rule</span><h3>三栏验证模型（每个 PR 的验证块都以此开头）</h3></div>
+    <div class="dec-body">
+      <div class="grid3">
+        <div class="card" style="margin-bottom:0">
+          <h3><span class="badge b-cyan">Unit</span></h3>
+          <p>指定测试文件 + 新增用例 + 运行命令。</p>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h3><span class="badge b-green">Live（强制）</span></h3>
+          <p>10 条 lane 在 PR head 驱动<b>真实表面</b>（control-ui / control-cli），每条 lane = 一个场景 + 一张截图 + 一个通过谓词。<br>其中一条必是 <b>Regression lane vs trunk</b>。</p>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h3><span class="badge b-orange">Perf</span></h3>
+          <p>双侧对比：trunk 与 head 都必须产出指标；先测 trunk 基线；给出会失败的数值规则。场景不同不比 ratio，用绝对预算。</p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:18px">
+        <b>trunk 缺功能怎么办：</b>记录该事实，将门禁改为"diff 新增的行为 + 用户等待的最终状态"，<b>不许发明一个 trunk 结果</b>。
+        交互类的 PR 是 review-gated：操作员在 chat 里看截图 + 30-60s 视频后才能 merge。
+      </div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Swarm Gate</span><h3>合并前的 swarm 裁决结构（每轮 code-ready head SHA）</h3></div>
+    <div class="dec-body">
+      <p>每次到达 code-ready head SHA、以及之后每一次改变 patch 的 push，都 fan out 一轮独立验证并聚合为<b>一个 verdict</b>：</p>
+      <div class="lanes">
+        <div class="lane"><span class="ln" style="background:rgba(110,168,254,.15);color:var(--blue)">GATES</span><span class="ld">在该 SHA 重跑仓库门禁（lint / typecheck / tests）</span><span class="lv">PASS 必需</span></div>
+        <div class="lane"><span class="ln" style="background:rgba(74,222,128,.15);color:var(--green)">LIVE ×10</span><span class="ld">真实表面驱动，含 Regression lane vs trunk（live lane 是地板：没有它的 verdict 不干净）</span><span class="lv">截图 + 谓词</span></div>
+        <div class="lane"><span class="ln" style="background:rgba(251,146,60,.15);color:var(--orange)">PERF</span><span class="ld">trunk 基线 vs head 的指标对比</span><span class="lv">数值规则</span></div>
+        <div class="lane"><span class="ln" style="background:rgba(192,132,252,.15);color:var(--purple)">AUDIT ×2+</span><span class="ld">读 diff 与 receipts、不信任 PR body 的审查 lane（各自一个焦点：消费者一致性 / 生命周期与竞态 / 数据与配置安全）</span><span class="lv">恶意假定</span></div>
+      </div>
+      <div class="rule"><div class="k">Clean 条件</div><div class="v"><b>每一条 lane 都是 PASS</b>。lane 以 note 形式记录下的缺陷也算 finding，照样打回 owner。</div></div>
+      <div class="rule"><div class="k">finding 回传</div><div class="v">所有实锤 finding 一次性 fix-forward 给 owner；行为类 finding 要求<b>覆盖所有同缺陷位点的红测试</b>，测不出来的要 repro receipt。</div></div>
+      <div class="rule"><div class="k">新 head</div><div class="v">新 head 拿全新 swarm + 全新 verdict；<b>patch-id 规则</b>（shipping 里）决定旧 lane 结果是否仍有效。</div></div>
+    </div>
+  </div>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Patch-ID Rule</span><h3>rebase 之后，verdict 何时失效？</h3></div>
+    <div class="dec-body">
+      <p>verdict 记录三元组：verdict head SHA + base SHA + base→head diff 的稳定 <span class="m">git patch-id</span>。rebase/retarget 重写 SHA，可能<b>静默作废</b>一个 verdict（哪怕没碰任何检查）。落地前必须比对 patch-id：</p>
+      <div class="rule"><div class="k">仅噪声差异</div><div class="v">当两个 patch 只在 tests / docs / lint 配置上不同 → build 各 lane 所跑的产物两次（verdict SHA）＋一次（当前 head）。差异若在 verdict SHA 的两次 build 中也出现，或只是内嵌 commit SHA → <b>判为噪声</b>，该 lane 结果保持有效；checks 和一次变更 review 重新跑。</div></div>
+      <div class="rule"><div class="k">禁止复用</div><div class="v">dev server 的 lane 结果（无 build 产物）一律重跑；<b>不许</b>用相同 commit message 或旧 SHA 的绿勾当替代。</div></div>
+      <div class="rule"><div class="k">patch 变了</div><div class="v">重验；patch 没变 → 保留代码 verdict，在当前 head 重跑 mergeability 与 CI。</div></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-blue">数字纪律</span>benchmark-checklist 触发条件</h3>
+      <p>只要你<b>亲自跑了 benchmark、测了性能、要报告提速或回归</b> → 报告或据此行动前先过 benchmark-checklist：查限速因子、调参、错误数、重复运行、端到端相关性。</p>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-red">Forensics 边界</span>诊断 ≠ 修复</h3>
+      <p>Runtime / Trace forensics 的交付物是<b>带引用的诊断</b>，不是修复。确认病因后再 route 回 Bug fix 或 Perf。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D7 ============ -->
+<section id="d7">
+  <div class="sec-head"><span class="sec-num">D7</span><h2>决策点：交付编排选哪一个（自主四件套）</h2></div>
+  <p class="sec-desc">
+    Autonomous run / Orchestrate / Autopilot-full / Autopilot-stack —— 四个都"自主"，但分界线很清楚：
+    <b>看工作是否超出单会话预算、PR 是否独立、落地授权是否给出</b>。
+  </p>
+
+  <div class="dec">
+    <div class="dec-head"><span class="q">Selector</span><h3>自主编排选择器</h3></div>
+    <div class="dec-body">
+      <div class="tree">
+        <ul>
+          <li><span class="cond">是"一个任务驱动到一个谓词"？（repro 修好、测试全绿、pixel-diff 归零）</span>
+            <span class="leaf l-auto">Autonomous run</span> <span class="note">你拥有退出条件；迭代循环最小改动 → 验证 → 前进或回退</span></li>
+          <li><span class="cond">是"一个项目程序"？（多日、多 stack、几十个 subagent、人每天看两次）</span>
+            <span class="leaf l-auto">Orchestrate</span> <span class="note">coordinator 落地已验证工作，但 worker 永不 merge；见第 08 节</span></li>
+          <li><span class="cond">是"一队独立 PR 队列"？</span>
+            <ul>
+              <li><span class="cond">PR 互相独立 + 落地授权已给（directly to merged）</span>
+                <span class="leaf l-auto">Autopilot-full</span> <span class="note">每 PR 一个 owner 走完 build→merge 全生命周期；root 每轮 swarm 验证 + 小时级 audit tick</span></li>
+              <li><span class="cond">要 review 后才落地 / 工作有顺序或耦合 / merge 授权被扣留</span>
+                <span class="leaf l-auto">Autopilot-stack</span> <span class="note">owner 不 merge；root 是唯一拓扑写者，组装一条线性 stack 交操作员落地</span></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="callout purple" style="border-left-color:var(--purple);background:rgba(192,132,252,.06);margin-top:14px">
+        <b>共同骨架（Autopilot 双胞胎）：</b>owner 15 分钟内建立 decisions.tsv trail + 推首分支快照 + 开 ready PR →
+        每个可验证单元后推一次 → code-ready head SHA 上报 → root 的 swarm 每轮裁决 → clean verdict 后 full 交给 owner merge / stack 由 root append。
+        <b>"State-then-wait"</b>：请求"陈述计划"不是执行指令；只有操作员明确的 go 才开跑。
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge">Orchestrate vs 其它</span>词面像程序、实质是任务？</h3>
+      <p>"work one agent could finish inside the session's budget routes there, not here, however program-shaped the phrasing sounds."<br>
+      —— 先量化：单元数 × 粗糙工作量 × 墙钟预算。一个 agent 能在预算内完成 → 降级。</p>
+    </div>
+    <div class="card">
+      <h3><span class="badge">Multi-phase plan 的位置</span>计划先于执行</h3>
+      <p>跨 phase / stacked PR 的工作可先产出<b>计划文件</b>（计划即交付物，不实现）：
+      原型解决开放问题 → subagent 探索 → 填 skeleton → 过 check-plan 脚本 → 交还给操作员。执行按计划点名的 execution playbook 启动。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D8 ============ -->
+<section id="d8">
+  <div class="sec-head"><span class="sec-num">D8</span><h2>决策点：Babysit 的四种模式</h2></div>
+  <p class="sec-desc">
+    任何 PR 状态请求都走 Babysit playbook（<b>不是</b> Cursor 内置 babysit，尽管描述词相同）。
+    第一步永远是<b>声明模式</b>再轮询；未声明默认 <span class="m">drive</span>。
+  </p>
+
+  <div class="tblwrap">
+    <div class="cap">请求 → 模式映射 <small>Babysit step 1</small></div>
+    <table class="rt">
+      <tr><th>模式</th><th>触发语</th><th>行为</th></tr>
+      <tr><td class="mono" style="color:var(--green)">drive</td><td>"babysit this" / "get it green" / "merge-ready"</td><td>跑循环直到 merge-ready（默认模式）</td></tr>
+      <tr><td class="mono" style="color:var(--blue)">background</td><td>计划还在执行中，不想被打断</td><td>triage 但不阻塞</td></tr>
+      <tr><td class="mono" style="color:var(--purple)">threads-only</td><td>"address the bugbot comments"</td><td>只回 review 评论，其它不碰</td></tr>
+      <tr><td class="mono" style="color:var(--orange)">check</td><td>"check on X" / "is it green"；小 PR 或纯文档 PR</td><td>一次状态扫描 + 报告</td></tr>
+    </table>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="badge b-red">Babysit 绝不越权</span></h3>
+      <ul>
+        <li>babysit <b>不授权 merge</b>；merge/land/ship 的请求一律 route 到 <b>Shipping</b>。</li>
+        <li>watcher 重新 arm 也不授权 merge。</li>
+        <li>唯一允许的创建：修复的归属 PR 已 merge 时 → 在剩余 stack 顶部开新 PR，绝不重写已 merge 历史。</li>
+        <li>一次只为一条 stack 做 babysit；只处理 frontier（最低未 merge PR），不许越级。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-green">CI 分级纪律</span></h3>
+      <ul>
+        <li>flake / 基础设施失败 → <b>一次</b> fresh build（只一次重试）。</li>
+        <li>同样的第二次失败 = 从来不是 flake → 重新分级，读子日志。</li>
+        <li>失败代码在 diff 之外 → 检查 stale base（<span class="m">git merge-base --is-ancestor</span>），报告需要 rebase，<b>不烧重试</b>。</li>
+        <li>只有失败在 diff 自己的代码里 → 才提交修复。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout blue">
+    <b>Bugbot / 安全评审 = 怀疑姿态：</b>它们既抓真 bug，也报非问题和 nitpick。逐条按事实评估，用具体理由 dismiss 噪音，绝不为了安抚 bot 而 churn 代码。
+    第三次 pass 起倾向 dismiss 有文档记录的模式，但安全 / 认证 / 计费 / 数据 / 迁移永远升级给人。
+  </div>
+</section>
+
+<!-- ============ D9 ============ -->
+<section id="d9">
+  <div class="sec-head"><span class="sec-num">D9</span><h2>决策点：Forge 解析（所有 PR 操作的前置）</h2></div>
+  <p class="sec-desc">每个涉及 PR 的 playbook 都要先解析一次 forge，然后整个程序保持该选择。</p>
+  <div class="flow" style="margin-top:8px">
+    <div class="fbox"><span class="t">默认 gh</span><span class="d">GitHub CLI</span></div>
+    <div class="farr">→</div>
+    <div class="fbox"><span class="t">检测 origin</span><span class="d">command -v origin 且能 resolve 仓库</span></div>
+    <div class="farr">→</div>
+    <div class="fbox accent"><span class="t">改用 origin pr …</span><span class="d">create/edit/view/watch/merge 全套</span></div>
+  </div>
+  <div class="rule"><div class="k">回退记录</div><div class="v">Origin 缺失或不能 resolve → 留在 gh 并<b>记录回退</b>。</div></div>
+  <div class="rule"><div class="k">硬禁令</div><div class="v"><b>Never require Graphite (gt)</b>。（orchestrate 的 stack 安全例外：栈内重新 stack 由唯一 stacker 用 gt 执行。）</div></div>
+  <div class="rule"><div class="k">内置工具优先</div><div class="v">运行环境提供内置 PR 工具时，创建/编辑/retarget/置 ready 全走它（CLI 会漏掉工具跟踪的元数据）；其余操作走解析出的 forge。</div></div>
+</section>
+
+<!-- ============ TOPO ============ -->
+<section id="topo">
+  <div class="sec-head"><span class="sec-num">08</span><h2>大程序拓扑：Orchestrate 的三层结构</h2></div>
+  <p class="sec-desc">
+    当工作超出单会话预算，Orchestrate 把程序拆成三层，<b>深度固定 ≤ 3</b>（更大的扇出靠宽度，不靠深度）。
+    三条铁律：完成是队列事件不是中断；每次 spawn/resume 逐字携带 standing orders；<b>brief 就是产品</b>（模糊的 brief 会安静地失败，因为 worker 无法向你提问）。
+  </p>
+
+  <div class="topo">
+    <div class="topo-node" style="border-color:var(--yellow-dim)">
+      <div class="tt" style="color:var(--yellow)">Coordinator（本 chat，本地）</div>
+      <div class="td">框定 · 写 brief · 排空 inbox · 拥有对人报告 · 做判断 | 永不写码</div>
+    </div>
+    <div class="topo-vline"></div>
+    <div class="topo-row">
+      <div class="topo-node" style="min-width:220px">
+        <div class="tt">Sub-coordinator · track A</div>
+        <div class="td">仅当 >1 drain 阈值；本地、耐久、一 track 一个</div>
+      </div>
+      <div class="topo-node" style="min-width:220px">
+        <div class="tt">Sub-coordinator · track B</div>
+        <div class="td">拥有本 track 单元与 board；混发自己的 brief</div>
+      </div>
+    </div>
+    <div class="topo-vline"></div>
+    <div class="topo-row">
+      <div class="topo-node" style="min-width:170px">
+        <div class="tt" style="font-size:13px">Worker × N</div>
+        <div class="td">environment: cloud</div>
+      </div>
+      <div class="topo-node" style="min-width:170px">
+        <div class="tt" style="font-size:13px">Verifier</div>
+        <div class="td">≠ worker 模型族</div>
+      </div>
+      <div class="topo-node" style="min-width:170px">
+        <div class="tt" style="font-size:13px">Babysitter × stack</div>
+        <div class="td">一 stack 一个，冻结 frontier</div>
+      </div>
+      <div class="topo-node" style="min-width:170px">
+        <div class="tt" style="font-size:13px">Stacker</div>
+        <div class="td">唯一 gt 持有者</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:10px">
+    <div class="card">
+      <h3><span class="badge">Store</span>状态全部外化到磁盘</h3>
+      <ul>
+        <li><span class="m">preferences.md</span> — standing orders 登记处，逐行编号，每条一个约束；spawn/resume 逐字粘贴。</li>
+        <li><span class="m">units.tsv</span> — 每单元一行：id / track / state / branch / PR / head SHA / brief path。</li>
+        <li><span class="m">ledger.tsv</span> — 验证账本，一 verdict 一行，键 = PR 号 + head SHA。</li>
+        <li><span class="m">frontier.json</span> — 计算式 merge frontier（有序 PR 列表 + generation）。</li>
+        <li><span class="m">inbox/</span> · <span class="m">gates.md</span> · <span class="m">decisions.tsv</span> · <span class="m">status.md</span>（从表派生，永不手写）。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-orange">Ledger verdicts</span>验证状态机</h3>
+      <ul>
+        <li><span class="m">live-ui-verified</span> / <span class="m">unit-test-verified</span> / <span class="m">type-check-only</span> / <span class="m">verifier-blocked</span> / <span class="m">verifier-failed</span>。</li>
+        <li>CI 绿是 verdict 的<b>输入</b>，不是 verdict；行为工作必须好于 type-check-only。</li>
+        <li><span class="m">verifier-blocked</span> 不是 pass——环境恢复后 respawn；<span class="m">verifier-failed</span> → 开修复单元，不是重验。</li>
+        <li><b>新 head SHA 作废旧行</b>——restack 后必须重验。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-purple">Queue &amp; Drain</span>排空纪律</h3>
+      <ul>
+        <li>完成通知 → <span class="m">orch inbox push</span> 记账 → 回到手头工作。<b>绝不 inline 深审</b>；需要 review 的完成 = 一个 verifier 单元。</li>
+        <li>四个 drain 点：关键区段结束、track rollup、frontier watcher 唤醒、对人报告之前。</li>
+        <li>每个 drain 分类所有指针（landed / needs-verify / failed / zombie / noise）→ 写行 → <span class="m">orch status</span> → 一条消息发下一波。</li>
+        <li>drain 回合以三行结束：状态计数、变更、open gates。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="badge b-red">Liveness</span>失败与重试分级</h3>
+      <ul>
+        <li>探活永远只读；<b>永不 resume 一个 agent 去检查它</b>（resume 会重启一个空闲 agent）。</li>
+        <li>按模式重试：cap-hit/OOM → 缩小 scope respawn；网络 → 原样重试；工具错误 → 换模型；未知 → 重试一次；两次后弃单元并重规划。</li>
+        <li>迟到 zombie：先对 frontier 与 ledger 校对，通过 fresh 单元抢救独特发现，绝不盲 merge。</li>
+        <li>连续工具 abort → 停止重试，写终态 handoff（已完成/在哪/恢复命令）并结束运行。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLAYBOOKS ============ -->
+<section id="playbooks">
+  <div class="sec-head"><span class="sec-num">09</span><h2>Playbook 全表（23 个 · 五族）</h2></div>
+  <p class="sec-desc">每个 playbook 的首行都是"所有权声明"——它明确定义了你拥有什么、不拥有什么。这就是决策点 D1/D2 的裁定依据。</p>
+
+  <div class="pb-group">
+    <h4>理解 & 诊断族 —— 只读或产出诊断，不交付修复</h4>
+    <div class="pb-grid">
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--red)"></span>Investigation</div><div class="d">只读问题：how / why / 是否确定。产出引用式解释或带 tradeoffs 表的建议。</div><span class="file">playbooks/investigation.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--red)"></span>Runtime forensics</div><div class="d">活体插桩诊断症状（泄漏 / 空转 / 毛刺）。交付诊断。</div><span class="file">playbooks/runtime-forensics.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--red)"></span>Trace forensics</div><div class="d">事后 profiling 工件（cpuprofile / trace / spindump / heap）。固定数据集，读不重跑。</div><span class="file">playbooks/trace-forensics.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--red)"></span>Bug fix</div><div class="d">复现 → 二分根因 → architect/interrogate → 委托修复 → 同表面验证。失败 repro 先于修复入史。</div><span class="file">playbooks/bug-fix.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--red)"></span>Perf issue</div><div class="d">测量到的一次性慢。7 条性能咒语按序，最早达成即止。每数过 checklist。</div><span class="file">playbooks/perf-issue.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--red)"></span>Hillclimb</div><div class="d">对单一指标的持续科学改进：冻结 harness、决策日志、一 win 一 commit、拒绝 plateau 止步。</div><span class="file">playbooks/hillclimb.md</span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>构建族 —— 交付代码变更</h4>
+    <div class="pb-grid">
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--green)"></span>Feature</div><div class="d">新/变行为。先命名数据形状；throughput checkpoint；多合法形状 → arena。</div><span class="file">playbooks/feature.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--green)"></span>Refactoring</div><div class="d">保行为改结构。先钉契约（characterization/等价 harness），再迁移+删除老 API 一浪完成。</div><span class="file">playbooks/refactoring.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--green)"></span>Prototype</div><div class="d">为决策服务的抛掷草图。唯一质量不重要、Laziness 反转的 playbook。输出=决策+工件。</div><span class="file">playbooks/prototype.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--green)"></span>Visual parity</div><div class="d">像素级等价。baseline 是规格不许动；image diff 归零；一组件一 PR。</div><span class="file">playbooks/visual-parity.md</span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>交付族 —— PR 与落地</h4>
+    <div class="pb-grid">
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--blue)"></span>Opening a PR</div><div class="d">所有 playbook 的终点。worktree / deslop / no-comments / Conventional Commits / briefing body。</div><span class="file">playbooks/opening-a-pr.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--blue)"></span>Babysit</div><div class="d">驱 PR/stack 到 merge-ready。4 模式；CI 分级；Bugbot 怀疑论。不授权 merge。</div><span class="file">playbooks/babysit.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--blue)"></span>Shipping</div><div class="d">独立逐 PR 验证 → patch-id 复核 → 只落地自底部起的连续已验证段。</div><span class="file">playbooks/shipping.md</span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>自主与编排族 —— 长时/项目级/离线</h4>
+    <div class="pb-grid">
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--purple)"></span>Autonomous run</div><div class="d">单谓词长任务。定义退出条件 → /loop 唤醒 → 每迭代最小改动 → 谓词达成才停。</div><span class="file">playbooks/autonomous-run.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--purple)"></span>Orchestrate</div><div class="d">常驻项目程序。Coordinator 不写码；brief 即产品；queue/drain；frontier 安全。</div><span class="file">playbooks/orchestrate.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--purple)"></span>Autopilot-full</div><div class="d">独立 PR 队列直通 merge。每 PR 一 owner；root 每秒级审计 + 每轮 swarm。</div><span class="file">playbooks/autopilot-full.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--purple)"></span>Autopilot-stack</div><div class="d">队列 → 一条线性 stack 交操作员落地。root 唯一拓扑写者。</div><span class="file">playbooks/autopilot-stack.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--purple)"></span>Multi-phase plan</div><div class="d">跨 phase/stack 的计划文件。计划是交付物，不实现；通过 check-plan 脚本后交还。</div><span class="file">playbooks/multi-phase-plan.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--purple)"></span>Session pickup</div><div class="d">恢复/接管先前 agent 的工作。先读 trail，差集出 resume 点，不重做。</div><span class="file">playbooks/session-pickup.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--purple)"></span>Pause safely</div><div class="d">干净暂停：wip commit + 离场 resume note。只有显式要求才执行。</div><span class="file">playbooks/pause-safely.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--purple)"></span>Worktree cleanup</div><div class="d">磁盘回收。唯一无代码审查兜底的破坏性 playbook；wip/在用一律暂停确认。</div><span class="file">playbooks/worktree-cleanup.md</span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>元族 —— 对工具箱自身动手</h4>
+    <div class="pb-grid">
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--cyan)"></span>Authoring a skill</div><div class="d">写/改 SKILL.md。用 create-skill；校验 frontmatter 与引用；怀疑时删除。</div><span class="file">playbooks/authoring-a-skill.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--cyan)"></span>Eval</div><div class="d">盲法测 skill/prompt 变化。去标识环境 + 有机 prompt + 异族 judge + 从 transcript 核验链路。</div><span class="file">playbooks/eval.md</span></div>
+      <div class="pb"><div class="n"><span class="dotc" style="background:var(--cyan)"></span>figure-it-out</div><div class="d">无匹配时的元 playbook：五阶段定制流程（Frame/Design/Loop/Trail/Verify）。</div><span class="file">skills/figure-it-out/SKILL.md</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRINCIPLES ============ -->
+<section id="principles">
+  <div class="sec-head"><span class="sec-num">10</span><h2>原则索引（24 条 · 6 组）</h2></div>
+  <p class="sec-desc">
+    原则是"重新定向 agent"的快捷指令。回复中必须点名：<b>哪个原则塑造了哪个决策、具体改变了什么选择</b>——且只引用本会话真正读过 leaf SKILL.md 的原则。
+  </p>
+
+  <div class="pb-group">
+    <h4>Core · 核心（10）</h4>
+    <div class="pr-list">
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">laziness-protocol</span> <span class="pdesc">偏向删除与最小改动。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">foundational-thinking</span> <span class="pdesc">写逻辑前定核心类型与数据结构。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">redesign-from-first-principles</span> <span class="pdesc">新需求当成第一天就有的基础假设来重设计。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">attack-the-premise</span> <span class="pdesc">≥2 个同前提修复同门失败 → 普查失衡方，质疑前提。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">subtract-before-you-add</span> <span class="pdesc">先删死重，再在更简基座上构建。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">minimize-reader-load</span> <span class="pdesc">数问答之间的层数与隐藏状态；折叠单调用者包装。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">outcome-oriented-execution</span> <span class="pdesc">迁移/重写收敛到目标架构，不用兼容代码撑中间态。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">experience-first</span> <span class="pdesc">用户愉悦优先于实现便利。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">exhaust-the-design-space</span> <span class="pdesc">承诺前造 2-3 个竞争原型并排对比。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--yellow)">core</span><span><span class="pname">build-the-lever</span> <span class="pdesc">造工具（codemod/脚本/生成器）来做或证，工具是可复跑的评审工件。</span></span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>Architecture · 架构（6）</h4>
+    <div class="pr-list">
+      <div class="pr"><span class="g" style="color:var(--blue)">arch</span><span><span class="pname">model-the-domain</span> <span class="pdesc">领域编进结构（状态机/注册表/reducer），别散成条件分支。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--blue)">arch</span><span><span class="pname">boundary-discipline</span> <span class="pdesc">卫兵集中在系统边界；内部信任类型，业务逻辑纯函数化。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--blue)">arch</span><span><span class="pname">type-system-discipline</span> <span class="pdesc">非法状态不可表示；品牌化原语；边界处解析外部数据。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--blue)">arch</span><span><span class="pname">make-operations-idempotent</span> <span class="pdesc">崩溃与重试之间收敛到同一终态。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--blue)">arch</span><span><span class="pname">migrate-callers-then-delete-legacy-apis</span> <span class="pdesc">一波迁移完调用者并删除旧 API，不留兼容层。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--blue)">arch</span><span><span class="pname">separate-before-serializing-shared-state</span> <span class="pdesc">先消除共享；只有真不变量才结构化串行。</span></span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>Verification · 验证（5）</h4>
+    <div class="pr-list">
+      <div class="pr"><span class="g" style="color:var(--green)">verify</span><span><span class="pname">prove-it-works</span> <span class="pdesc">对真实工件验证——跑功能、读真实值、审 diff，不用代理指标或"能编译"。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--green)">verify</span><span><span class="pname">fix-root-causes</span> <span class="pdesc">症状追到根因再修；先复现；抵抗消音式 nil 守卫。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--green)">verify</span><span><span class="pname">sequence-verifiable-units</span> <span class="pdesc">多步工作切成每步可验证的单元；交付顺序让序列自证。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--green)">verify</span><span><span class="pname">test-behavior-not-implementation</span> <span class="pdesc">像用户那样调代码，断言字面期望值；假测试要重写或删。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--green)">verify</span><span><span class="pname">explain-the-number</span> <span class="pdesc">信任/报告/行动一个数字前：找到限速因子，排除测错对象。</span></span></div>
+    </div>
+  </div>
+
+  <div class="pb-group">
+    <h4>Delegation · 委派（2） + Meta（1）</h4>
+    <div class="pr-list">
+      <div class="pr"><span class="g" style="color:var(--purple)">deleg</span><span><span class="pname">guard-the-context-window</span> <span class="pdesc">bulk 路由给 subagent；主线程留摘要不落原始 payload。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--purple)">deleg</span><span><span class="pname">never-block-on-the-human</span> <span class="pdesc">可逆工作先做后报；确认只留给不可逆动作。</span></span></div>
+      <div class="pr"><span class="g" style="color:var(--cyan)">meta</span><span><span class="pname">encode-lessons-in-structure</span> <span class="pdesc">同一指令写第二遍时 → 编码为 lint / 元数据 / 运行时检查 / 脚本。</span></span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>基于 pstack（github.com/poteto/pstack 系插件包）源码整理：poteto-mode SKILL.md（147 行）、23 个 playbook 文件、swarm / figure-it-out / shipping / babysit 等 skill 与 docs/guide。生成的 HTML 为单文件、零依赖、可离线打开。</p>
+  <p style="margin-top:6px">决策点速查：<b style="color:var(--yellow)">D1</b> 选 playbook → <b style="color:var(--yellow)">D2</b> 扇出结构 → <b style="color:var(--yellow)">D3</b> 模型 → <b style="color:var(--yellow)">D4</b> 问人 vs 自主 → <b style="color:var(--yellow)">D5</b> 暂停红线 → <b style="color:var(--yellow)">D6</b> 验证裁决 → <b style="color:var(--yellow)">D7</b> 交付编排 → <b style="color:var(--yellow)">D8</b> Babysit 模式 → <b style="color:var(--yellow)">D9</b> Forge。</p>
+</footer>
+
+</div>
+</body>
+</html>
