@@ -16,7 +16,8 @@ def scope_parts(scope):
 def overlap(left, right):
     """A wildcard segment can cover descendants; uncertain overlap reserves both."""
     a, b = scope_parts(left), scope_parts(right)
-    for first, second in zip(a, b, strict=False):
+    for index in range(min(len(a), len(b))):
+        first, second = a[index], b[index]
         if any(char in first + second for char in '*?['):
             return True
         if first != second:

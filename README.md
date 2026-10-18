@@ -78,6 +78,10 @@ python3 <skill-dir>/scripts/task.py run <task-dir> --acceptance A1 --evidence ch
   --command '<验证命令>'
 # 收口：生成候选并复用原有完成门
 python3 <skill-dir>/scripts/task.py finish <task-dir>
+# 契约已封存但范围或验收改变时，先修改 contract.md，再执行：
+python3 <skill-dir>/scripts/task.py revise <task-dir> \
+  --reason '说明变化原因' --approved-by '批准人' \
+  --approval-source '可追踪授权来源' --affected-evidence 'A1'
 ```
 
 严格任务还提供 `update`（更新进度、阻塞和恢复）、`capture`（非自动观察前采集相关输入）、`record`（登记实际取得的非自动验收或独立审查报告）和 `summary`（只读生成摘要）。具体参数和完整示例见[验证说明](skills/x-rail/playbooks/verification.md)。摘要核对相关输入，标明过期或无效；登记保留实际观察时间，另记登记时间。报告内容也绑定摘要。脚本不证明人工结论真实、审查独立或验收范围完整。

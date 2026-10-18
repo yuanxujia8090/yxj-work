@@ -24,9 +24,9 @@ done
 
 PI="$TARGET_HOME/.pi/agent"
 SKILLS="$PI/skills"
-# pi 会把 extensions/ 下每个 .ts 都当扩展加载，所以辅助模块放进子目录，用 package.json 的 pi 清单只声明两个入口
+# pi 会把 extensions/ 下每个 .ts 都当扩展加载；两个职责共用一个生命周期入口，避免 handler 覆盖和模块状态隔离。
 EXT="$PI/extensions/x-rail"
-MANIFEST='{\n  "name": "x-rail-extensions",\n  "private": true,\n  "type": "module",\n  "pi": { "extensions": ["./x-failover.ts", "./x-run-guard.ts"] }\n}'
+MANIFEST='{\n  "name": "x-rail-extensions",\n  "private": true,\n  "type": "module",\n  "pi": { "extensions": ["./x-failover.ts"] }\n}'
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP="$PI/v3-backup-$STAMP"
 
@@ -35,7 +35,7 @@ link_of() { printf '%s' "$ROOT/skills/$1"; }
 
 EXT_FILES=(
   constants.ts classify.ts breaker.ts switch.ts compat.ts failback.ts subagent.ts
-  store.ts watchdog.ts guard-core.ts run-files.ts x-failover.ts x-run-guard.ts
+  file-io.ts store.ts watchdog.ts guard-core.ts run-files.ts x-failover.ts x-run-guard.ts
 )
 
 note() { printf '%s\n' "$1"; }
@@ -64,7 +64,7 @@ if [[ "$DRY" -eq 1 ]]; then
   for file in "${EXT_FILES[@]}"; do
     note "复制 $EXT/$file"
   done
-  note "写入 $EXT/package.json（pi 清单：x-failover.ts、x-run-guard.ts）"
+  note "写入 $EXT/package.json（pi 清单：x-failover.ts 单一入口）"
   note "不修改 models.json、settings.json，不运行 skills-cleanup.sh"
   exit 0
 fi

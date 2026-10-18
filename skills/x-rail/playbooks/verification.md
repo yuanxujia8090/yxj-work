@@ -12,6 +12,10 @@
 python3 <skill-dir>/scripts/task.py start <task-dir>
 python3 <skill-dir>/scripts/task.py run <task-dir> --acceptance A1 --evidence behavior-1 --workspace <execution-root> --input src/changed.py --input tests/test_changed.py --expect 'Tests 4 passed' --command 'python3 tests/test_changed.py'
 python3 <skill-dir>/scripts/task.py finish <task-dir>
+# 契约已封存但范围或验收改变时，先修改 contract.md，再执行：
+python3 <skill-dir>/scripts/task.py revise <task-dir> \
+  --reason '说明变化原因' --approved-by '批准人' \
+  --approval-source '可追踪授权来源' --affected-evidence 'A1'
 ```
 
 - `start`：从已写好的 contract.md 生成 state.md，使用当前时间、契约摘要、not_run 验收和离线记录提示，封存并校验。已有状态拒绝重建；不补过去快照。
@@ -21,7 +25,7 @@ python3 <skill-dir>/scripts/task.py finish <task-dir>
 - `--used`：兼容旧调用的可选观察值。它只写入 `tool_count_note`，不参与预算、完成门或效率结论。没有宿主真实计数时不要填写。
 - `finish`：从当前状态生成唯一候选，调用原 complete 的全部检查。只生成完成时间，不刷新旧验证时间，不修改验收、审查或授权。失败保留正式状态与索引，候选留在 tmp/。
 
-严格任务不限成本时，在 contract 首个二级标题前记录 `cost_control: unlimited`（取消成本上限）和 `cost_authorization: 当前用户原话及可追踪来源`。`start` 自动生成 `budget: unlimited`，长任务保留开始时间但不生成默认总期限。检查器按当前已封存契约跳过旧数值预算与总期限的超限检查；仍验证格式、授权来源、无进展、必需验收和证据。未声明策略时沿用默认，`cost_control: default` 也表示默认；状态单独写 unlimited 无法放行。脚本校验来源非空，不判断自然语言或授权真实性。已有任务由执行者按契约变更规则记录用户新授权、提升版本并同步当前状态及受影响证据，不能修改旧快照。
+严格任务不限成本时，在 contract 首个二级标题前记录 `cost_control: unlimited`（取消成本上限）和 `cost_authorization: 当前用户原话及可追踪来源`。授权记录必须包含当前用户明确表达“解除成本限制”“不限制成本”“不计成本”或“成本不限”的原话；“分析并修复”“解除阻塞”“按推荐”不构成不限成本授权。`start` 自动生成 `budget: unlimited`，长任务保留开始时间但不生成默认总期限。检查器按当前已封存契约跳过旧数值预算与总期限的超限检查；仍验证格式、授权来源、无进展、必需验收和证据。未声明策略时沿用默认，`cost_control: default` 也表示默认；状态单独写 unlimited 无法放行。已有任务按契约变更规则记录用户新授权、提升版本并同步当前状态及受影响证据，不能修改旧快照。
 
 证据文件名每次验证使用新名称；旧记录不覆盖。`run` 的默认超时为 300 秒，用于单条命令挂起保护，不是任务成本上限；不限成本时也按操作合理用 `--timeout` 调整；超时保存失败输出并终止该命令进程组。check/complete/finish 只核对资料，不执行证据里的命令。初始化和完成不包含提交、发布或数据库操作。
 

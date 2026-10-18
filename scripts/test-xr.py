@@ -5,6 +5,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +21,6 @@ class XrTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name)
         (self.repo / "README.md").write_text("seed\n")
-        os.chmod(XR, 0o755)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -67,15 +67,30 @@ class XrTests(unittest.TestCase):
         self.assertIn("VERIFIED", verified.stdout)
         again = run(self.repo, "verify", "a")
         self.assertIn("cached", again.stdout)
+        self.assertEqual(run(self.repo, "fail", "a", "--kind", "verify").returncode, 0)
+        self.assertEqual(run(self.repo, "reopen", "a").returncode, 0)
+        changed = run(self.repo, "plan", "add", "a", "A", "--deps", "none", "--files", "src/a.txt", "--verify", "false")
+        self.assertEqual(changed.returncode, 0, changed.stdout + changed.stderr)
+        rerun = run(self.repo, "verify", "a")
+        self.assertIn("FAILED", rerun.stdout)
+        self.assertNotIn("cached", rerun.stdout)
+        self.assertNotEqual(run(self.repo, "done", "a").returncode, 0)
+        self.assertEqual(run(self.repo, "plan", "add", "a", "A", "--deps", "none", "--files", "src/a.txt", "--verify", "true").returncode, 0)
+        self.assertIn("ok next a doing", run(self.repo, "next").stdout)
+        self.assertIn("VERIFIED", run(self.repo, "verify", "a").stdout)
         self.assertEqual(run(self.repo, "done", "a").returncode, 0)
         self.assertIn("unchanged", run(self.repo, "done", "a").stdout)
         failed = run(self.repo, "fail", "c", "--kind", "cap")
         self.assertEqual(failed.returncode, 0, failed.stdout)
+        terminal_fail = run(self.repo, "fail", "c", "--kind", "net")
+        self.assertNotEqual(terminal_fail.returncode, 0)
+        self.assertIn("reopen", terminal_fail.stdout)
         self.assertIn("abandoned", failed.stdout)
         self.assertNotIn("doing", failed.stdout.splitlines()[0])
         units = (self.repo / ".work-docs" / "runs" / (self.repo / ".work-docs" / "runs" / "ACTIVE").read_text().strip() / "units.tsv").read_text()
         self.assertIn("abandoned", units)
         self.assertNotRegex(units, r"^c\t.*\tdoing\t", )
+        self.assertEqual(run(self.repo, "reopen", "c").returncode, 0)
 
     def test_status_idempotent_capsule_and_import(self):
         run_id = self.init()
@@ -92,6 +107,7 @@ class XrTests(unittest.TestCase):
         self.assertLessEqual(len(blob), 2048)
         self.assertIn(b"Done", blob)
         self.assertIn("下一步".encode(), blob)
+        self.assertEqual(blob.count("模型：".encode()), 1)
         task = self.repo / ".work-docs" / "tasks" / "old-1"
         task.mkdir(parents=True)
         contract = task / "contract.md"
@@ -105,14 +121,34 @@ class XrTests(unittest.TestCase):
         self.assertEqual(hashes[state], hashlib.sha256(state.read_bytes()).hexdigest())
         self.assertIn("units=", imported.stdout)
 
-    def test_gate_decide_and_bad_verb(self):
+    def test_close_and_safe_import_id(self):
         self.init()
+        bad = run(self.repo, "import", "../outside")
+        self.assertNotEqual(bad.returncode, 0)
+        closed = run(self.repo, "close")
+        self.assertEqual(closed.returncode, 0, closed.stdout + closed.stderr)
+        self.assertFalse((self.repo / ".work-docs" / "runs" / "ACTIVE").exists())
+
+    def test_gate_decide_and_bad_verb(self):
+        run_id = self.init()
+        run_dir = self.repo / ".work-docs" / "runs" / run_id
         self.assertEqual(run(self.repo, "decide", "用 TSV", "--why", "脚本写状态").returncode, 0)
         again = run(self.repo, "decide", "用 TSV", "--why", "脚本写状态")
         self.assertIn("unchanged", again.stdout)
         self.assertEqual(run(self.repo, "plan", "add", "g", "G", "--deps", "none", "--files", "README.md", "--verify", "true").returncode, 0)
-        self.assertIn("ok gate", run(self.repo, "gate", "要不要改接口", "--default", "不改", "--unit", "g").stdout)
-        self.assertIn("unchanged", run(self.repo, "gate", "要不要改接口", "--default", "不改", "--unit", "g").stdout)
+        self.assertIn("ok gate", run(self.repo, "gate", "add", "要不要改接口", "--default", "不改", "--unit", "g").stdout)
+        self.assertIn("unchanged", run(self.repo, "gate", "add", "要不要改接口", "--default", "不改", "--unit", "g").stdout)
+        gates = (run_dir / "gates.md").read_text()
+        self.assertEqual(gates.count("## G1\n"), 1)
+        before = gates
+        rejected = run(self.repo, "gate", "add", "不能改已完成", "--default", "跳过", "--unit", "missing")
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertEqual(before, (run_dir / "gates.md").read_text())
+        resolved = run(self.repo, "gate", "resolve", "G10", "--default")
+        self.assertNotEqual(resolved.returncode, 0)
+        resolved = run(self.repo, "gate", "resolve", "G1", "--default")
+        self.assertEqual(resolved.returncode, 0, resolved.stdout + resolved.stderr)
+        self.assertIn("\ng\tG\ttodo\t", (run_dir / "units.tsv").read_text())
         bad = run(self.repo, "nope")
         self.assertNotEqual(bad.returncode, 0)
         self.assertIn("正确命令", bad.stdout)
@@ -133,10 +169,12 @@ class XrTests(unittest.TestCase):
         state.write_text(json.dumps({"version": 1, "disabled": False, "breakers": {"openai26/gpt-6.1-sol": {"open": True}}, "runs": {}}))
         env = os.environ.copy()
         env["X_FAILOVER_STATE"] = str(state)
-        claimed = []
-        for _ in range(4):
+        def claim():
             result = subprocess.run([str(XR), "--repo", str(self.repo), "next"], capture_output=True, text=True, env=env)
-            claimed.append(result.stdout.strip())
+            return result.stdout.strip()
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            claimed = list(pool.map(lambda _: claim(), range(4)))
         doing = [line for line in claimed if " doing" in line]
         self.assertEqual(len(doing), 1)
 

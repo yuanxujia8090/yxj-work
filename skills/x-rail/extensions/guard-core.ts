@@ -62,30 +62,19 @@ export function renderHandoff(runId: string, reason: string): string {
     "xr status",
     "```",
     "",
-    "恢复：/x-rail resume，然后读 capsule.md。",
+    "恢复：读 capsule.md，再执行 xr status；不要重做已有 VERIFIED 单元。",
     "",
   ].join("\n");
 }
 
-export type BoundaryChoice = "continue" | "new-session" | "subagent" | "compact";
+export type BoundaryChoice = "continue" | "compact";
 
-/**
- * PHASE-BOUNDARIES 顺序：continue、另开会话、子代理、压缩。
- * 扩展不能可靠地新建会话时，new-session 由调用方改走 compact。
- */
 export function boundaryDecision(input: {
   contextTokens: number | null;
   provider: string;
-  nextDependsOnReasoning: boolean;
-  nextUnrelated: boolean;
-  nextCanBeUnattended: boolean;
 }): BoundaryChoice {
   const limit = input.provider === "bai" ? BAI_CONTINUE_TOKENS : OPENAI_CONTINUE_TOKENS;
-  const enough = input.contextTokens !== null && input.contextTokens <= limit;
-  if (input.nextDependsOnReasoning && enough) return "continue";
-  if (input.nextUnrelated) return "new-session";
-  if (input.nextCanBeUnattended) return "subagent";
-  return "compact";
+  return input.contextTokens !== null && input.contextTokens <= limit ? "continue" : "compact";
 }
 
 export function compactText(capsule: string, supplement: string | null): string {
@@ -96,7 +85,7 @@ export function compactText(capsule: string, supplement: string | null): string 
 
 export function resumeHint(runId: string | null): string | null {
   if (!runId) return null;
-  return `有未完成的 run ${runId}。输入 /x-rail resume，或先读 .work-docs/runs/${runId}/capsule.md。`;
+  return `有未完成的 run ${runId}。先读 .work-docs/runs/${runId}/capsule.md，再执行 xr status。`;
 }
 
 export function watchdogDue(lastTokenAt: number, now: number, abortedByUser: boolean): boolean {

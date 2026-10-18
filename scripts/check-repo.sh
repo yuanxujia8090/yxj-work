@@ -72,4 +72,7 @@ import task_checks
 assert task_checks.STATUSES == {'in_progress','done','blocked','stopped','cancelled'}
 PY
 
+python3 "$ROOT/scripts/test-xr.py" >/dev/null || fail 'test-xr failed'
+bash "$ROOT/scripts/test-install-v3.sh" >/dev/null || fail 'test-install-v3 failed'
+
 printf 'check-repo: passed\n'

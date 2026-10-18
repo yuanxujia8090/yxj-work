@@ -10,7 +10,7 @@ import { decideFailback } from "./failback.ts";
 import { concurrencyLimits, dispatchModel, reviewerFamily } from "./subagent.ts";
 import { decideSwitch, freshMemory, memoryAfter } from "./switch.ts";
 import { loadState, saveState } from "./store.ts";
-import { compactText, nextStall, shouldContinue, watchdogDue } from "./guard-core.ts";
+import { boundaryDecision, compactText, nextStall, shouldContinue, watchdogDue } from "./guard-core.ts";
 import { WATCHDOG_MS } from "./constants.ts";
 
 const primary = { provider: "openai26", id: "gpt-6.1-sol" };
@@ -152,5 +152,9 @@ assert.ok(summary.includes("对话要点"));
 assert.ok(summary.length < capsule.length + 4000);
 assert.equal(watchdogDue(0, WATCHDOG_MS, false), true);
 assert.equal(watchdogDue(0, WATCHDOG_MS, true), false);
+assert.equal(boundaryDecision({ contextTokens: 100_000, provider: "openai26" }), "continue");
+assert.equal(boundaryDecision({ contextTokens: 200_000, provider: "openai26" }), "compact");
+assert.equal(boundaryDecision({ contextTokens: 300_000, provider: "bai" }), "continue");
+assert.equal(boundaryDecision({ contextTokens: 400_000, provider: "bai" }), "compact");
 
 console.log("failover tests passed");

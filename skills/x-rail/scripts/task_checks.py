@@ -17,6 +17,7 @@ ISO_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2}
 SENSITIVE_ACTIONS = {"irreversible", "cost", "external-publish", "scope-change"}
 STATUSES = {"in_progress", "done", "blocked", "stopped", "cancelled"}
 STAGES = {"fast-answer", "investigate", "research", "design", "plan", "exec", "bugfix", "review", "ops", "mixed", "handoff"}
+UNLIMITED_AUTHORIZATION = re.compile(r"(?<!不要)(?:解除成本限制|不限制成本|不计成本|成本不限)")
 
 
 def fail(message: str) -> NoReturn:
@@ -230,8 +231,10 @@ def check_contract(task_dir: Path, mode: str = "ready", strict: bool = True) -> 
         fail(f"invalid task_type: {fields['task_type']}")
     if fields.get('cost_control', 'default') not in {'default', 'unlimited'}:
         fail('invalid cost_control; expected default or unlimited')
-    if fields.get('cost_control') == 'unlimited' and fields.get('cost_authorization', '').strip() in {'', 'none'}:
-        fail('unlimited cost_control requires cost_authorization from current user')
+    if fields.get('cost_control') == 'unlimited':
+        authorization = fields.get('cost_authorization', '').strip()
+        if authorization in {'', 'none'} or not UNLIMITED_AUTHORIZATION.search(authorization):
+            fail('cost_authorization must explicitly authorize removing cost limits')
     if fields["risk"] not in {"low", "medium", "high"}:
         fail(f"invalid risk: {fields['risk']}")
     if fields["review_policy"] not in {"auto", "user-confirm", "full-review"}:

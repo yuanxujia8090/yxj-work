@@ -1,13 +1,15 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { AgentBeforeSettleEvent, ExtensionAPI, ExtensionContext, SessionBoundaryDraft } from "@earendil-works/pi-coding-agent";
 import { PRIMARY, modelKey } from "./constants.ts";
 import { classifyError, assistantErrorText } from "./classify.ts";
 import { noteFailback, noteProbe, observe } from "./breaker.ts";
 import { decideFailback } from "./failback.ts";
 import { planSwitch } from "./compat.ts";
-import { decideSwitch, memoryAfter } from "./switch.ts";
-import { breakerFor, loadState, memoryFor, saveState, statePath, type Persisted } from "./store.ts";
+import { decideSwitch, freshMemory, memoryAfter } from "./switch.ts";
+import { breakerFor, loadState, memoryFor, statePath, updateState, type Persisted } from "./store.ts";
 import { appendEvent, findActiveRun, readBoundary } from "./run-files.ts";
-import { takeWatchdog } from "./watchdog.ts";
+import { guardBoundary, registerGuardLifecycle } from "./x-run-guard.ts";
+
+let sessionMemory = freshMemory();
 
 function currentModel(ctx: { model?: { provider: string; id: string } | undefined }): { provider: string; id: string } {
   if (ctx.model?.provider && ctx.model?.id) return { provider: ctx.model.provider, id: ctx.model.id };
@@ -26,6 +28,18 @@ function statusText(state: Persisted): string {
 }
 
 export default function (pi: ExtensionAPI) {
+  registerGuardLifecycle(pi, async (ctx) => {
+    const target = ctx.modelRegistry.find("bai", "deepseek-v4.1-flash");
+    if (!target || !(await pi.setModel(target))) {
+      ctx.ui.notify("看门狗判定模型无响应，但找不到可用兜底模型；已停止自动续跑。", "error");
+      return;
+    }
+    pi.setThinkingLevel("high");
+    pi.sendMessage(
+      { customType: "x-failover", content: "[x-failover] 看门狗检测到模型无响应，已切换兜底模型。继续当前工作。", display: true },
+      { triggerTurn: true },
+    );
+  });
   pi.registerCommand("x-failover", {
     description: "查看或开关模型降级",
     handler: async (args, ctx) => {
@@ -33,14 +47,12 @@ export default function (pi: ExtensionAPI) {
       const state = loadState(file);
       const cmd = args.trim();
       if (cmd === "off") {
-        state.disabled = true;
-        saveState(file, state);
+        updateState(file, (latest) => { latest.disabled = true; });
         ctx.ui.notify("x-failover 已关闭。熔断记录还在。", "warning");
         return;
       }
       if (cmd === "on") {
-        state.disabled = false;
-        saveState(file, state);
+        updateState(file, (latest) => { latest.disabled = false; });
         ctx.ui.notify("x-failover 已打开。", "info");
         return;
       }
@@ -52,28 +64,29 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  pi.on("session_start", async () => {
+    sessionMemory = freshMemory();
+  });
   pi.on("tool_result", async (_event, ctx) => {
     const located = findActiveRun(ctx.cwd);
     if (!located) return;
     const file = statePath();
-    const state = loadState(file);
-    const memory = memoryFor(state, located.id);
-    memory.toolCallsSinceFailover += 1;
-    state.runs[located.id] = memory;
-    saveState(file, state);
+    updateState(file, (state) => {
+      const memory = memoryFor(state, located.id);
+      state.runs[located.id] = { ...memory, toolCallsSinceFailover: memory.toolCallsSinceFailover + 1 };
+    });
   });
 
-  pi.on("agent_before_settle", async (event, ctx) => {
+  pi.on("agent_before_settle", async (event: AgentBeforeSettleEvent, ctx: ExtensionContext) => {
     const file = statePath();
     const state = loadState(file);
     const located = findActiveRun(ctx.cwd);
-    const runId = located?.id ?? "session";
-    const memory = memoryFor(state, runId);
+    const memory = located ? memoryFor(state, located.id) : sessionMemory;
     const current = currentModel(ctx);
+    let needsCompaction = false;
     if (event.outcome === "completed" && located && ctx.model?.provider === "bai") {
       const mark = readBoundary(located.dir);
       if (mark && mark.nonce !== state.boundaryNonce) {
-        state.boundaryNonce = mark.nonce;
         const usage = ctx.getContextUsage();
         const back = decideFailback({
           now: Date.now(),
@@ -85,16 +98,17 @@ export default function (pi: ExtensionAPI) {
           contextTokens: usage?.tokens ?? null,
           probeAvailable: process.env.X_FAILOVER_PROBE === "1",
         });
-        saveState(file, state);
+        needsCompaction = back.action === "compact-then-switch-back";
+        updateState(file, (latest) => { latest.boundaryNonce = mark.nonce; });
         if (back.action !== "stay") {
-          if (back.action === "compact-then-switch-back") ctx.compact({ customInstructions: "切回前只保留胶囊。" });
           const primary = ctx.modelRegistry.find(PRIMARY.provider, PRIMARY.id);
           if (primary) {
             const switched = await pi.setModel(primary);
             if (switched) {
-              const key = modelKey(PRIMARY.provider, PRIMARY.id);
-              state.breakers[key] = noteFailback(breakerFor(state, key), Date.now());
-              saveState(file, state);
+              updateState(file, (latest) => {
+                const key = modelKey(PRIMARY.provider, PRIMARY.id);
+                latest.breakers[key] = noteFailback(breakerFor(latest, key), Date.now());
+              });
               appendEvent(located.dir, { type: "failback", ts: new Date().toISOString(), reason: back.reason });
               pi.appendEntry("x-failover", { action: "failback", reason: back.reason });
             }
@@ -115,7 +129,7 @@ export default function (pi: ExtensionAPI) {
     const classified = classifyError({
       stopReason: event.outcome === "aborted" ? "aborted" : extracted.stopReason,
       text: extracted.text,
-      watchdog: takeWatchdog(),
+      watchdog: false,
     });
     if (!state.disabled && (classified.klass === "E1" || classified.klass === "E3" || classified.klass === "E5" || classified.klass === "E2")) {
       const key = modelKey(current.provider, current.id);
@@ -130,9 +144,23 @@ export default function (pi: ExtensionAPI) {
       errorText: extracted.text,
     });
     const planned = planSwitch(decision, process.env.X_FAILOVER_REPLAY_COMPATIBLE !== "0");
-    state.runs[runId] = memoryAfter(memory, decision);
-    saveState(file, state);
-    if (planned.action === "ignore") return;
+    updateState(file, (latest) => {
+      if (!latest.disabled && (classified.klass === "E1" || classified.klass === "E3" || classified.klass === "E5" || classified.klass === "E2")) {
+        const key = modelKey(current.provider, current.id);
+        latest.breakers[key] = observe(breakerFor(latest, key), classified.klass, Date.now()).state;
+      }
+      if (located) {
+        latest.runs[located.id] = memoryAfter(memoryFor(latest, located.id), decision);
+      } else {
+        sessionMemory = memoryAfter(sessionMemory, decision);
+      }
+    });
+    if (planned.action === "ignore") {
+      const guard = await guardBoundary(event, ctx);
+      if (!guard && needsCompaction) return { continue: true, entries: [{ type: "compaction", summary: "切回主模型。恢复状态以 capsule.md 和 ledger.tsv 为准。", firstKeptEntryId: null }] };
+      if (guard && needsCompaction) return { continue: true, entries: [{ type: "compaction", summary: "切回主模型。恢复状态以 capsule.md 和 ledger.tsv 为准。", firstKeptEntryId: null }, ...guard.entries] };
+      return guard;
+    }
     const record = { class: classified.klass, action: planned.action, from: modelKey(current.provider, current.id), ts: new Date().toISOString() };
     pi.appendEntry("x-failover", record);
     if (located) appendEvent(located.dir, { type: planned.action, ...record });
@@ -162,20 +190,23 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     pi.setThinkingLevel("high");
-    if (planned.action === "compact-then-switch") ctx.compact({ customInstructions: "只保留胶囊里的状态指针。" });
     const content = "message" in planned ? planned.message : "";
-    return {
-      continue: true,
-      entries: [{ type: "custom_message" as const, customType: "x-failover", content, display: true }],
-    };
+    const entries: SessionBoundaryDraft[] = [];
+    if (planned.action === "compact-then-switch") {
+      entries.push({ type: "compaction", summary: "跨模型切换。恢复状态以 capsule.md 和 ledger.tsv 为准。", firstKeptEntryId: null });
+    }
+    entries.push({ type: "custom_message", customType: "x-failover", content, display: true });
+    const guard = await guardBoundary(event, ctx);
+    if (guard) entries.push(...guard.entries);
+    return { continue: true, entries };
   });
 
 }
 
 export function applyProbe(ok: boolean): void {
   const file = statePath();
-  const state = loadState(file);
-  const key = modelKey(PRIMARY.provider, PRIMARY.id);
-  state.breakers[key] = noteProbe(breakerFor(state, key), ok);
-  saveState(file, state);
+  updateState(file, (state) => {
+    const key = modelKey(PRIMARY.provider, PRIMARY.id);
+    state.breakers[key] = noteProbe(breakerFor(state, key), ok);
+  });
 }

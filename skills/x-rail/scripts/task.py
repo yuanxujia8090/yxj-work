@@ -129,6 +129,104 @@ def start(task_dir: Path) -> None:
         output.write(text)
 
 
+def atomic_bytes(path: Path, data: bytes) -> None:
+    temporary = path.with_name(f'.{path.name}.{uuid.uuid4().hex}.tmp')
+    try:
+        with temporary.open('xb') as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def revise(task_dir: Path, args) -> None:
+    task_dir = Path(task_dir).resolve()
+    contract_path = task_dir / 'contract.md'
+    state_path = task_dir / 'state.md'
+    audit = task_dir / 'audit'
+    if contract_path.is_symlink() or state_path.is_symlink():
+        raise ValueError('contract and state must not be symlinks')
+    data = task_checks.check_contract(task_dir, mode='ready')
+    current_revision = int(data['fields']['contract_revision'])
+    snapshots = sorted(audit.glob('contract-r[0-9]*.md'))
+    if not snapshots:
+        raise ValueError('cannot revise without an existing contract snapshot')
+    def snapshot_revision(path: Path) -> int:
+        match = re.fullmatch(r'contract-r(\d+)\.md', path.name)
+        if not match:
+            raise ValueError(f'invalid contract snapshot name: {path.name}')
+        return int(match.group(1))
+
+    latest = max(snapshots, key=snapshot_revision)
+    latest_revision = snapshot_revision(latest)
+    original_contract = contract_path.read_bytes()
+    previous_contract = latest.read_bytes()
+    old_contract_hash = hashlib.sha256(previous_contract).hexdigest()
+    if original_contract == previous_contract:
+        raise ValueError('contract has no changes to revise')
+    if current_revision != latest_revision:
+        raise ValueError('edit contract content only; revise updates contract_revision')
+    original_state = state_path.read_bytes()
+    old_state, _, _ = task_checks._parse_state(state_path)
+    new_revision = latest_revision + 1
+    contract_text = state_text(original_contract.decode(), {'contract_revision': str(new_revision)})
+    change_path = audit / f'contract-change-r{new_revision}.md'
+    snapshot_path = audit / f'contract-r{new_revision}.md'
+    if change_path.exists() or snapshot_path.exists():
+        raise ValueError(f'contract revision already exists: {new_revision}')
+    for value in [args.reason, args.approved_by, args.approval_source, args.affected_evidence]:
+        cell(value)
+    if '## Contract Changes\n' not in contract_text:
+        raise ValueError('contract missing Contract Changes section')
+    changes = contract_text.split('## Contract Changes\n', 1)
+    section = changes[1]
+    section = section.replace('- none', f'- audit/contract-change-r{new_revision}.md', 1)
+    if f'audit/contract-change-r{new_revision}.md' not in section:
+        section = section.rstrip() + f'\n- audit/contract-change-r{new_revision}.md\n'
+    contract_text = changes[0] + '## Contract Changes\n' + section
+    change = (f'old_revision: {latest_revision}\nnew_revision: {new_revision}\n'
+              f'old_value: sha256:{old_contract_hash}\nnew_value: sha256:{hashlib.sha256(contract_text.encode()).hexdigest()}\nreason: {args.reason}\n'
+              f'approved_by: {args.approved_by}\napproval_source: {args.approval_source}\n'
+              f'affected_evidence: {args.affected_evidence}\n')
+    stale = []
+    for line in state_path.read_text().splitlines():
+        if line.startswith('required_verification: '):
+            parts = line[len('required_verification: '):].split()
+            if any(part.startswith('evidence=') for part in parts):
+                stale.append(' '.join(parts))
+    updates = {
+        'contract_revision': str(new_revision),
+        'contract_fingerprint': hashlib.sha256(contract_text.encode()).hexdigest(),
+        'updated_at': now(),
+        'next_action': '重新验证受契约修订影响的验收',
+        'transition_reason': f'契约修订为 r{new_revision}，旧证据保留但不再作为当前通过依据',
+        'stale_evidence': f'r{latest_revision}: ' + ('; '.join(stale) if stale else 'none'),
+    }
+    if old_state.get('status') == 'done':
+        updates['status'] = 'in_progress'
+    revised_state = state_text(original_state.decode(), updates)
+    revised_state = re.sub(r'^(required_verification: [^ ]+) status=(?:passed|failed|blocked)(.*)$', r'\1 status=not_run\2', revised_state, flags=re.M)
+    revised_state = re.sub(r'^(work_item_state:[^|]+\|status=)verified(\|)', r'\1awaiting_verification\2', revised_state, flags=re.M)
+    try:
+        atomic_bytes(contract_path, contract_text.encode())
+        atomic_bytes(change_path, change.encode())
+        atomic_bytes(snapshot_path, contract_text.encode())
+        task_checks.check_contract(task_dir, mode='seal')
+        candidate = candidate_file(task_dir, revised_state)
+        task_checks.check_state(task_dir, candidate, validate_inputs=False)
+        os.replace(candidate, state_path)
+    except Exception:
+        atomic_bytes(contract_path, original_contract)
+        if change_path.exists():
+            change_path.unlink()
+        if snapshot_path.exists():
+            snapshot_path.unlink()
+        raise
+
+
 def finish(task_dir: Path, used: int | None = None) -> None:
     fields = task_checks.check_state(task_dir)
     if fields['status'] != 'in_progress':
@@ -488,6 +586,12 @@ def main() -> int:
     p = sub.add_parser('finish', help='prepare a completion candidate and reuse strict checks')
     p.add_argument('task_dir')
     p.add_argument('--used', type=int, help='optional executor observation; not a completion or budget gate')
+    p = sub.add_parser('revise', help='revise a sealed contract and invalidate current evidence')
+    p.add_argument('task_dir')
+    p.add_argument('--reason', required=True)
+    p.add_argument('--approved-by', required=True)
+    p.add_argument('--approval-source', required=True)
+    p.add_argument('--affected-evidence', default='none')
     p = sub.add_parser('run', help='run an automatic verification against bound inputs')
     p.add_argument('task_dir')
     p.add_argument('--acceptance', required=True)
@@ -576,6 +680,8 @@ def main() -> int:
             run_verification(task_dir, args)
         elif args.command == 'finish':
             finish(task_dir, args.used)
+        elif args.command == 'revise':
+            revise(task_dir, args)
         else:
             candidate = Path(args.candidate)
             complete(task_dir, candidate)

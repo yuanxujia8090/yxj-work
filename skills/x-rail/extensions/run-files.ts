@@ -2,18 +2,23 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { writeAtomic } from "./file-io.ts";
 
 export interface ActiveRun {
   id: string;
   dir: string;
 }
 
+const RUN_ID = /^\d{8}-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*(?:-\d+)?$/;
+
 export function findActiveRun(cwd: string): ActiveRun | null {
-  const pointer = path.join(cwd, ".work-docs", "runs", "ACTIVE");
+  const root = path.resolve(cwd, ".work-docs", "runs");
+  const pointer = path.join(root, "ACTIVE");
   try {
     const id = fs.readFileSync(pointer, "utf8").trim();
-    if (!id) return null;
-    const dir = path.join(cwd, ".work-docs", "runs", id);
+    if (!RUN_ID.test(id)) return null;
+    const dir = path.resolve(root, id);
+    if (path.dirname(dir) !== root && !dir.startsWith(`${root}${path.sep}`)) return null;
     if (!fs.existsSync(path.join(dir, "RUN.md"))) return null;
     return { id, dir };
   } catch {
@@ -22,7 +27,8 @@ export function findActiveRun(cwd: string): ActiveRun | null {
 }
 
 export function appendEvent(dir: string, record: Record<string, unknown>): void {
-  fs.appendFileSync(path.join(dir, "events.jsonl"), `${JSON.stringify(record)}\n`);
+  const file = path.join(dir, "events.jsonl");
+  fs.appendFileSync(file, `${JSON.stringify(record)}\n`, { encoding: "utf8", mode: 0o600 });
 }
 
 export function readCapsule(dir: string): string {
@@ -47,7 +53,7 @@ function readOrEmpty(file: string): string {
   }
 }
 
-export function runSnapshot(dir: string, id: string): {
+export function runSnapshot(dir: string): {
   doneMet: boolean;
   allBlockedByGate: boolean;
 } {
@@ -110,7 +116,7 @@ export function loadGuardMemory(dir: string): GuardMemory {
 }
 
 export function saveGuardMemory(dir: string, memory: GuardMemory): void {
-  fs.writeFileSync(guardMemoryPath(dir), JSON.stringify(memory));
+  writeAtomic(guardMemoryPath(dir), `${JSON.stringify(memory)}\n`);
 }
 
 export interface BoundaryMark {

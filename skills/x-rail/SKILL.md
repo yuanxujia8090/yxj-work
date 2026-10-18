@@ -8,7 +8,7 @@ description: 按交付结果分流的任务入口；长任务读阶段卡并用 
 <skill name="x-rail">
   <purpose>先按交付结果选路径，再按失败代价和恢复需求选择普通模式或证据模式。普通任务先读、最小实施、实际验证、交付；证据模式保存契约、状态、验收证据和输入摘要。旧“严格记录/严格验证”字段保持兼容。</purpose>
   <authority source="current-user-instructions" sensitive-actions="irreversible,cost,external-publish,scope-change" readonly-no-files="true" delegation="default-active">调用本入口即授权当前目标范围内默认主动委派完整执行单元；宿主限制与用户禁止优先，短小且交接成本更高可直接完成。不扩大需求范围。不可逆、花钱、对外发布、生产变更和范围变化先确认。用户明确只读时不落盘。调用本入口不取消权限、宿主限制或必过验收；用户已批准的同范围目标跨阶段和压缩后继续。</authority>
-  <routing>先按交付结果选路径，不先建记录。长任务从 stages/frame.md 读到 plan、execute、review、land，记账只用 xr。选择路径后读取对应 playbook；bugfix 重点是复现、根因、最小修复、回归。
+  <routing>先按交付结果选路径，不先建记录。跨会话恢复、外部等待、必需依赖汇总或复杂编排时走 stages/frame.md → plan → execute → review → land，并只用 xr 记账；其余任务走对应 playbook 与 task.py。bugfix 重点是复现、根因、最小修复、回归。
     <route name="investigate" playbook="playbooks/investigate.md">现状、定位、恢复。</route>
     <route name="research" playbook="playbooks/research.md">外部事实、产品、市场、用户或技术选型研究。</route>
     <route name="design" playbook="playbooks/design.md">方案设计，不改代码。</route>

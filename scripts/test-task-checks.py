@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pyright: reportMissingImports=false
 """Task protocol tests. Retain synthetic artifacts for inspection."""
 import hashlib
 import importlib.util
@@ -614,12 +615,39 @@ class TaskTests(unittest.TestCase):
                     f'cost_control: {value}\n\n## Acceptance'))
                 with self.assertRaisesRegex(ValueError, 'cost_'):
                     checks.check_contract(self.task)
-        for source in ['', 'none']:
+        for source in ['', 'none', '当前用户指令：分析并修复问题']:
             with self.subTest(source=source):
                 (self.task / 'contract.md').write_text(self.contract.replace('## Acceptance',
                     f'cost_control: unlimited\ncost_authorization: {source}\n\n## Acceptance'))
                 with self.assertRaisesRegex(ValueError, 'cost_authorization'):
                     checks.check_contract(self.task)
+        allowed = self.contract.replace('## Acceptance',
+            'cost_control: unlimited\ncost_authorization: 当前用户明确说：不限制成本\n\n## Acceptance')
+        (self.task / 'contract.md').write_text(allowed)
+        checks.check_contract(self.task)
+
+    def test_revise_preserves_history_invalidates_evidence_and_allows_reverify(self):
+        directory = self.fresh_task()
+        self.assertEqual(self.run_cli('start', str(directory)).returncode, 0)
+        self.assertEqual(self.run_verification(directory, "printf 'actual result\\n'", evidence='before-revise').returncode, 0)
+        old_snapshot = (directory / 'audit/contract-r1.md').read_bytes()
+        contract = (directory / 'contract.md').read_text().replace('objective: 形成一份局部设计说明', 'objective: 修订后的设计说明')
+        (directory / 'contract.md').write_text(contract)
+        revised = self.run_cli(
+            'revise', str(directory), '--reason', '补充验收范围', '--approved-by', 'current user',
+            '--approval-source', 'current user message', '--affected-evidence', 'before-revise',
+        )
+        self.assertEqual(revised.returncode, 0, revised.stderr)
+        self.assertEqual((directory / 'audit/contract-r1.md').read_bytes(), old_snapshot)
+        self.assertTrue((directory / 'audit/contract-r2.md').is_file())
+        self.assertTrue((directory / 'audit/contract-change-r2.md').is_file())
+        state = (directory / 'state.md').read_text()
+        self.assertIn('status: in_progress', state)
+        self.assertIn('contract_revision: 2', state)
+        self.assertIn('required_verification: A1 status=not_run evidence=evidence/before-revise.txt', state)
+        checks.check_contract(directory, mode='locked')
+        self.assertEqual(self.run_verification(directory, "printf 'actual result\\n'", evidence='after-revise').returncode, 0)
+        self.assertEqual(self.run_cli('finish', str(directory)).returncode, 0)
 
     def test_unlimited_state_requires_authorized_contract(self):
         self.assert_bad(self.state.replace('59/60', 'unlimited'), 'cost_authorization')

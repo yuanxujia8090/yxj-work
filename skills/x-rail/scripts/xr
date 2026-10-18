@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -10,6 +11,8 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -19,7 +22,8 @@ import frontier  # noqa: E402
 
 TZ = ZoneInfo("Asia/Shanghai")
 HEADER = ["id", "title", "state", "deps", "scope", "timebox_min", "attempts", "owner", "model", "verify_cmd", "evidence", "updated", "kind"]
-LEDGER = ["unit", "tree_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
+LEDGER = ["unit", "tree_hash", "cmd_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
+LEGACY_LEDGER = ["unit", "tree_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
 DECISIONS = ["ts", "unit", "decision", "reason", "alternatives", "reversible", "by_model"]
 ID_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 SLUG_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
@@ -76,29 +80,74 @@ def read_tsv(path: Path, header: list[str]) -> list[dict[str, str]]:
     return rows
 
 
+def atomic_write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as output:
+            temporary = Path(output.name)
+            output.write(text)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+
+
 def write_tsv(path: Path, header: list[str], rows: list[dict[str, str]]) -> None:
     body = ["\t".join(header)]
     for row in rows:
         body.append("\t".join(cell(row[key]) for key in header))
-    path.write_text("\n".join(body) + "\n")
+    atomic_write_text(path, "\n".join(body) + "\n")
+
+
+@contextmanager
+def run_lock(run: Path):
+    lock_path = run / ".lock"
+    with lock_path.open("a+") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def event(run: Path, payload: dict) -> None:
     payload = {"ts": stamp(), **payload}
-    with (run / "events.jsonl").open("a") as handle:
+    with (run / "events.jsonl").open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+RUN_ID_RE = re.compile(r"\d{8}-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*(?:-\d+)?")
+
+
+def valid_run_id(value: str) -> bool:
+    return bool(RUN_ID_RE.fullmatch(value))
 
 
 def active_id(repo: Path) -> str:
     pointer = repo / ".work-docs" / "runs" / "ACTIVE"
     if not pointer.is_file():
         die("没有 active run。正确命令：xr init <slug>")
-    return pointer.read_text().strip()
+    name = pointer.read_text().strip()
+    if not valid_run_id(name):
+        die(f"ACTIVE 中的 run id 不合法：{name}。只能使用 xr init 生成的 run")
+    return name
 
 
 def run_dir(repo: Path, run_id: str | None = None) -> Path:
+    base = (repo / ".work-docs" / "runs").resolve()
     name = run_id or active_id(repo)
-    path = repo / ".work-docs" / "runs" / name
+    if not valid_run_id(name):
+        die(f"run id 不合法：{name}")
+    path = (base / name).resolve()
+    try:
+        path.relative_to(base)
+    except ValueError:
+        die(f"run 路径越界：{name}")
     if not (path / "RUN.md").is_file():
         die(f"找不到 run {name}。正确命令：xr init <slug>")
     return path
@@ -177,6 +226,7 @@ def is_writer(kind: str) -> bool:
 def tree_hash(repo: Path, scope: str) -> str:
     digest = hashlib.sha256()
     files: list[Path] = []
+    root = repo.resolve()
     for pattern in check_scope(scope):
         if any(char in pattern for char in "*?["):
             files.extend(path for path in repo.glob(pattern) if path.is_file())
@@ -186,13 +236,26 @@ def tree_hash(repo: Path, scope: str) -> str:
                 files.append(candidate)
             elif candidate.is_dir():
                 files.extend(path for path in candidate.rglob("*") if path.is_file())
-    for path in sorted({item.resolve() for item in files}):
-        rel = path.relative_to(repo).as_posix()
+    resolved_files: list[Path] = []
+    for item in sorted({path.resolve() for path in files}):
+        try:
+            item.relative_to(root)
+        except ValueError:
+            die(f"scope 通过软链越出仓库：{item}")
+        resolved_files.append(item)
+    if not resolved_files:
+        die(f"scope 没有匹配文件：{scope}。不能生成 VERIFIED 证据")
+    for path in resolved_files:
+        rel = path.relative_to(root).as_posix()
         digest.update(rel.encode())
         digest.update(b"\0")
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()[:16]
+
+
+def command_hash(command: str) -> str:
+    return hashlib.sha256(command.encode()).hexdigest()[:16]
 
 
 def model_of(run: Path) -> str:
@@ -331,35 +394,38 @@ def cmd_plan_add(args: argparse.Namespace) -> None:
     deps = "none" if args.deps.strip() == "none" else ",".join(part.strip() for part in args.deps.split(",") if part.strip())
     repo = repo_of(args)
     run = run_dir(repo)
-    rows = units(run)
-    known = {row["id"] for row in rows}
-    if deps != "none":
-        missing = [item for item in deps.split(",") if item not in known and item != args.id]
-        if missing:
-            die(f"依赖还不存在：{','.join(missing)}。正确命令：先 xr plan add 依赖，再加这个单元")
-    timebox = str(args.timebox if args.timebox is not None else (25 if kind == "review" else 15 if kind == "research" else 45))
-    fresh = {
-        "id": args.id, "title": cell(args.title), "state": "todo", "deps": deps, "scope": args.files,
-        "timebox_min": timebox, "attempts": "0", "owner": "unassigned", "model": model_of(run),
-        "verify_cmd": cell(args.verify), "evidence": "none", "updated": stamp(), "kind": kind,
-    }
-    replaced = False
-    for index, row in enumerate(rows):
-        if row["id"] == args.id:
-            if row["state"] not in {"todo", "failed", "abandoned"}:
-                die(f"单元 {args.id} 正在 {row['state']}，不能改。正确命令：xr status")
-            fresh["attempts"] = row["attempts"]
-            fresh["evidence"] = row["evidence"]
-            rows[index] = fresh
-            replaced = True
-    if not replaced:
-        rows.append(fresh)
-    if cycles(rows):
-        die("依赖有环，已拒绝。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\"")
-    save_units(run, rows)
-    if len(rows) >= 5 and mode_of(run, rows) == "subagents":
-        record_decision(run, "mode", "不少于 5 个单元，走子代理", "主会话执行", "Y")
-    event(run, {"type": "plan", "unit": args.id, "replaced": replaced})
+    with run_lock(run):
+        rows = units(run)
+        known = {row["id"] for row in rows}
+        if deps != "none":
+            missing = [item for item in deps.split(",") if item not in known and item != args.id]
+            if missing:
+                die(f"依赖还不存在：{','.join(missing)}。正确命令：先 xr plan add 依赖，再加这个单元")
+        timebox = str(args.timebox if args.timebox is not None else (25 if kind == "review" else 15 if kind == "research" else 45))
+        fresh = {
+            "id": args.id, "title": cell(args.title), "state": "todo", "deps": deps, "scope": args.files,
+            "timebox_min": timebox, "attempts": "0", "owner": "unassigned", "model": model_of(run),
+            "verify_cmd": cell(args.verify), "evidence": "none", "updated": stamp(), "kind": kind,
+        }
+        replaced = False
+        for index, row in enumerate(rows):
+            if row["id"] == args.id:
+                if row["state"] in TERMINAL:
+                    die(f"单元 {args.id} 已终态 {row['state']}，先执行 xr reopen {args.id}")
+                if row["state"] not in {"todo", "failed"}:
+                    die(f"单元 {args.id} 正在 {row['state']}，不能改。正确命令：xr status")
+                fresh["attempts"] = row["attempts"]
+                fresh["evidence"] = row["evidence"]
+                rows[index] = fresh
+                replaced = True
+        if not replaced:
+            rows.append(fresh)
+        if cycles(rows):
+            die("依赖有环，已拒绝。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\"")
+        save_units(run, rows)
+        if len(rows) >= 5 and mode_of(run, rows) == "subagents":
+            record_decision(run, "mode", "不少于 5 个单元，走子代理", "主会话执行", "Y")
+        event(run, {"type": "plan", "unit": args.id, "replaced": replaced})
     say(f"ok plan {args.id} {'updated' if replaced else 'added'} units={len(rows)} mode={mode_of(run, rows)}")
 
 
@@ -380,96 +446,125 @@ def overlaps(row: dict[str, str], other: dict[str, str]) -> bool:
 
 def cmd_next(args: argparse.Namespace) -> None:
     run = run_dir(repo_of(args))
-    rows = units(run)
-    readers, writers, total = limits()
-    doing = [row for row in rows if row["state"] == "doing"]
-    if len(doing) >= total:
-        say("ok next none concurrency")
-        return
-    for row in rows:
-        if not ready(row, rows):
-            continue
-        if any(overlaps(row, other) for other in doing):
-            continue
-        writer = is_writer(row["kind"])
-        if writer and sum(1 for item in doing if is_writer(item["kind"])) >= writers:
-            continue
-        if not writer and sum(1 for item in doing if not is_writer(item["kind"])) >= readers:
-            continue
-        row["state"] = "doing"
-        row["updated"] = stamp()
-        save_units(run, rows)
-        event(run, {"type": "next", "unit": row["id"]})
-        say(f"ok next {row['id']} doing")
-        return
+    with run_lock(run):
+        rows = units(run)
+        readers, writers, total = limits()
+        doing = [row for row in rows if row["state"] == "doing"]
+        if len(doing) >= total:
+            say("ok next none concurrency")
+            return
+        for row in rows:
+            if not ready(row, rows):
+                continue
+            if any(overlaps(row, other) for other in doing):
+                continue
+            writer = is_writer(row["kind"])
+            if writer and sum(1 for item in doing if is_writer(item["kind"])) >= writers:
+                continue
+            if not writer and sum(1 for item in doing if not is_writer(item["kind"])) >= readers:
+                continue
+            row["state"] = "doing"
+            row["updated"] = stamp()
+            save_units(run, rows)
+            event(run, {"type": "next", "unit": row["id"]})
+            say(f"ok next {row['id']} doing")
+            return
     say("ok next none")
 
 
 def ledger_rows(run: Path) -> list[dict[str, str]]:
-    return read_tsv(run / "ledger.tsv", LEDGER)
+    path = run / "ledger.tsv"
+    if not path.is_file() or not path.read_text().strip():
+        return []
+    first = path.read_text().splitlines()[0].split("\t")
+    if first == LEDGER:
+        return read_tsv(path, LEDGER)
+    if first != LEGACY_LEDGER:
+        die(f"ledger.tsv 表头不对。正确命令：不要手改 TSV，用 xr verify 重建")
+    rows = read_tsv(path, LEGACY_LEDGER)
+    return [{**row, "cmd_hash": command_hash(row["cmd"])} for row in rows]
 
 
 def cmd_verify(args: argparse.Namespace) -> None:
     repo = repo_of(args)
     run = run_dir(repo)
-    rows = units(run)
-    row = find_unit(rows, args.id)
-    digest = tree_hash(repo, row["scope"])
-    existing = ledger_rows(run)
-    prior = [item for item in existing if item["unit"] == args.id and item["tree_hash"] == digest and item["verdict"] == "VERIFIED"]
-    if prior:
-        say(f"ok verify {args.id} VERIFIED {digest} cached")
-        return
+    with run_lock(run):
+        row = find_unit(units(run), args.id).copy()
+        digest = tree_hash(repo, row["scope"])
+        command = row["verify_cmd"]
+        existing = ledger_rows(run)
+        prior = [item for item in existing if item["unit"] == args.id and item["tree_hash"] == digest
+                 and item.get("cmd_hash") == command_hash(command) and item["verdict"] == "VERIFIED"]
+        if prior:
+            say(f"ok verify {args.id} VERIFIED {digest} cached")
+            return
     timeout = int(args.timeout) if args.timeout else 180
     try:
-        result = subprocess.run(row["verify_cmd"], shell=True, cwd=repo, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(command, shell=True, cwd=repo, capture_output=True, text=True, timeout=timeout)
         code = result.returncode
         output = (result.stdout or "") + (result.stderr or "")
     except subprocess.TimeoutExpired as error:
         code = 124
         output = (error.stdout or "") if isinstance(error.stdout, str) else ""
-    evidence = run / "notes" / f"verify-{args.id}.log"
-    evidence.write_text(output)
-    verdict = "VERIFIED" if code == 0 else "FAILED"
-    existing.append({
-        "unit": args.id, "tree_hash": digest, "verdict": verdict, "cmd": row["verify_cmd"].replace("\t", " "),
-        "exit_code": str(code), "evidence_path": evidence.relative_to(run).as_posix(),
-        "model": row["model"] or model_of(run), "ts": stamp(),
-    })
-    write_tsv(run / "ledger.tsv", LEDGER, existing)
-    if verdict == "VERIFIED" and row["state"] == "doing":
-        row["state"] = "verifying"
-        row["updated"] = stamp()
-        save_units(run, rows)
-    event(run, {"type": "verify", "unit": args.id, "verdict": verdict, "exit": code})
+    with run_lock(run):
+        current_rows = units(run)
+        current = find_unit(current_rows, args.id)
+        current_digest = tree_hash(repo, current["scope"])
+        if current["verify_cmd"] != command or current_digest != digest:
+            code = 125
+            output += "\n验证期间单元判据或文件已变化；本次证据作废，请重新 xr verify。\n"
+        evidence = run / "notes" / f"verify-{args.id}.log"
+        atomic_write_text(evidence, output)
+        verdict = "VERIFIED" if code == 0 else "FAILED"
+        existing = ledger_rows(run)
+        existing.append({
+            "unit": args.id, "tree_hash": digest, "cmd_hash": command_hash(command), "verdict": verdict,
+            "cmd": command.replace("\t", " "), "exit_code": str(code),
+            "evidence_path": evidence.relative_to(run).as_posix(),
+            "model": current["model"] or model_of(run), "ts": stamp(),
+        })
+        write_tsv(run / "ledger.tsv", LEDGER, existing)
+        if verdict == "VERIFIED" and current["state"] == "doing":
+            current["state"] = "verifying"
+            current["updated"] = stamp()
+            save_units(run, current_rows)
+        event(run, {"type": "verify", "unit": args.id, "verdict": verdict, "exit": code})
     say(f"ok verify {args.id} {verdict} {digest}")
 
 
 def verified_now(repo: Path, run: Path, row: dict[str, str]) -> bool:
     digest = tree_hash(repo, row["scope"])
-    return any(item["unit"] == row["id"] and item["tree_hash"] == digest and item["verdict"] == "VERIFIED" for item in ledger_rows(run))
+    command = command_hash(row["verify_cmd"])
+    return any(item["unit"] == row["id"] and item["tree_hash"] == digest
+               and item.get("cmd_hash") == command and item["verdict"] == "VERIFIED"
+               for item in ledger_rows(run))
 
 
 def cmd_done(args: argparse.Namespace) -> None:
     repo = repo_of(args)
     run = run_dir(repo)
-    rows = units(run)
-    row = find_unit(rows, args.id)
-    if row["state"] == "done":
-        say(f"ok done {args.id} unchanged")
-        return
-    if not verified_now(repo, run, row):
-        die(f"没有对应当前文件的 VERIFIED ledger，不能 done。正确命令：xr verify {args.id}")
-    row["state"] = "done"
-    row["updated"] = stamp()
-    save_units(run, rows)
-    (run / "pending-boundary.json").write_text(json.dumps({
-        "nonce": f"{args.id}-{stamp()}",
-        "dependsOnReasoning": False,
-        "unrelated": False,
-        "unattended": False,
-    }))
-    event(run, {"type": "done", "unit": args.id})
+    with run_lock(run):
+        rows = units(run)
+        row = find_unit(rows, args.id)
+        if row["state"] not in {"doing", "verifying", "done", "abandoned"}:
+            die(f"单元 {args.id} 当前是 {row['state']}，只能从 doing/verifying 完成")
+        if row["state"] == "done":
+            say(f"ok done {args.id} unchanged")
+            return
+        if row["state"] == "abandoned":
+            die(f"单元 {args.id} 已终态 abandoned，先执行 xr reopen {args.id}")
+        if not verified_now(repo, run, row):
+            die(f"没有对应当前文件和当前验证命令的 VERIFIED ledger，不能 done。正确命令：xr verify {args.id}")
+        row["state"] = "done"
+        row["updated"] = stamp()
+        save_units(run, rows)
+        atomic_write_text(run / "pending-boundary.json", json.dumps({
+            "nonce": f"{args.id}-{stamp()}",
+            "dependsOnReasoning": False,
+            "unrelated": False,
+            "unattended": False,
+        }))
+        event(run, {"type": "done", "unit": args.id})
     refresh_status(run)
     say(f"ok done {args.id}")
 
@@ -478,26 +573,44 @@ def cmd_fail(args: argparse.Namespace) -> None:
     if args.kind not in FAIL_KINDS:
         die("kind 只能是 cap、net、tool、logic、verify、unknown。正确命令：xr fail <id> --kind net")
     run = run_dir(repo_of(args))
-    rows = units(run)
-    row = find_unit(rows, args.id)
-    attempts = int(row["attempts"]) + 1
-    row["attempts"] = str(attempts)
-    row["evidence"] = f"kind:{args.kind}"
-    row["updated"] = stamp()
-    retry = args.kind in {"net", "tool", "unknown"} and attempts < 2 and args.kind != "cap"
-    if args.kind == "cap":
-        row["state"] = "abandoned"
-        hint = f"xr plan add {args.id}b \"拆小后的标题\" --deps none --files {row['scope']} --verify \"{row['verify_cmd']}\""
-    elif retry:
-        row["state"] = "todo"
-        hint = f"xr next"
-    else:
-        row["state"] = "abandoned"
-        hint = "xr plan add <新id> \"重新规划\" --deps none --files <路径> --verify \"<命令>\""
-    save_units(run, rows)
-    event(run, {"type": "fail", "unit": args.id, "kind": args.kind, "state": row["state"]})
+    with run_lock(run):
+        rows = units(run)
+        row = find_unit(rows, args.id)
+        if row["state"] in TERMINAL:
+            die(f"单元 {args.id} 已终态 {row['state']}，不能 fail；需要重新处理时先 xr reopen {args.id}")
+        attempts = int(row["attempts"]) + 1
+        row["attempts"] = str(attempts)
+        row["evidence"] = f"kind:{args.kind}"
+        row["updated"] = stamp()
+        retry = args.kind in {"net", "tool", "unknown"} and attempts < 2 and args.kind != "cap"
+        if args.kind == "cap":
+            row["state"] = "abandoned"
+            hint = f"xr plan add {args.id}b \"拆小后的标题\" --deps none --files {row['scope']} --verify \"{row['verify_cmd']}\""
+        elif retry:
+            row["state"] = "todo"
+            hint = f"xr next"
+        else:
+            row["state"] = "abandoned"
+            hint = "xr plan add <新id> \"重新规划\" --deps none --files <路径> --verify \"<命令>\""
+        save_units(run, rows)
+        event(run, {"type": "fail", "unit": args.id, "kind": args.kind, "state": row["state"]})
     say(f"ok fail {args.id} {row['state']} attempts={attempts}")
     say(f"正确命令：{hint}")
+
+
+def cmd_reopen(args: argparse.Namespace) -> None:
+    run = run_dir(repo_of(args))
+    with run_lock(run):
+        rows = units(run)
+        row = find_unit(rows, args.id)
+        if row["state"] not in TERMINAL:
+            die(f"单元 {args.id} 当前是 {row['state']}，只有终态才能 reopen")
+        row["state"] = "todo"
+        row["evidence"] = "reopened"
+        row["updated"] = stamp()
+        save_units(run, rows)
+        event(run, {"type": "reopen", "unit": args.id, "from": "terminal"})
+    say(f"ok reopen {args.id} todo")
 
 
 def record_decision(run: Path, unit: str, decision: str, reason: str, reversible: str) -> bool:
@@ -516,7 +629,8 @@ def cmd_decide(args: argparse.Namespace) -> None:
     if not args.text or not args.why:
         die("参数不够。正确命令：xr decide \"决定\" --why \"理由\"")
     run = run_dir(repo_of(args))
-    wrote = record_decision(run, args.unit or "run", args.text, args.why, "Y" if args.reversible else "N")
+    with run_lock(run):
+        wrote = record_decision(run, args.unit or "run", args.text, args.why, "Y" if args.reversible else "N")
     say(f"ok decide {'unchanged' if not wrote else 'recorded'}")
 
 
@@ -524,27 +638,31 @@ def cmd_gate(args: argparse.Namespace) -> None:
     if not args.text or not args.default:
         die("参数不够。正确命令：xr gate \"问题\" --default \"默认做法\"")
     run = run_dir(repo_of(args))
-    text = (run / "gates.md").read_text()
-    if f"- question: {args.text}" in text and "status: open" in text:
-        say("ok gate unchanged")
-        return
-    number = text.count("\n## G") + 1
-    block = (
-        f"## G{number}\n"
-        f"- question: {args.text}\n"
-        f"- default: {args.default}\n"
-        f"- deadline: Land 前无答复即按默认执行\n"
-        f"- units: {args.unit or 'none'}\n"
-        f"- status: open\n\n"
-    )
-    (run / "gates.md").write_text(text + block)
-    if args.unit:
+    with run_lock(run):
+        text = (run / "gates.md").read_text()
+        if f"- question: {args.text}" in text and "status: open" in text:
+            say("ok gate unchanged")
+            return
+        number = text.count("\n## G") + 1
+        block = (
+            f"## G{number}\n"
+            f"- question: {args.text}\n"
+            f"- default: {args.default}\n"
+            f"- deadline: Land 前无答复即按默认执行\n"
+            f"- units: {args.unit or 'none'}\n"
+            f"- status: open\n\n"
+        )
         rows = units(run)
-        row = find_unit(rows, args.unit)
-        row["state"] = "blocked"
-        row["updated"] = stamp()
-        save_units(run, rows)
-    event(run, {"type": "gate", "unit": args.unit or "none"})
+        if args.unit:
+            row = find_unit(rows, args.unit)
+            if row["state"] in TERMINAL:
+                die(f"单元 {args.unit} 已终态 {row['state']}，不能设为 blocked")
+        atomic_write_text(run / "gates.md", text + block)
+        if args.unit:
+            row["state"] = "blocked"
+            row["updated"] = stamp()
+            save_units(run, rows)
+        event(run, {"type": "gate", "unit": args.unit or "none"})
     say(f"ok gate G{number}")
 
 
@@ -564,14 +682,43 @@ def status_body(run: Path) -> str:
 def refresh_status(run: Path) -> str:
     body = status_body(run)
     text = (run / "RUN.md").read_text()
-    (run / "RUN.md").write_text(replace_block(text, "<!-- xr:status:start -->", "<!-- xr:status:end -->", body))
+    atomic_write_text(run / "RUN.md", replace_block(text, "<!-- xr:status:start -->", "<!-- xr:status:end -->", body))
     return body
+
+
+def cmd_gate_resolve(args: argparse.Namespace) -> None:
+    run = run_dir(repo_of(args))
+    with run_lock(run):
+        path = run / "gates.md"
+        text = path.read_text()
+        match = re.search(rf"^## {re.escape(args.gate)}\n.*?(?=^## |\Z)", text, re.S | re.M)
+        if not match:
+            die(f"没有决策门 {args.gate}")
+        start, end = match.span()
+        block = match.group(0)
+        if "- status: open" not in block:
+            die(f"决策门 {args.gate} 已不是 open")
+        answer = args.answer if args.answer is not None else next((line.split(": ", 1)[1] for line in block.splitlines() if line.startswith("- default: ")), "")
+        block = block.replace("- status: open", f"- status: resolved\n- answer: {cell(answer)}", 1)
+        atomic_write_text(path, text[:start] + block + text[end:])
+        units_to_resume = [args.unit] if args.unit else [line.split(": ", 1)[1] for line in block.splitlines() if line.startswith("- units: ") and line.split(": ", 1)[1] != "none"]
+        if units_to_resume:
+            rows = units(run)
+            for unit_id in units_to_resume:
+                row = find_unit(rows, unit_id)
+                if row["state"] == "blocked":
+                    row["state"] = "todo"
+                    row["updated"] = stamp()
+            save_units(run, rows)
+        event(run, {"type": "gate-resolve", "gate": args.gate, "unit": args.unit or "none"})
+    say(f"ok gate {args.gate} resolved")
 
 
 def cmd_status(args: argparse.Namespace) -> None:
     run = run_dir(repo_of(args))
-    before = (run / "RUN.md").read_text()
-    body = refresh_status(run)
+    with run_lock(run):
+        before = (run / "RUN.md").read_text()
+        body = refresh_status(run)
     after = (run / "RUN.md").read_text()
     if before == after:
         say("ok status unchanged")
@@ -616,7 +763,7 @@ def cmd_capsule(args: argparse.Namespace) -> None:
     encoded = text.encode()
     if len(encoded) > 2048:
         text = encoded[:2048].decode(errors="ignore").rstrip() + "\n"
-    (run / "capsule.md").write_text(text)
+    atomic_write_text(run / "capsule.md", text)
     say(f"ok capsule bytes={len(text.encode())}")
 
 
@@ -629,8 +776,23 @@ def sha_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def cmd_close(args: argparse.Namespace) -> None:
+    repo = repo_of(args)
+    base = repo / ".work-docs" / "runs"
+    run = run_dir(repo)
+    active = base / "ACTIVE"
+    if active.read_text().strip() != run.name:
+        die(f"ACTIVE 不是当前 run {run.name}")
+    atomic_write_text(run / "closed", f"closed: {stamp()}\n")
+    active.unlink()
+    event(run, {"type": "close"})
+    say(f"ok close {run.name}")
+
+
 def cmd_import(args: argparse.Namespace) -> None:
     repo = repo_of(args)
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", args.task_id):
+        die("task-id 不合法。只能使用字母、数字、下划线和短横线")
     task = repo / ".work-docs" / "tasks" / args.task_id
     contract = task / "contract.md"
     state = task / "state.md"
@@ -668,17 +830,18 @@ def cmd_import(args: argparse.Namespace) -> None:
         rows.append({
             "id": name, "title": fields.get("title", name), "state": "todo", "deps": fields.get("depends") or "none",
             "scope": scope, "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown",
-            "verify_cmd": "true", "evidence": f"imported:{args.task_id}", "updated": stamp(), "kind": "impl",
+            "verify_cmd": "false", "evidence": f"imported:{args.task_id};rewrite verify_cmd before xr verify", "updated": stamp(), "kind": "impl",
         })
         imported += 1
     if imported == 0:
         rows.append({
             "id": "imported", "title": objective[:80], "state": "todo", "deps": "none", "scope": "README.md",
-            "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown", "verify_cmd": "true",
-            "evidence": f"imported:{args.task_id}", "updated": stamp(), "kind": "impl",
+            "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown", "verify_cmd": "false",
+            "evidence": f"imported:{args.task_id};rewrite verify_cmd before xr verify", "updated": stamp(), "kind": "impl",
         })
-    if not cycles(rows):
-        save_units(run, rows)
+    if cycles(rows):
+        die("导入任务依赖有环，已拒绝")
+    save_units(run, rows)
     after = {str(path.relative_to(repo)): sha_file(path) for path in (contract, state) if path.is_file()}
     if before != after:
         die("导入改动了旧任务文件，已停止")
@@ -717,6 +880,9 @@ def build() -> argparse.ArgumentParser:
     fail.add_argument("id")
     fail.add_argument("--kind", required=True)
     fail.set_defaults(func=cmd_fail)
+    reopen = sub.add_parser("reopen")
+    reopen.add_argument("id")
+    reopen.set_defaults(func=cmd_reopen)
     decide = sub.add_parser("decide")
     decide.add_argument("text")
     decide.add_argument("--why", required=True)
@@ -724,14 +890,25 @@ def build() -> argparse.ArgumentParser:
     decide.add_argument("--reversible", action="store_true")
     decide.set_defaults(func=cmd_decide)
     gate = sub.add_parser("gate")
-    gate.add_argument("text")
-    gate.add_argument("--default", required=True)
-    gate.add_argument("--unit")
-    gate.set_defaults(func=cmd_gate)
+    gate_sub = gate.add_subparsers(dest="gate_verb")
+    gate_add = gate_sub.add_parser("add")
+    gate_add.add_argument("text")
+    gate_add.add_argument("--default", required=True)
+    gate_add.add_argument("--unit")
+    gate_add.set_defaults(func=cmd_gate)
+    resolve = gate_sub.add_parser("resolve")
+    resolve.add_argument("gate")
+    answer = resolve.add_mutually_exclusive_group(required=True)
+    answer.add_argument("--answer")
+    answer.add_argument("--default", action="store_true")
+    resolve.add_argument("--unit")
+    resolve.set_defaults(func=cmd_gate_resolve)
     status = sub.add_parser("status")
     status.set_defaults(func=cmd_status)
     capsule = sub.add_parser("capsule")
     capsule.set_defaults(func=cmd_capsule)
+    close = sub.add_parser("close")
+    close.set_defaults(func=cmd_close)
     imp = sub.add_parser("import")
     imp.add_argument("task_id")
     imp.set_defaults(func=cmd_import)
@@ -750,16 +927,18 @@ def main(argv: list[str] | None = None) -> None:
             continue
         cleaned.append(raw[index])
         index += 1
+    if len(cleaned) >= 2 and cleaned[0] == "gate" and cleaned[1] not in {"add", "resolve"}:
+        cleaned.insert(1, "add")
     parser = build()
     try:
         args = parser.parse_args(cleaned)
     except SystemExit as error:
         if error.code not in (0, None):
-            die("参数不对。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net | xr decide \"决定\" --why \"理由\" | xr gate \"问题\" --default \"默认\" | xr status | xr capsule | xr import <task-id>")
+            die("参数不对。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net | xr reopen <id> | xr decide \"决定\" --why \"理由\" | xr gate add \"问题\" --default \"默认\" | xr gate resolve G1 --answer \"答案\" | xr close | xr status | xr capsule | xr import <task-id>")
         raise
     args.repo = repo
     if not getattr(args, "func", None):
-        die("未知或不完整的命令。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net | xr decide \"决定\" --why \"理由\" | xr gate \"问题\" --default \"默认\" | xr status | xr capsule | xr import <task-id>")
+        die("未知或不完整的命令。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net | xr reopen <id> | xr decide \"决定\" --why \"理由\" | xr gate add \"问题\" --default \"默认\" | xr gate resolve G1 --answer \"答案\" | xr close | xr status | xr capsule | xr import <task-id>")
     args.func(args)
 
 

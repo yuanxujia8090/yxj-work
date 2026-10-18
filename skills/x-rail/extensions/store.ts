@@ -4,6 +4,7 @@ import path from "node:path";
 import { emptyFile, freshBreaker, type BreakerState, type FailoverFile } from "./breaker.ts";
 import type { RunMemory } from "./switch.ts";
 import { freshMemory } from "./switch.ts";
+import { writeAtomic } from "./file-io.ts";
 
 export interface Persisted extends FailoverFile {
   runs: Record<string, RunMemory>;
@@ -30,11 +31,48 @@ export function loadState(file: string): Persisted {
   }
 }
 
-export function saveState(file: string, state: Persisted): void {
+function sleep(): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+}
+
+function withLock<T>(file: string, work: () => T): T {
+  const lock = `${file}.lock`;
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
-  fs.renameSync(tmp, file);
+  for (;;) {
+    try {
+      fs.mkdirSync(lock);
+      fs.writeFileSync(path.join(lock, "owner"), `${process.pid}\n${Date.now()}\n`, "utf8");
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      try {
+        const [pidText, timeText] = fs.readFileSync(path.join(lock, "owner"), "utf8").split("\n");
+        const stale = Date.now() - Number(timeText) > 120_000;
+        if (stale) {
+          try { process.kill(Number(pidText), 0); } catch { fs.rmSync(lock, { recursive: true, force: true }); }
+        }
+      } catch { fs.rmSync(lock, { recursive: true, force: true }); }
+      sleep();
+    }
+  }
+  try { return work(); } finally { fs.rmSync(lock, { recursive: true, force: true }); }
+}
+
+function saveUnlocked(file: string, state: Persisted): void {
+  writeAtomic(file, `${JSON.stringify(state, null, 2)}\n`);
+}
+
+export function saveState(file: string, state: Persisted): void {
+  withLock(file, () => saveUnlocked(file, state));
+}
+
+export function updateState(file: string, update: (state: Persisted) => void): Persisted {
+  return withLock(file, () => {
+    const state = loadState(file);
+    update(state);
+    saveUnlocked(file, state);
+    return state;
+  });
 }
 
 export function breakerFor(state: Persisted, key: string): BreakerState {
