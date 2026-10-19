@@ -21,7 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import frontier  # noqa: E402
 
 TZ = ZoneInfo("Asia/Shanghai")
-HEADER = ["id", "title", "state", "deps", "scope", "timebox_min", "attempts", "owner", "model", "verify_cmd", "evidence", "updated", "kind"]
+HEADER = ["id", "title", "state", "deps", "scope", "output_scope", "timebox_min", "attempts", "owner", "model", "verify_cmd", "evidence", "updated", "kind"]
+LEGACY_HEADER = ["id", "title", "state", "deps", "scope", "timebox_min", "attempts", "owner", "model", "verify_cmd", "evidence", "updated", "kind"]
 LEDGER = ["unit", "tree_hash", "cmd_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
 LEGACY_LEDGER = ["unit", "tree_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
 DECISIONS = ["ts", "unit", "decision", "reason", "alternatives", "reversible", "by_model"]
@@ -154,7 +155,15 @@ def run_dir(repo: Path, run_id: str | None = None) -> Path:
 
 
 def units(run: Path) -> list[dict[str, str]]:
-    return read_tsv(run / "units.tsv", HEADER)
+    path = run / "units.tsv"
+    if not path.is_file() or not path.read_text().strip():
+        return []
+    header = path.read_text().splitlines()[0].split("\t")
+    if header == HEADER:
+        return read_tsv(path, HEADER)
+    if header != LEGACY_HEADER:
+        die("units.tsv 表头不对。正确命令：不要手改 TSV，用 xr 命令重写")
+    return [{**row, "output_scope": row["scope"]} for row in read_tsv(path, LEGACY_HEADER)]
 
 
 def save_units(run: Path, rows: list[dict[str, str]]) -> None:
@@ -254,6 +263,14 @@ def tree_hash(repo: Path, scope: str) -> str:
     return digest.hexdigest()[:16]
 
 
+def verification_hash(repo: Path, row: dict[str, str]) -> str:
+    scope = row["scope"]
+    output_scope = row.get("output_scope", scope)
+    if output_scope != "none":
+        scope = f"{scope},{output_scope}"
+    return tree_hash(repo, scope)
+
+
 def command_hash(command: str) -> str:
     return hashlib.sha256(command.encode()).hexdigest()[:16]
 
@@ -340,7 +357,7 @@ mode: auto
 
 - wall: 未填
 - cost: 未填
-- unit: worker 软 30 分 / 硬 45 分；reviewer 25 分；researcher 与 scout 15 分
+- unit: 由宿主实际运行限制决定
 
 ## Status
 
@@ -402,9 +419,12 @@ def cmd_plan_add(args: argparse.Namespace) -> None:
             if missing:
                 die(f"依赖还不存在：{','.join(missing)}。正确命令：先 xr plan add 依赖，再加这个单元")
         timebox = str(args.timebox if args.timebox is not None else (25 if kind == "review" else 15 if kind == "research" else 45))
+        output_scope = args.output_scope or (args.files if is_writer(kind) else "none")
+        if output_scope != "none":
+            check_scope(output_scope)
         fresh = {
             "id": args.id, "title": cell(args.title), "state": "todo", "deps": deps, "scope": args.files,
-            "timebox_min": timebox, "attempts": "0", "owner": "unassigned", "model": model_of(run),
+            "output_scope": output_scope, "timebox_min": timebox, "attempts": "0", "owner": "unassigned", "model": model_of(run),
             "verify_cmd": cell(args.verify), "evidence": "none", "updated": stamp(), "kind": kind,
         }
         replaced = False
@@ -438,10 +458,17 @@ def ready(row: dict[str, str], rows: list[dict[str, str]]) -> bool:
     return all(by_id[dep]["state"] == "done" for dep in row["deps"].split(",") if dep in by_id)
 
 
+def path_sets(row: dict[str, str]) -> tuple[list[str], list[str]]:
+    inputs = [part.strip() for part in row["scope"].split(",") if part.strip()]
+    outputs = [part.strip() for part in row.get("output_scope", row["scope"]).split(",") if part.strip() and part.strip() != "none"]
+    return inputs, outputs
+
+
 def overlaps(row: dict[str, str], other: dict[str, str]) -> bool:
-    left = [part.strip() for part in row["scope"].split(",") if part.strip()]
-    right = [part.strip() for part in other["scope"].split(",") if part.strip()]
-    return any(frontier.overlap(a, b) for a in left for b in right)
+    left_inputs, left_outputs = path_sets(row)
+    right_inputs, right_outputs = path_sets(other)
+    return (any(frontier.overlap(a, b) for a in left_outputs for b in right_inputs + right_outputs)
+            or any(frontier.overlap(a, b) for a in left_inputs for b in right_outputs))
 
 
 def cmd_next(args: argparse.Namespace) -> None:
@@ -450,18 +477,21 @@ def cmd_next(args: argparse.Namespace) -> None:
         rows = units(run)
         readers, writers, total = limits()
         doing = [row for row in rows if row["state"] == "doing"]
-        if len(doing) >= total:
+        held = [row for row in rows if row["state"] == "blocked" and
+                (";kind:" in row["evidence"] or "blocked_from:doing" in row["evidence"])]
+        occupied = doing + held
+        if len(occupied) >= total:
             say("ok next none concurrency")
             return
         for row in rows:
             if not ready(row, rows):
                 continue
-            if any(overlaps(row, other) for other in doing):
+            if any(overlaps(row, other) for other in occupied):
                 continue
             writer = is_writer(row["kind"])
-            if writer and sum(1 for item in doing if is_writer(item["kind"])) >= writers:
+            if writer and sum(1 for item in occupied if is_writer(item["kind"])) >= writers:
                 continue
-            if not writer and sum(1 for item in doing if not is_writer(item["kind"])) >= readers:
+            if not writer and sum(1 for item in occupied if not is_writer(item["kind"])) >= readers:
                 continue
             row["state"] = "doing"
             row["updated"] = stamp()
@@ -490,7 +520,7 @@ def cmd_verify(args: argparse.Namespace) -> None:
     run = run_dir(repo)
     with run_lock(run):
         row = find_unit(units(run), args.id).copy()
-        digest = tree_hash(repo, row["scope"])
+        digest = verification_hash(repo, row)
         command = row["verify_cmd"]
         existing = ledger_rows(run)
         prior = [item for item in existing if item["unit"] == args.id and item["tree_hash"] == digest
@@ -509,7 +539,7 @@ def cmd_verify(args: argparse.Namespace) -> None:
     with run_lock(run):
         current_rows = units(run)
         current = find_unit(current_rows, args.id)
-        current_digest = tree_hash(repo, current["scope"])
+        current_digest = verification_hash(repo, current)
         if current["verify_cmd"] != command or current_digest != digest:
             code = 125
             output += "\n验证期间单元判据或文件已变化；本次证据作废，请重新 xr verify。\n"
@@ -533,7 +563,7 @@ def cmd_verify(args: argparse.Namespace) -> None:
 
 
 def verified_now(repo: Path, run: Path, row: dict[str, str]) -> bool:
-    digest = tree_hash(repo, row["scope"])
+    digest = verification_hash(repo, row)
     command = command_hash(row["verify_cmd"])
     return any(item["unit"] == row["id"] and item["tree_hash"] == digest
                and item.get("cmd_hash") == command and item["verdict"] == "VERIFIED"
@@ -571,46 +601,96 @@ def cmd_done(args: argparse.Namespace) -> None:
 
 def cmd_fail(args: argparse.Namespace) -> None:
     if args.kind not in FAIL_KINDS:
-        die("kind 只能是 cap、net、tool、logic、verify、unknown。正确命令：xr fail <id> --kind net")
+        die("kind 只能是 cap、net、tool、logic、verify、unknown。正确命令：xr fail <id> --kind net --record <引用>")
+    if not args.record:
+        die("故障/拆分记录需要 --record 引用错误、原运行和已有报告；正确命令：xr fail <id> --kind net --record <引用>")
     run = run_dir(repo_of(args))
     with run_lock(run):
         rows = units(run)
         row = find_unit(rows, args.id)
         if row["state"] in TERMINAL:
             die(f"单元 {args.id} 已终态 {row['state']}，不能 fail；需要重新处理时先 xr reopen {args.id}")
+        if args.kind == "cap" and row["state"] == "blocked":
+            die("blocked 单元不能按 cap 终止；先确认原运行已终止并执行 xr reopen")
         attempts = int(row["attempts"]) + 1
         row["attempts"] = str(attempts)
-        row["evidence"] = f"kind:{args.kind}"
         row["updated"] = stamp()
-        retry = args.kind in {"net", "tool", "unknown"} and attempts < 2 and args.kind != "cap"
         if args.kind == "cap":
             row["state"] = "abandoned"
+            row["evidence"] = f"{row['evidence']};kind:cap;record:{cell(args.record)}"
             hint = f"xr plan add {args.id}b \"拆小后的标题\" --deps none --files {row['scope']} --verify \"{row['verify_cmd']}\""
-        elif retry:
-            row["state"] = "todo"
-            hint = f"xr next"
         else:
-            row["state"] = "abandoned"
-            hint = "xr plan add <新id> \"重新规划\" --deps none --files <路径> --verify \"<命令>\""
+            row["state"] = "blocked"
+            row["evidence"] = f"{row['evidence']};kind:{args.kind};record:{cell(args.record)}"
+            hint = f"核对原运行后执行 xr reopen {args.id} --resolution resumed|terminated --record <状态依据>"
         save_units(run, rows)
-        event(run, {"type": "fail", "unit": args.id, "kind": args.kind, "state": row["state"]})
+        event(run, {"type": "fail", "unit": args.id, "kind": args.kind, "state": row["state"], "record": args.record or "none"})
     say(f"ok fail {args.id} {row['state']} attempts={attempts}")
     say(f"正确命令：{hint}")
 
 
+def unresolved_failure(run: Path, unit_id: str) -> bool:
+    unresolved = False
+    for line in (run / "events.jsonl").read_text().splitlines():
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if item.get("unit") == unit_id and item.get("type") == "fail":
+            unresolved = True
+        elif item.get("unit") == unit_id and item.get("type") == "reopen" and item.get("resolution") == "terminated":
+            unresolved = False
+    return unresolved
+
+
+def open_gates_for(run: Path, unit_id: str) -> list[str]:
+    gates = (run / "gates.md").read_text()
+    matches = re.finditer(r"^## (G\d+)\n(.*?)(?=^## |\Z)", gates, re.S | re.M)
+    return [match.group(1) for match in matches
+            if "- status: open" in match.group(2)
+            and unit_id in next((line.split(": ", 1)[1].split(",") for line in match.group(2).splitlines() if line.startswith("- units: ")), [])]
+
+
 def cmd_reopen(args: argparse.Namespace) -> None:
+    if args.resolution not in {"resumed", "terminated"} or not args.record:
+        die("恢复必须确认原运行仍可续接或已终止，并提供 --record；正确命令：xr reopen <id> --resolution resumed|terminated --record <状态依据>")
     run = run_dir(repo_of(args))
     with run_lock(run):
         rows = units(run)
         row = find_unit(rows, args.id)
-        if row["state"] not in TERMINAL:
-            die(f"单元 {args.id} 当前是 {row['state']}，只有终态才能 reopen")
-        row["state"] = "todo"
-        row["evidence"] = "reopened"
+        if row["state"] != "blocked" and row["state"] not in TERMINAL:
+            die(f"单元 {args.id} 当前是 {row['state']}，只有 blocked 或终态才能 reopen")
+        if row["state"] in TERMINAL and args.resolution != "terminated":
+            die("终态单元只能在确认旧运行已终止后重新规划")
+        unresolved = unresolved_failure(run, args.id)
+        open_gates = open_gates_for(run, args.id)
+        if open_gates:
+            die(f"单元 {args.id} 仍被决策门阻塞：{','.join(open_gates)}")
+        if unresolved and row["state"] != "blocked" and args.resolution != "terminated":
+            die("仍有未解决故障；必须先处理阻塞单元或确认原运行已终止")
+        if unresolved and args.resolution == "resumed" and row["state"] != "blocked":
+            die("故障恢复只能从 blocked 继续原运行")
+        if args.resolution == "resumed":
+            readers, writers, total = limits()
+            doing = [item for item in rows if item["state"] == "doing"]
+            held = [item for item in rows if item["state"] == "blocked" and
+                    (";kind:" in item["evidence"] or "blocked_from:doing" in item["evidence"])]
+            occupied = doing + [item for item in held if item["id"] != row["id"]]
+            if (len(occupied) >= total
+                    or (is_writer(row["kind"]) and sum(is_writer(item["kind"]) for item in occupied) >= writers)
+                    or (not is_writer(row["kind"]) and sum(not is_writer(item["kind"]) for item in occupied) >= readers)):
+                die("并发额度已满；保留 blocked，待有额度后再恢复")
+            if any(overlaps(row, item) for item in occupied):
+                die("恢复范围与活跃单元冲突；保留 blocked，待范围释放后再恢复")
+        prior = row["state"]
+        if args.resolution == "resumed" and prior == "blocked" and ";kind:" not in row["evidence"] and "blocked_from:doing" not in row["evidence"]:
+            die("该单元没有活跃原运行证据，不能按 resumed 恢复")
+        row["state"] = "doing" if args.resolution == "resumed" else "todo"
+        row["evidence"] = f"recovered:{args.resolution};record:{cell(args.record)}"
         row["updated"] = stamp()
         save_units(run, rows)
-        event(run, {"type": "reopen", "unit": args.id, "from": "terminal"})
-    say(f"ok reopen {args.id} todo")
+        event(run, {"type": "reopen", "unit": args.id, "from": prior, "resolution": args.resolution, "record": args.record})
+    say(f"ok reopen {args.id} {row['state']}")
 
 
 def record_decision(run: Path, unit: str, decision: str, reason: str, reversible: str) -> bool:
@@ -659,7 +739,10 @@ def cmd_gate(args: argparse.Namespace) -> None:
                 die(f"单元 {args.unit} 已终态 {row['state']}，不能设为 blocked")
         atomic_write_text(run / "gates.md", text + block)
         if args.unit:
+            prior_state = row["state"]
             row["state"] = "blocked"
+            if prior_state == "doing":
+                row["evidence"] = f"{row['evidence']};blocked_from:doing;gate:G{number}"
             row["updated"] = stamp()
             save_units(run, rows)
         event(run, {"type": "gate", "unit": args.unit or "none"})
@@ -701,16 +784,7 @@ def cmd_gate_resolve(args: argparse.Namespace) -> None:
         answer = args.answer if args.answer is not None else next((line.split(": ", 1)[1] for line in block.splitlines() if line.startswith("- default: ")), "")
         block = block.replace("- status: open", f"- status: resolved\n- answer: {cell(answer)}", 1)
         atomic_write_text(path, text[:start] + block + text[end:])
-        units_to_resume = [args.unit] if args.unit else [line.split(": ", 1)[1] for line in block.splitlines() if line.startswith("- units: ") and line.split(": ", 1)[1] != "none"]
-        if units_to_resume:
-            rows = units(run)
-            for unit_id in units_to_resume:
-                row = find_unit(rows, unit_id)
-                if row["state"] == "blocked":
-                    row["state"] = "todo"
-                    row["updated"] = stamp()
-            save_units(run, rows)
-        event(run, {"type": "gate-resolve", "gate": args.gate, "unit": args.unit or "none"})
+        event(run, {"type": "gate-resolve", "gate": args.gate, "unit": args.unit or "none", "answer": cell(answer)})
     say(f"ok gate {args.gate} resolved")
 
 
@@ -829,13 +903,13 @@ def cmd_import(args: argparse.Namespace) -> None:
             scope = "README.md"
         rows.append({
             "id": name, "title": fields.get("title", name), "state": "todo", "deps": fields.get("depends") or "none",
-            "scope": scope, "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown",
+            "scope": scope, "output_scope": scope, "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown",
             "verify_cmd": "false", "evidence": f"imported:{args.task_id};rewrite verify_cmd before xr verify", "updated": stamp(), "kind": "impl",
         })
         imported += 1
     if imported == 0:
         rows.append({
-            "id": "imported", "title": objective[:80], "state": "todo", "deps": "none", "scope": "README.md",
+            "id": "imported", "title": objective[:80], "state": "todo", "deps": "none", "scope": "README.md", "output_scope": "README.md",
             "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown", "verify_cmd": "false",
             "evidence": f"imported:{args.task_id};rewrite verify_cmd before xr verify", "updated": stamp(), "kind": "impl",
         })
@@ -862,7 +936,8 @@ def build() -> argparse.ArgumentParser:
     add.add_argument("id")
     add.add_argument("title")
     add.add_argument("--deps", default=None)
-    add.add_argument("--files", default=None)
+    add.add_argument("--files", default=None, help="readable inputs or legacy combined scope")
+    add.add_argument("--output", dest="output_scope", help="exclusive outputs; defaults to --files for writer kinds")
     add.add_argument("--verify", default=None)
     add.add_argument("--kind", default="impl")
     add.add_argument("--timebox", type=int)
@@ -879,9 +954,12 @@ def build() -> argparse.ArgumentParser:
     fail = sub.add_parser("fail")
     fail.add_argument("id")
     fail.add_argument("--kind", required=True)
+    fail.add_argument("--record", required=True, help="错误、原运行和阶段报告的可追溯引用")
     fail.set_defaults(func=cmd_fail)
     reopen = sub.add_parser("reopen")
     reopen.add_argument("id")
+    reopen.add_argument("--resolution", choices=["resumed", "terminated"], required=True)
+    reopen.add_argument("--record", required=True, help="宿主原运行状态的可追溯依据")
     reopen.set_defaults(func=cmd_reopen)
     decide = sub.add_parser("decide")
     decide.add_argument("text")
@@ -934,11 +1012,11 @@ def main(argv: list[str] | None = None) -> None:
         args = parser.parse_args(cleaned)
     except SystemExit as error:
         if error.code not in (0, None):
-            die("参数不对。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net | xr reopen <id> | xr decide \"决定\" --why \"理由\" | xr gate add \"问题\" --default \"默认\" | xr gate resolve G1 --answer \"答案\" | xr close | xr status | xr capsule | xr import <task-id>")
+            die("参数不对。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net --record <引用> | xr reopen <id> --resolution resumed|terminated --record <依据> | xr decide \"决定\" --why \"理由\" | xr gate add \"问题\" --default \"默认\" | xr gate resolve G1 --answer \"答案\" | xr close | xr status | xr capsule | xr import <task-id>")
         raise
     args.repo = repo
     if not getattr(args, "func", None):
-        die("未知或不完整的命令。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net | xr reopen <id> | xr decide \"决定\" --why \"理由\" | xr gate add \"问题\" --default \"默认\" | xr gate resolve G1 --answer \"答案\" | xr close | xr status | xr capsule | xr import <task-id>")
+        die("未知或不完整的命令。正确命令：xr init <slug> | xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" | xr next | xr verify <id> | xr done <id> | xr fail <id> --kind net --record <引用> | xr reopen <id> --resolution resumed|terminated --record <依据> | xr decide \"决定\" --why \"理由\" | xr gate add \"问题\" --default \"默认\" | xr gate resolve G1 --answer \"答案\" | xr close | xr status | xr capsule | xr import <task-id>")
     args.func(args)
 
 

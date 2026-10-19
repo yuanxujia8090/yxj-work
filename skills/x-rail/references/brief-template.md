@@ -1,16 +1,16 @@
 # Brief
 
-子代理只按这张表派发，不手写 workflow 语法。
+子代理按表派发，不手写 workflow 语法。
 
 ```
 GOAL       一句话
-SCOPE      --files；worktree 与分支 xr/run/unit；基于集成分支 SHA
-CONTEXT    只给指针：RUN.md#Intent、units.tsv 那一行、notes/、起点 SHA
-ACCEPTANCE 可检查的条件
+SCOPE      输入路径与独占输出；工作区和起点版本
+CONTEXT    RUN.md#Intent、单元行、已有报告、起点版本
+ACCEPTANCE 检查条件与必答问题
 VERIFY     一条命令
-BUDGET     ≤ 40 轮；软 30 分钟写进度；硬超时 45 分钟
-MODEL      主模型；熔断时 bai/deepseek-v4.1-flash thinking high
-FORBIDDEN  文件集之外不改；不推送；不 rebase 集成分支
-REPORT     notes/单元-report.md、wip 提交、一行摘要
-STANDING   RUN.md#Standing。答不上的问题写 xr gate，不停下空等
+MODEL      按当前授权和宿主能力选择
+FORBIDDEN  不越范围、不推送、不覆盖用户修改
+REPORT     首个结论即保存；列证据、已查和待查范围
+RECOVERY   保存错误与原运行；先查询，未知不重派
+STANDING   RUN.md#Standing。决策问题写 xr gate；解除门不代表故障已恢复
 ```

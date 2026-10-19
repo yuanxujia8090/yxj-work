@@ -1,13 +1,7 @@
-# 失败类型
+# 失败恢复
 
-`xr fail <id> --kind` 只接受这些值：
+`xr fail <id> --kind <类型> --record <引用>` 保存错误、原运行和报告。除 `cap` 拆分外，故障进入 `blocked`，保留证据及冲突写入占用，不自动重派。
 
-| kind | 之后 |
-|---|---|
-| cap | 单元标成 abandoned，拆小后用 xr plan add 新单元。不 resume |
-| net | 同模型再试 1 次（attempts < 2 时回到 todo） |
-| tool | 换模型后再试 1 次 |
-| logic / verify | 不重试同一做法，直接 abandoned，重新规划 |
-| unknown | 再试 1 次，第二次 abandoned |
+核实原运行后：可续接用 `xr reopen <id> --resolution resumed --record <依据>`，沿用原运行；已终止用 `terminated`，接收可用结果后只规划剩余项。未知则保持阻塞；缺报告不妨碍已确认终止后重规划，但不可声称有可复用覆盖。
 
-同一模型的 provider 自动重试另计，最多 1 次，然后交给 x-failover。
+解除决策门不清除故障阻塞；被门暂停的活跃项仍占资源，直至核实原运行。只读可共读输入，重叠写入互斥。脚本不验证宿主事实。

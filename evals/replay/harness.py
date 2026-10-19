@@ -72,9 +72,9 @@ def offline(scenarios: list[dict]) -> list[dict]:
             (repo / "README.md").write_text("x\n")
             xr(repo, "plan", "add", "u", "太大", "--deps", "none", "--files", "README.md", "--verify", "true")
             xr(repo, "next")
-            proc = xr(repo, "fail", "u", "--kind", "cap")
+            proc = xr(repo, "fail", "u", "--kind", "cap", "--record", "replay:R5 oversized unit; host-run=none")
             units = list((repo / ".work-docs" / "runs").glob("*/units.tsv"))[0].read_text()
-            ok = proc.returncode == 0 and "\tdoing\t" not in units.split("u\t", 1)[-1].split("\n", 1)[0]
+            ok = proc.returncode == 0 and "u\t太大\tabandoned\t" in units
             results.append({"id": name, "offline": "passed" if ok else "failed", "detail": proc.stdout.strip(), "live": "pending-user-approval"})
         elif name == "R6":
             repo = Path(tempfile.mkdtemp())
