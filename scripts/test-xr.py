@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -84,7 +85,9 @@ class XrTests(unittest.TestCase):
         self.assertIn("ok next a doing", run(self.repo, "next").stdout)
         self.assertIn("VERIFIED", run(self.repo, "verify", "a").stdout)
         self.assertEqual(run(self.repo, "done", "a").returncode, 0)
-        self.assertIn("unchanged", run(self.repo, "done", "a").stdout)
+        again_done = run(self.repo, "done", "a")
+        self.assertEqual(again_done.returncode, 0, again_done.stdout)
+        self.assertNotIn("unchanged", again_done.stdout)
         failed = run(self.repo, "fail", "c", "--kind", "cap", "--record", "error:cap;run:run-c")
         self.assertEqual(failed.returncode, 0, failed.stdout)
         terminal_fail = run(self.repo, "fail", "c", "--kind", "net", "--record", "error:net;run:run-c")
@@ -304,6 +307,140 @@ class XrTests(unittest.TestCase):
             claimed = list(pool.map(lambda _: claim(), range(4)))
         doing = [line for line in claimed if " doing" in line]
         self.assertEqual(len(doing), 1)
+
+    def _epoch(self) -> int:
+        run_id = (self.repo / ".work-docs" / "runs" / "ACTIVE").read_text().strip()
+        text = (self.repo / ".work-docs" / "runs" / run_id / "RUN.md").read_text()
+        match = re.search(r"^dispatch_epoch:\s*(\d+)", text, re.M)
+        self.assertIsNotNone(match)
+        return int(match.group(1))
+
+    def _finish_pair(self) -> None:
+        self.assertEqual(run(self.repo, "plan", "add", "u", "U", "--deps", "none", "--files", "README.md", "--verify", "true").returncode, 0)
+        self.assertEqual(run(self.repo, "plan", "add", "i", "集成", "--deps", "u", "--files", "README.md", "--verify", "true", "--kind", "integration").returncode, 0)
+        self.assertIn("ok next u doing", run(self.repo, "next").stdout)
+        self.assertIn("VERIFIED", run(self.repo, "verify", "u").stdout)
+        self.assertEqual(run(self.repo, "done", "u").returncode, 0)
+        self.assertIn("ok next i doing", run(self.repo, "next").stdout)
+        self.assertIn("VERIFIED", run(self.repo, "verify", "i").stdout)
+        self.assertEqual(run(self.repo, "done", "i").returncode, 0)
+
+    def test_inspect_reports_abandoned_as_not_done(self):
+        self.init()
+        run(self.repo, "plan", "add", "u", "U", "--deps", "none", "--files", "README.md", "--verify", "true")
+        run(self.repo, "next")
+        run(self.repo, "verify", "u")
+        run(self.repo, "done", "u")
+        run(self.repo, "plan", "add", "v", "V", "--deps", "none", "--files", "README.md", "--verify", "true")
+        run(self.repo, "next")
+        run(self.repo, "fail", "v", "--kind", "cap", "--record", "error:cap;run:r")
+        out = json.loads(run(self.repo, "inspect", "--json").stdout)
+        self.assertEqual(out["mode"], "managed")
+        self.assertFalse(out["done_met"])
+        self.assertTrue(any("abandoned" in reason for reason in out["reasons"]))
+
+    def test_inspect_requires_acceptance_source(self):
+        self.init()
+        run(self.repo, "plan", "add", "u", "U", "--deps", "none", "--files", "README.md", "--verify", "true")
+        run(self.repo, "next")
+        run(self.repo, "verify", "u")
+        run(self.repo, "done", "u")
+        (self.repo / "req.md").write_text("需求：只读检查\n")
+        bad = run(self.repo, "acceptance", "set", "A1", "只读检查", "--source", "missing.md", "--units", "u")
+        self.assertNotEqual(bad.returncode, 0)
+        ok = run(self.repo, "acceptance", "set", "A1", "只读检查", "--source", "req.md", "--units", "u")
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        out = json.loads(run(self.repo, "inspect", "--json").stdout)
+        self.assertFalse(out["done_met"])
+        self.assertEqual(out["acceptance_status"]["total"], 1)
+
+    def test_finish_refuses_stale_evidence(self):
+        self.init()
+        target = self.repo / "README.md"
+        self._finish_pair()
+        (self.repo / "req.md").write_text("需求：保持不变\n")
+        self.assertEqual(run(self.repo, "acceptance", "set", "A1", "保持不变", "--source", "req.md", "--units", "u").returncode, 0)
+        self.assertEqual(run(self.repo, "finish").returncode, 0)
+        target.write_text("changed\n")
+        again = run(self.repo, "finish")
+        self.assertNotEqual(again.returncode, 0)
+        self.assertIn("stale", again.stdout)
+        stale = run(self.repo, "done", "u")
+        self.assertNotEqual(stale.returncode, 0)
+        self.assertIn("verify", stale.stdout)
+
+    def test_pause_keeps_active_and_resume_needs_confirmation(self):
+        run_id = self.init()
+        self.assertEqual(run(self.repo, "pause", "--reason", "等待确认", "--record", "session:abc").returncode, 0)
+        self.assertTrue((self.repo / ".work-docs" / "runs" / "ACTIVE").exists())
+        self.assertIn("phase: paused", (self.repo / ".work-docs" / "runs" / run_id / "RUN.md").read_text())
+        self.assertNotEqual(run(self.repo, "resume").returncode, 0)
+        self.assertEqual(run(self.repo, "resume", "--confirm", "--record", "user:ok").returncode, 0)
+
+    def test_take_ownership_rewrites_binding(self):
+        run_id = self.init()
+        (self.repo / ".work-docs" / "runs" / run_id / "binding.json").write_text(json.dumps({
+            "schema": 1, "workspace": str(self.repo.resolve()), "run_id": run_id,
+            "session_id": "s-old", "owner": "host", "created_at": "2026-10-20T00:00:00+08:00", "lease": "active",
+        }))
+        self.assertNotEqual(run(self.repo, "resume", "--confirm", "--record", "user:ok").returncode, 0)
+        ok = run(self.repo, "resume", "--confirm", "--take-ownership", "--record", "user:ok")
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        binding = json.loads((self.repo / ".work-docs" / "runs" / run_id / "binding.json").read_text())
+        self.assertNotEqual(binding["session_id"], "s-old")
+        self.assertIn("s-old", (self.repo / ".work-docs" / "runs" / run_id / "events.jsonl").read_text())
+
+    def test_acceptance_rebind_is_atomic(self):
+        self.init()
+        (self.repo / "req.md").write_text("需求：有替代\n")
+        run(self.repo, "plan", "add", "u", "U", "--deps", "none", "--files", "README.md", "--verify", "true")
+        run(self.repo, "next")
+        run(self.repo, "fail", "u", "--kind", "cap", "--record", "error:cap;run:r")
+        run(self.repo, "plan", "add", "w", "替代", "--deps", "none", "--files", "README.md", "--verify", "true")
+        run(self.repo, "acceptance", "set", "A1", "有替代", "--source", "req.md", "--units", "u")
+        self.assertEqual(run(self.repo, "acceptance", "rebind", "A1", "--units", "w").returncode, 0)
+        out = json.loads(run(self.repo, "acceptance", "list", "--json").stdout)
+        row = next(item for item in out["rows"] if item["id"] == "A1")
+        self.assertEqual(row["units"], "w")
+        inspected = json.loads(run(self.repo, "inspect", "--json").stdout)
+        self.assertFalse(any("abandoned" in reason for reason in inspected["reasons"]))
+
+    def test_finish_vs_dispatch_race(self):
+        self.init()
+        self._finish_pair()
+        (self.repo / "req.md").write_text("需求：竞态\n")
+        run(self.repo, "acceptance", "set", "A1", "竞态", "--source", "req.md", "--units", "u")
+        epoch0 = self._epoch()
+        self.assertEqual(run(self.repo, "done", "u").returncode, 0)
+        out = run(self.repo, "finish")
+        self.assertGreater(self._epoch(), epoch0)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        (self.repo / "README.md").write_text("touched\n")
+        self.assertNotEqual(run(self.repo, "finish").returncode, 0)
+
+    def test_explicit_run_id_does_not_fall_back(self):
+        run_id = self.init()
+        missing = run(self.repo, "--run-id", "20260101-0000-missing", "status")
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertNotIn(run_id, missing.stdout)
+        escaped = run(self.repo, "--run-id", "../x", "status")
+        self.assertNotEqual(escaped.returncode, 0)
+        self.assertEqual((self.repo / ".work-docs" / "runs" / "ACTIVE").read_text().strip(), run_id)
+
+    def test_legacy_inspect_is_readonly(self):
+        run_id = self.init()
+        run_dir = self.repo / ".work-docs" / "runs" / run_id
+        text = (run_dir / "RUN.md").read_text()
+        text = re.sub(r"^phase:.*\n", "", text, flags=re.M)
+        (run_dir / "RUN.md").write_text(text)
+        (run_dir / "binding.json").unlink()
+        (run_dir / "acceptance.tsv").unlink()
+        inspected = run(self.repo, "inspect", "--json")
+        self.assertEqual(inspected.returncode, 0, inspected.stdout + inspected.stderr)
+        out = json.loads(inspected.stdout)
+        self.assertEqual(out["mode"], "legacy")
+        self.assertFalse(out["automation_allowed"])
+        self.assertFalse(out["done_met"])
 
 
 if __name__ == "__main__":
