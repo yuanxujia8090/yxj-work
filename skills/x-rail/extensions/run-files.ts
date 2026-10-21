@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -53,19 +53,98 @@ function readOrEmpty(file: string): string {
   }
 }
 
-export function runSnapshot(dir: string): {
-  doneMet: boolean;
-  allBlockedByGate: boolean;
-} {
-  const units = readOrEmpty(path.join(dir, "units.tsv")).trim().split("\n").slice(1).filter(Boolean);
-  const rows = units.map((line) => line.split("\t"));
-  const states = rows.map((cols) => cols[2] ?? "");
-  const open = states.filter((state) => state !== "done" && state !== "abandoned");
-  const doneMet = rows.length > 0 && open.length === 0;
-  const gates = readOrEmpty(path.join(dir, "gates.md"));
-  const gateOpen = /status: open/.test(gates);
-  const allBlockedByGate = gateOpen && open.length > 0 && open.every((state) => state === "blocked");
-  return { doneMet, allBlockedByGate };
+export interface RunBinding {
+  schema: 1;
+  workspace: string;
+  run_id: string;
+  session_id: string;
+  owner?: string;
+  created_at?: string;
+  lease: "active" | "paused" | "released";
+}
+
+/** 绑定文件坏掉时返回 null，不猜默认值。 */
+export function parseBinding(raw: string): RunBinding | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof data !== "object" || data === null) return null;
+  const item = data as Record<string, unknown>;
+  if (item.schema !== 1) return null;
+  if (typeof item.workspace !== "string" || item.workspace === "") return null;
+  if (typeof item.run_id !== "string" || item.run_id === "") return null;
+  if (typeof item.session_id !== "string" || item.session_id === "") return null;
+  if (item.lease !== "active" && item.lease !== "paused" && item.lease !== "released") return null;
+  return {
+    schema: 1,
+    workspace: item.workspace,
+    run_id: item.run_id,
+    session_id: item.session_id,
+    owner: typeof item.owner === "string" ? item.owner : undefined,
+    created_at: typeof item.created_at === "string" ? item.created_at : undefined,
+    lease: item.lease,
+  };
+}
+
+export function bindingMatches(
+  binding: RunBinding | null,
+  expected: { workspace: string; runId: string; sessionId: string },
+): boolean {
+  if (!binding) return false;
+  return binding.workspace === path.resolve(expected.workspace)
+    && binding.run_id === expected.runId
+    && binding.session_id === expected.sessionId;
+}
+
+export function readBinding(dir: string): RunBinding | null {
+  try {
+    return parseBinding(fs.readFileSync(path.join(dir, "binding.json"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/** 权威检查结果。字段与 `xr inspect --json` 一一对应。 */
+export interface InspectSnapshot {
+  mode: "managed" | "legacy" | "invalid";
+  phase: string;
+  automation_allowed: boolean;
+  done_met: boolean;
+  ready: string[];
+  doing: string[];
+  blocked: string[];
+  stale_units: string[];
+  unresolved_ops: string[];
+  acceptance_status: { total: number; covered: number };
+  reasons: string[];
+  truncated_tail: boolean;
+}
+
+/** 检查器失败一律返回 null：调用方按“暂停”处理，不能当完成。 */
+export function inspectRun(cwd: string, runId: string, timeoutMs = 5_000): Promise<InspectSnapshot | null> {
+  const bin = xrPath(cwd);
+  if (!bin) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    execFile(
+      bin,
+      ["--repo", cwd, "--run-id", runId, "inspect", "--json"],
+      { timeout: timeoutMs, maxBuffer: 1_000_000 },
+      (error, stdout) => {
+        if (error) {
+          resolve(null);
+          return;
+        }
+        try {
+          resolve(JSON.parse(stdout) as InspectSnapshot);
+        } catch {
+          resolve(null);
+        }
+      },
+    );
+  });
 }
 
 export function xrPath(cwd: string): string | null {
