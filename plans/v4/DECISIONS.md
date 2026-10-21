@@ -67,3 +67,16 @@
 | Q5 | 是否允许在真实任务中先只启用“完成门”，暂不启用自动恢复 | 降低风险 | 允许，分两步启用 |
 
 > Q1–Q5 不影响本轮写文档；实施前需要用户拍板，尤其 Q2 改变了 `close` 的语义。
+
+## 6. 2026-10-20 规格修订（成功标准逐项核对后补充）
+
+| # | 决策 | 理由 |
+| --- | --- | --- |
+| D18 | `dispatch_epoch` 落在 `RUN.md`，`finish/resume/acceptance set/acceptance rebind/done` 持 `run_lock` 递增；`pause` 不递增 | 完成凭据需与派发竞争防护绑定；示例值原先无定义 |
+| D19 | epoch 防穿插的保证级别：单写者进程内成立；外部并发靠 `run_lock` 串行 + epoch 失配作废 finish | 不引入跨进程时钟或心跳，符合"复用现有锁"约束 |
+| D20 | `resume --take-ownership` 为显式人工动作：改写 `binding.json` 的 `session_id`，事件记录原会话；不做进程存活探测、不加心跳 | 误接管靠绑定校验，真实接管靠人拍板；心跳机制超出最小闭环 |
+| D21 | 新增 `xr acceptance rebind`：原子替换某条验收的 units 列，持 `run_lock` | 放弃后的替代单元改接需要无中间态；否则完成检查可能读到半更新状态 |
+| D22 | `cmd_done()` 复核通过后也递增 epoch（删掉 unchanged 早退） | 已完成单元重放 `done` 不应绕过版本推进；Q2 相关的 close 语义维持默认（不强制 finish.json） |
+| D23 | 验收矩阵补 A17（接管）、A18（放弃改接）、A19（finish 竞争）；A13 升级为生命周期 + 脚本双层 | 覆盖成功标准 5、6 中原先缺测试锚点的项 |
+| D24 | 阻断在 `tool_call` 返回路径记 `op_result blocked=true`；子代理终态用 `runId` 通知/`status`，不用 `parentToolCallId`；重启身份用 `sessionId` | 本地探针 13/13：阻断没有 `tool_result` 回调，启动回执不是终态，`--session` 的 reason 仍是 startup |
+| D25 | `finish` 保留 `ACTIVE`；`close` 才释放指针，并打印 `finish=valid\|missing\|stale`。`xr` 不实现 `--timeout-ms`，超时由调用方限时杀进程 | 改文件后必须还能对同一运行重跑 `finish` 并看到 stale；检查器超时不是记账命令自己的秒表 |
