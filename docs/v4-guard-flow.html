@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-rail v4 守卫流程与卡点</title>
+<style>
+  :root{
+    --ink:#1c2126; --muted:#6b7280; --bg:#f6f4ee; --card:#fff;
+    --line:#dcd7cb; --green:#2f6f4e; --green-bg:#eaf3ee;
+    --warn:#a15c00; --warn-bg:#fbf1e1; --stop:#a6261d; --stop-bg:#fbeceb;
+    --blue:#2b5f8a; --blue-bg:#eaf1f7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.65 -apple-system,"PingFang SC","Noto Sans SC",system-ui,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 24px 80px}
+  header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:34px}
+  h1{font-size:30px;line-height:1.25;margin:0 0 8px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:14px}
+  h2{font-size:19px;margin:44px 0 14px;padding-left:10px;border-left:4px solid var(--green)}
+  h3{font-size:15px;margin:0 0 6px}
+  p{margin:8px 0}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;
+       background:#efeadf;padding:1px 5px;border-radius:4px}
+  .principle{background:var(--green-bg);border:1px solid #c7dccf;border-radius:10px;padding:16px 18px;margin:26px 0}
+  .principle b{color:var(--green)}
+  .flow{display:flex;flex-direction:column;gap:0}
+  .step{display:grid;grid-template-columns:150px 1fr;gap:16px;position:relative;padding:10px 0}
+  .step::before{content:"";position:absolute;left:150px;top:0;bottom:0;width:2px;background:var(--line)}
+  .step:first-child::before{top:22px}
+  .step:last-child::before{bottom:calc(100% - 22px)}
+  .phase{grid-column:1;text-align:right;color:var(--muted);font-size:12px;padding-top:14px}
+  .card{grid-column:2;background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:14px 16px;margin-left:14px;position:relative}
+  .card::before{content:"";position:absolute;left:-21px;top:20px;width:8px;height:8px;border-radius:50%;
+        background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+  .card.stop::before{background:var(--stop);box-shadow:0 0 0 3px var(--stop-bg)}
+  .card.warn::before{background:var(--warn);box-shadow:0 0 0 3px var(--warn-bg)}
+  .card.blue::before{background:var(--blue);box-shadow:0 0 0 3px var(--blue-bg)}
+  .branch{margin:10px 0 0;padding:10px 12px;border-radius:8px;font-size:13.5px;border:1px dashed var(--line)}
+  .branch.s{background:var(--stop-bg);border-color:#e8c4c1}
+  .branch.w{background:var(--warn-bg);border-color:#e8d3ad}
+  .branch.g{background:var(--green-bg);border-color:#c7dccf}
+  .branch.b{background:var(--blue-bg);border-color:#c5d7e6}
+  .branch b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  ul{margin:6px 0;padding-left:20px}
+  li{margin:4px 0}
+  .gates{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .gate{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .tag{display:inline-block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;
+       padding:2px 7px;border-radius:999px;margin-bottom:8px}
+  .tag.stop{background:var(--stop-bg);color:var(--stop)}
+  .tag.warn{background:var(--warn-bg);color:var(--warn)}
+  .tag.info{background:var(--blue-bg);color:var(--blue)}
+  .tag.ok{background:var(--green-bg);color:var(--green)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .panel h3{color:var(--stop)}
+  .panel.ok h3{color:var(--green)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-top:6px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12.5px;margin:10px 0 0}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+  footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  @media(max-width:720px){
+    .step{grid-template-columns:1fr}
+    .step::before{display:none}
+    .phase{text-align:left;padding:0 0 4px}
+    .card{margin-left:0}
+    .card::before{display:none}
+    .two{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>x-rail v4 守卫：流程、边界、关键卡点</h1>
+  <div class="sub">对应实现：<code>skills/x-rail/extensions/x-run-guard.ts</code>、<code>guard-core.ts</code>、<code>scripts/xr</code>。日期 2026-10-22。</div>
+</header>
+
+<div class="principle">
+  <b>一条原则：</b>还有产出就继续，没有任何产出才停。
+  <div class="sub" style="margin-top:6px">产出 = 模型流事件、工具开始/输出/结束、<code>units.tsv</code> 或 <code>ledger.tsv</code> 内容变化。连续 <code>IDLE_STOP_MS</code>（默认 240 秒，可用 <code>X_RAIL_IDLE_STOP_MS</code> 覆盖）都没有产出才中止，并写 <code>handoff.md</code>。</div>
+</div>
+
+<h2>主链路：一次会话里发生什么</h2>
+<div class="legend">
+  <span><i class="dot" style="background:#2f6f4e"></i>主线</span>
+  <span><i class="dot" style="background:#a6261d"></i>停止</span>
+  <span><i class="dot" style="background:#a15c00"></i>等待/提示</span>
+  <span><i class="dot" style="background:#2b5f8a"></i>记录/修复</span>
+</div>
+
+<div class="flow">
+
+  <div class="step">
+    <div class="phase">会话开始</div>
+    <div class="card">
+      <h3>找 ACTIVE run 并绑定</h3>
+      <p><code>xr bind --session &lt;当前会话&gt;</code>，核对 workspace / run / session；绑定成功才进入 bound 状态，并提示未完成的 run。</p>
+      <div class="branch w"><b>卡点 1 · 绑定</b>：没有 ACTIVE run、被别的会话占用、lease 不对 → <b>不绑定，全程不自动续跑</b>，只提示原因。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">每次开工</div>
+    <div class="card">
+      <h3>核对身份，重置进度计时，启动看门狗</h3>
+      <ul>
+        <li>会话 ID 变了 → 重新 <code>bind</code>（generation 递增）；绑不上就清空绑定。</li>
+        <li><code>lastProgressAt = now</code>，每 5 秒检查一次是否有产出。</li>
+      </ul>
+      <div class="branch s"><b>卡点 2 · 代次</b>：别的会话接管后，本会话不再推进、不再写状态。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">工具执行</div>
+    <div class="card">
+      <h3>先记意图，再执行</h3>
+      <p>工具开始前经 <code>xr event --record</code> 写 <code>op_intent</code>（带 workspace / run / session / generation）。成功结果关闭动作；报错保持未决；被别的扩展阻断且没有执行 → 记 <code>not-started</code>。</p>
+      <div class="branch s"><b>卡点 3 · 副作用</b>：未决动作会让 <code>inspect.automation_allowed=false</code>，不自动续跑，也不能 done。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">准备收尾</div>
+    <div class="card">
+      <h3><code>agent_before_settle</code>：逐道门判断</h3>
+      <p>详细分支见下一节。只有通过全部卡点才会注入一条续接消息。</p>
+      <div class="branch b"><b>续接消息</b>：运行目录 + <code>下一步：xr next（当前单元）</code>，每轮只注入一次。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">结算</div>
+    <div class="card">
+      <h3><code>agent_settled</code>：只记录真实结局</h3>
+      <p>宿主只提供 <code>aborted</code>；<code>outcome</code> 取 <code>before_settle</code> 当时保存的值，不猜、不补 error 字段。</p>
+      <div class="branch w"><b>看门狗中止</b> → 单独装守卫时写 <code>handoff.md</code>；装了 failover 时交给它处理。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">压缩时</div>
+    <div class="card">
+      <h3>只刷新胶囊，不覆盖宿主摘要</h3>
+      <p>刷新 <code>capsule.md</code> 并记录 <code>compaction</code> 事件；摘要仍由 Pi 生成，避免丢掉真实对话。</p>
+      <div class="branch w"><b>卡点 4 · 胶囊</b>：刷新失败记 <code>capsule-stale</code>，不拿旧胶囊冒充新状态。</div>
+    </div>
+  </div>
+
+</div>
+
+<h2>before_settle 决策树（按代码顺序）</h2>
+
+<div class="flow">
+
+  <div class="step">
+    <div class="phase">前置</div>
+    <div class="card blue">
+      <h3>是子代理会话，或没有绑定？</h3>
+      <div class="branch w"><b>是</b>（<code>X_RAIL_SUBAGENT=1</code> 或 unbound）→ 直接返回，什么都不做。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">指针</div>
+    <div class="card">
+      <h3>ACTIVE 是否被改到别的 run？</h3>
+      <div class="branch w"><b>是</b> → 记 <code>binding-drift</code>，提示“不自动接管”，不跟着换任务。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">用户意图</div>
+    <div class="card">
+      <h3>最后一条回答是否在问用户？</h3>
+      <div class="branch w"><b>是</b>（匹配“请确认/请选择/请提供…”）→ 不自动续跑，把决定权留给用户。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">检查器</div>
+    <div class="card">
+      <h3><code>xr inspect --json</code>（5 秒超时）</h3>
+      <div class="branch s"><b>卡点 5 · 检查器</b>：无结果、超时、schema 不合法、mode 不是 managed → 写 handoff 并停。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">代次</div>
+    <div class="card">
+      <h3>inspect 的 session / generation 与本地绑定一致？</h3>
+      <div class="branch g"><b>同会话、lease active</b> → 跟到新代次（resume/bind 提代不算故障）。</div>
+      <div class="branch s"><b>别的会话</b> → 记 <code>stale-binding</code>，清空绑定并停。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">子代理</div>
+    <div class="card">
+      <h3>有 pending 子代理？</h3>
+      <div class="branch w"><b>有</b> → 提示“等子代理回报；不重复派发”，不计数、不续接，等结构化通知。</div>
+      <div class="branch s"><b>卡点 6 · 回执</b>：子代理失败/未知时保持 pending，<code>receive</code> 只接受进程退出 0、步骤全完成、会话与产物摘要匹配的回执。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">完成</div>
+    <div class="card">
+      <h3><code>done_met</code> 或“只剩收据问题”？</h3>
+      <div class="branch g"><b>是</b> → 调 <code>xr finish</code> 刷新收据；成功提示，失败只告警（收据未更新），不假装完成。</div>
+      <div class="branch b"><b>为什么“只剩收据”也收</b>：收据过期只能由 finish 刷新，否则 inspect 与 finish 会互相拒绝，形成死锁。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">续跑判定</div>
+    <div class="card">
+      <h3><code>shouldContinue</code>：五个停/跳条件</h3>
+      <table>
+        <tr><th>条件</th><th>动作</th></tr>
+        <tr><td>outcome = aborted / error</td><td>跳过（错误交给 Pi 原生重试，不在这里补循环）</td></tr>
+        <tr><td>没有 active run 或 <code>done_met</code></td><td>跳过</td></tr>
+        <tr><td>剩余单元全被 gate 挡住</td><td>停 + handoff</td></tr>
+        <tr><td>续跑次数 ≥ 200</td><td>停 + handoff</td></tr>
+        <tr><td>连续 3 次语义指纹不变</td><td>停 + handoff（时间戳变化不算进展）</td></tr>
+        <tr><td>其余</td><td>继续</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">继续前</div>
+    <div class="card">
+      <h3>落盘计数，再注入续接</h3>
+      <ul>
+        <li>刷新 <code>capsule.md</code>；失败只记录 <code>capsule-stale</code>。</li>
+        <li><code>xr guard set</code> 写 <code>guard.json</code>（运行锁 + session/generation）。</li>
+        <li>写 <code>resume</code> 事件，注入一条 <code>custom_message</code>。</li>
+      </ul>
+      <div class="branch s"><b>卡点 7 · 计数落盘</b>：写失败 → 停 + handoff，避免内存与磁盘分叉后无限续跑。</div>
+    </div>
+  </div>
+
+</div>
+
+<h2>关键卡点一览</h2>
+<div class="gates">
+
+  <div class="gate">
+    <span class="tag stop">卡点 1</span>
+    <h3>绑定 / 代次</h3>
+    <p>没有 ACTIVE run、被别的会话占用、generation 过期 → 不自动续跑；同会话提代才跟进。</p>
+  </div>
+
+  <div class="gate">
+    <span class="tag stop">卡点 2</span>
+    <h3>未决副作用</h3>
+    <p>工具报错不等于没执行。未 <code>xr op reconcile</code> 前 <code>automation_allowed=false</code>，done 也会被拒。</p>
+  </div>
+
+  <div class="gate">
+    <span class="tag stop">卡点 3</span>
+    <h3>子代理回执</h3>
+    <p>只收结构化通知；要求进程退出 0、步骤 complete、子会话与产物摘要匹配。失败保持 pending，不自动重派。</p>
+  </div>
+
+  <div class="gate">
+    <span class="tag stop">卡点 4</span>
+    <h3>证据与审查</h3>
+    <p>输入、产物、报告或审查会话任一变化 → stale；<code>review_required</code> 缺有效独立审查不能完成。</p>
+  </div>
+
+  <div class="gate">
+    <span class="tag stop">卡点 5</span>
+    <h3>检查器</h3>
+    <p>5 秒超时或无合法 JSON → 当作暂停，不当作完成；写 handoff 说明原因。</p>
+  </div>
+
+  <div class="gate">
+    <span class="tag warn">卡点 6</span>
+    <h3>进度</h3>
+    <p>连续 3 次语义指纹不变，或总续跑 ≥ 200 → 停。只改时间戳不算进展。</p>
+  </div>
+
+  <div class="gate">
+    <span class="tag warn">卡点 7</span>
+    <h3>空闲</h3>
+    <p>连续 <code>IDLE_STOP_MS</code> 无任何产出 → 中止 + handoff。默认 240 秒，可配置。</p>
+  </div>
+
+  <div class="gate">
+    <span class="tag warn">卡点 8</span>
+    <h3>暂停记录</h3>
+    <p><code>handoff.md</code> 只由 <code>xr handoff</code> 在运行锁内写；写不进去也必须停，并记录失败原因。</p>
+  </div>
+
+  <div class="gate">
+    <span class="tag info">卡点 9</span>
+    <h3>收据</h3>
+    <p>只有“其余问题都已清零、只剩收据 stale/invalid”时才允许 finish 刷新；其他问题一律拒绝 finish。</p>
+  </div>
+
+</div>
+
+<h2>边界：守卫明确不做什么</h2>
+<div class="two">
+  <div class="panel">
+    <h3>不会</h3>
+    <ul>
+      <li>不替你改默认模型、不改 Pi 的 retry 设置。</li>
+      <li>不在子代理会话里运行（<code>X_RAIL_SUBAGENT=1</code> 直接返回）。</li>
+      <li>不跟着 ACTIVE 指针换任务。</li>
+      <li>不自动重派失败的子代理，不自动重放工具。</li>
+      <li>不覆盖 Pi 的压缩摘要。</li>
+      <li>不直接写 <code>units.tsv</code> / <code>ledger.tsv</code> / <code>guard.json</code> / <code>handoff.md</code>。</li>
+      <li>不因为“时间到了”就宣布完成；完成只看 <code>xr inspect</code>。</li>
+    </ul>
+  </div>
+  <div class="panel ok">
+    <h3>会</h3>
+    <ul>
+      <li>绑定临时 run，并核对 workspace / run / session / generation。</li>
+      <li>把工具生命周期写成可核对的账（意图 → 结果 → 未决 → 核实）。</li>
+      <li>在满足条件时注入一条续接消息（带运行目录和当前单元）。</li>
+      <li>在判据满足时调 <code>xr finish</code> 生成收据。</li>
+      <li>在停滞、被接管、缺审查、无产出时停下并写 <code>handoff.md</code>。</li>
+      <li>把“为什么停”写进事件与 handoff，方便下一个会话接手。</li>
+    </ul>
+  </div>
+</div>
+
+<h2>配置与文件</h2>
+<table>
+  <tr><th>项</th><th>默认</th><th>说明</th></tr>
+  <tr><td><code>X_RAIL_IDLE_STOP_MS</code></td><td>240000</td><td>连续无产出的中止阈值；想更灵敏设 120000，想容忍安静长构建设 600000。</td></tr>
+  <tr><td><code>MAX_CONTINUES_WITHOUT_PROGRESS</code></td><td>3</td><td>连续无进展续跑上限，写死在 <code>constants.ts</code>。</td></tr>
+  <tr><td><code>MAX_CONTINUES_PER_RUN</code></td><td>200</td><td>单个 run 的总续跑上限，计在 <code>guard.json</code>。</td></tr>
+  <tr><td><code>handoff.md</code></td><td>—</td><td>暂停记录：阻塞原因 + 下一条命令 + 恢复说明。</td></tr>
+  <tr><td><code>guard.json</code></td><td>—</td><td>续跑计数与语义指纹；只由 <code>xr guard set</code> 写。</td></tr>
+</table>
+
+<footer>
+  图的依据是当前代码，不是设计稿：<code>x-run-guard.ts</code> 的 <code>guardBoundary</code> 顺序、<code>guard-core.ts</code> 的 <code>shouldContinue</code> / <code>idleExpired</code>、<code>xr inspect</code> 的 reason 列表。
+  未验证：真实静默满阈值的中止路径（探针未跑满时长）。
+</footer>
+
+</div>
+</body>
+</html>

@@ -38,7 +38,7 @@ v4 把任务执行与模型恢复拆成两个可独立安装的产物：
 - 模型恢复插件：`plugins/pi-model-recovery/`，只在用户选择 `model-recovery/auto` 时生效。
 
 证据分 `command`/`observation`/`review` 三种，写同一个 `ledger.tsv`；审查必须来自独立会话。
-细节、配置示例、打包命令和实测过的宿主事实见 [v4 说明](docs/v4-task-guard-and-model-recovery.md)。
+守卫流程与卡点：[流程图](docs/v4-guard-flow.html)。细节、配置示例、打包命令和实测过的宿主事实见 [v4 说明](docs/v4-task-guard-and-model-recovery.md)。
 
 ```bash
 bash scripts/package-v4.sh --dest <新目录> --dry-run   # 只打印两个产物的入口、提交和摘要

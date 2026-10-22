@@ -19,8 +19,8 @@ export const BAI_CONTINUE_TOKENS = 350_000;
 export const SUMMARY_TIMEOUT_MS = 120_000;
 export const SUMMARY_MAX_CHARS = 3_000;
 export const CAPSULE_MAX_BYTES = 2_048;
-/** 原则：只要还有产出就继续等；连续这么久没有任何产出一律视为卡住。可用 X_RAIL_IDLE_STOP_MS 覆盖。 */
-export const IDLE_STOP_MS = Number(process.env.X_RAIL_IDLE_STOP_MS ?? 600_000);
+/** 原则：只要还有产出就继续等；连续这么久没有任何产出一律视为卡住。默认 240 秒，可用 X_RAIL_IDLE_STOP_MS 覆盖。 */
+export const IDLE_STOP_MS = Number(process.env.X_RAIL_IDLE_STOP_MS ?? 240_000);
 export const MAX_CONTINUES_WITHOUT_PROGRESS = 3;
 export const MAX_CONTINUES_PER_RUN = 200;
 
