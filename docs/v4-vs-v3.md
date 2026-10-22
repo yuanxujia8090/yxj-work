@@ -146,7 +146,23 @@ ls ~/.pi/agent | grep v3-backup                  # 找到备份目录
 
 注意：回滚不会恢复 v4 写过的 run 数据到 v3 格式；v3 读不了 v4 新增列。需要保留旧 run 时，先备份 `.work-docs/runs`。
 
-## 7. 仍未验证（安装前请知悉）
+## 7. 体积上限（v4 已固化）
+
+v3 的体积上限写在 `plans/0.0.7/体积基线与验收.md`，v4 把它变成可执行检查：`python3 scripts/check-size.py`（`scripts/check-repo.sh` 已接入）。
+
+| 指标 | v3 基线（734f554） | v4 上限（当前实测） | 差值原因 |
+| --- | ---: | ---: | --- |
+| `SKILL.md` | 4,618 | 4,618 | 未改入口 |
+| 五份运行说明合计 | 4,695 | 5,197 | `execute.md`、`review.md` 各加证据命令说明 |
+| `stages/` + `references/` 合计 | 8,307 | 10,018 | `references/verification.md` 重写（三种证据、不可覆盖、stale） |
+| 全部说明文档 | 136,819 | 138,530 | 同上，未新增说明文件 |
+| 技能内代码与测试 | 253,224 | 303,066 | 只记录不设上限；新增 inspect/finish/evidence/guard/handoff/acceptance、宿主事件、收据与审查校验 |
+
+规则与 v3 一致：以原始字节为准，不能靠合并长行或换目录规避；代码允许为必要保障增长，但要在交付里列出新增职责；阈值不通过先精简，确有例外要写明“未达目标”。
+
+自检：`bash scripts/test-size-check.sh` 会验证“真实预算通过、故意调小的预算必须失败”。
+
+## 8. 仍未验证（安装前请知悉）
 
 - 安装到真实 HOME 后由 Pi 自动加载 `extensions/` 的路径（探针用显式 `--extension` 加载）。
 - 真实网关错误分类、余额/鉴权分支的真实宿主行为。

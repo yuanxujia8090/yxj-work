@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "skill": "skills/x-rail",
+  "note": "v3 的四道体积上限沿用，v4 只在新增能力处按实测增量上调并写明原因。口径见 plans/0.0.7/体积基线与验收.md。",
+  "v3_baseline": {
+    "commit": "734f554",
+    "skill_md_bytes": 4618,
+    "run_docs_bytes": 4695,
+    "stages_references_bytes": 8307,
+    "all_docs_bytes": 136819,
+    "code_bytes": 253224
+  },
+  "limits": {
+    "skill_md_bytes": 4618,
+    "run_docs_bytes": 5197,
+    "stages_references_bytes": 10018,
+    "all_docs_bytes": 138530
+  },
+  "record_only": {
+    "code_bytes": 303066
+  },
+  "run_docs": [
+    "stages/plan.md",
+    "stages/execute.md",
+    "stages/review.md",
+    "references/brief-template.md",
+    "references/failure-modes.md"
+  ],
+  "deltas_reason": {
+    "run_docs_bytes": "+502：stages/execute.md 与 stages/review.md 增加 observation/review 证据命令；入口与其余四份不变。",
+    "stages_references_bytes": "+1711：references/verification.md 重写（三种证据、报告不可覆盖、stale 规则），其余阶段卡只加两行命令说明。",
+    "all_docs_bytes": "+1711：同上，v4 未新增 stages/references 之外的说明文档。",
+    "code_bytes": "+49842：新增 inspect/finish/evidence/guard/handoff/acceptance 等命令、宿主事件记账、收据与审查校验、测试与探针；代码只记录不设上限。"
+  }
+}
