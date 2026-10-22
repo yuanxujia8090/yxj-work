@@ -7,7 +7,7 @@ import { planSwitch } from "./compat.ts";
 import { decideSwitch, freshMemory, memoryAfter } from "./switch.ts";
 import { breakerFor, loadState, memoryFor, statePath, updateState, type Persisted } from "./store.ts";
 import { appendEvent, findActiveRun, readBoundary } from "./run-files.ts";
-import { guardBoundary, registerGuardLifecycle } from "./x-run-guard.ts";
+import { registerGuardLifecycle } from "./x-run-guard.ts";
 
 let sessionMemory = freshMemory();
 
@@ -156,10 +156,9 @@ export default function (pi: ExtensionAPI) {
       }
     });
     if (planned.action === "ignore") {
-      const guard = await guardBoundary(event, ctx);
-      if (!guard && needsCompaction) return { continue: true, entries: [{ type: "compaction", summary: "切回主模型。恢复状态以 capsule.md 和 ledger.tsv 为准。", firstKeptEntryId: null }] };
-      if (guard && needsCompaction) return { continue: true, entries: [{ type: "compaction", summary: "切回主模型。恢复状态以 capsule.md 和 ledger.tsv 为准。", firstKeptEntryId: null }, ...guard.entries] };
-      return guard;
+      // 任务续跑只由守卫负责；这里仅在需要压缩时追加自己的条目，不覆盖守卫已写入的 entries。
+      if (!needsCompaction) return;
+      return { continue: true, entries: [...(event.entries ?? []), { type: "compaction", summary: "切回主模型。恢复状态以 capsule.md 和 ledger.tsv 为准。", firstKeptEntryId: null }] };
     }
     const record = { class: classified.klass, action: planned.action, from: modelKey(current.provider, current.id), ts: new Date().toISOString() };
     pi.appendEntry("x-failover", record);
@@ -174,7 +173,7 @@ export default function (pi: ExtensionAPI) {
       }
       return {
         continue: true,
-        entries: [{ type: "custom_message" as const, customType: "x-failover", content: `[x-failover] ${planned.reason}`, display: true }],
+        entries: [...(event.entries ?? []), { type: "custom_message" as const, customType: "x-failover", content: `[x-failover] ${planned.reason}`, display: true }],
       };
     }
     const target = ctx.modelRegistry.find("bai", "deepseek-v4.1-flash");
@@ -191,13 +190,11 @@ export default function (pi: ExtensionAPI) {
     }
     pi.setThinkingLevel("high");
     const content = "message" in planned ? planned.message : "";
-    const entries: SessionBoundaryDraft[] = [];
+    const entries: SessionBoundaryDraft[] = [...(event.entries ?? [])];
     if (planned.action === "compact-then-switch") {
       entries.push({ type: "compaction", summary: "跨模型切换。恢复状态以 capsule.md 和 ledger.tsv 为准。", firstKeptEntryId: null });
     }
     entries.push({ type: "custom_message", customType: "x-failover", content, display: true });
-    const guard = await guardBoundary(event, ctx);
-    if (guard) entries.push(...guard.entries);
     return { continue: true, entries };
   });
 

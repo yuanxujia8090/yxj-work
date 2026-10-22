@@ -6,8 +6,13 @@ export default function (pi: any) {
     sessionFile: ctx?.sessionManager.getSessionFile(), ...event,
   })}\n`);
   record({ type: "extension_loaded" });
-  for (const type of ["session_start", "session_shutdown", "agent_start", "agent_end", "agent_before_settle", "agent_settled", "turn_start", "turn_end", "tool_execution_start", "tool_execution_end", "tool_result"]) {
-    pi.on(type, (event: any, ctx: any) => { record(event, ctx); });
+  for (const type of ["session_start", "session_shutdown", "agent_start", "agent_end", "agent_before_settle", "agent_settled", "turn_start", "turn_end", "message_end", "tool_execution_start", "tool_execution_end", "tool_result"]) {
+    pi.on(type, (event: any, ctx: any) => {
+      record(event, ctx);
+      if (type === "message_end" && event.message?.role === "assistant" && event.message.stopReason === "error" && event.message.errorMessage === "gateway_concurrency_limit") {
+        return { ...event.message, errorMessage: `${event.message.errorMessage} [host-probe retryable]` };
+      }
+    });
   }
   pi.on("tool_call", (event: any, ctx: any) => {
     record(event, ctx);
@@ -15,6 +20,19 @@ export default function (pi: any) {
       record({ type: "block_decision", toolCallId: event.toolCallId }, ctx);
       return { block: true, reason: "host-probe intentional block" };
     }
+  });
+  pi.registerVirtualModel({
+    provider: "host-probe",
+    id: "auto",
+    name: "Host probe auto",
+    thinkingLevels: ["off"],
+    route(request: any, ctx: any) {
+      const selected = request.reason === "retry" ? "fixture-b" : request.previous?.model?.id ?? "fixture-a";
+      const model = ctx.modelRegistry.find("host-probe", selected);
+      if (!model) throw new Error(`host-probe missing physical model: ${selected}`);
+      record({ type: "route", reason: request.reason, selected, failed: request.failed?.message?.errorMessage }, ctx);
+      return { model, thinkingLevel: "off" };
+    },
   });
   pi.on("before_provider_request", (_event: any, ctx: any) => {
     if (ctx.model?.provider !== "host-probe" || !ctx.model.baseUrl.startsWith(`http://127.0.0.1:${process.env.HOST_PROBE_PORT}/`)) {

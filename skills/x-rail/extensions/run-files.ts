@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { writeAtomic } from "./file-io.ts";
+import { fileURLToPath } from "node:url";
 
 export interface ActiveRun {
   id: string;
@@ -11,8 +12,17 @@ export interface ActiveRun {
 
 const RUN_ID = /^\d{8}-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*(?:-\d+)?$/;
 
+/** 同一工作区的规范路径；xr 侧用 Path.resolve()，撞上符号链接时两边文字才对得上。 */
+function realpath(target: string): string {
+  try {
+    return fs.realpathSync(target);
+  } catch {
+    return path.resolve(target);
+  }
+}
+
 export function findActiveRun(cwd: string): ActiveRun | null {
-  const root = path.resolve(cwd, ".work-docs", "runs");
+  const root = path.resolve(realpath(cwd), ".work-docs", "runs");
   const pointer = path.join(root, "ACTIVE");
   try {
     const id = fs.readFileSync(pointer, "utf8").trim();
@@ -58,6 +68,7 @@ export interface RunBinding {
   workspace: string;
   run_id: string;
   session_id: string;
+  generation: number;
   owner?: string;
   created_at?: string;
   lease: "active" | "paused" | "released";
@@ -77,12 +88,14 @@ export function parseBinding(raw: string): RunBinding | null {
   if (typeof item.workspace !== "string" || item.workspace === "") return null;
   if (typeof item.run_id !== "string" || item.run_id === "") return null;
   if (typeof item.session_id !== "string" || item.session_id === "") return null;
+  if (typeof item.generation !== "number" || !Number.isInteger(item.generation) || item.generation < 1) return null;
   if (item.lease !== "active" && item.lease !== "paused" && item.lease !== "released") return null;
   return {
     schema: 1,
     workspace: item.workspace,
     run_id: item.run_id,
     session_id: item.session_id,
+    generation: item.generation,
     owner: typeof item.owner === "string" ? item.owner : undefined,
     created_at: typeof item.created_at === "string" ? item.created_at : undefined,
     lease: item.lease,
@@ -91,12 +104,13 @@ export function parseBinding(raw: string): RunBinding | null {
 
 export function bindingMatches(
   binding: RunBinding | null,
-  expected: { workspace: string; runId: string; sessionId: string },
+  expected: { workspace: string; runId: string; sessionId: string; generation?: number },
 ): boolean {
   if (!binding) return false;
-  return binding.workspace === path.resolve(expected.workspace)
+  return binding.workspace === realpath(expected.workspace)
     && binding.run_id === expected.runId
-    && binding.session_id === expected.sessionId;
+    && binding.session_id === expected.sessionId
+    && (expected.generation === undefined || binding.generation === expected.generation);
 }
 
 export function readBinding(dir: string): RunBinding | null {
@@ -118,9 +132,28 @@ export interface InspectSnapshot {
   blocked: string[];
   stale_units: string[];
   unresolved_ops: string[];
+  pending_workers: string[];
+  receipt_status: "missing" | "valid" | "stale" | "invalid";
   acceptance_status: { total: number; covered: number };
   reasons: string[];
   truncated_tail: boolean;
+}
+
+export function validInspectSnapshot(value: unknown, runId: string): value is InspectSnapshot {
+  if (typeof value !== "object" || value === null) return false;
+  const item = value as Record<string, unknown>;
+  const acceptance = item.acceptance_status;
+  return item.schema_version === 1 && item.run_id === runId
+    && ["managed", "legacy", "invalid"].includes(String(item.mode))
+    && typeof item.phase === "string"
+    && typeof item.automation_allowed === "boolean"
+    && typeof item.done_met === "boolean"
+    && ["ready", "doing", "blocked", "stale_units", "unresolved_ops", "pending_workers", "reasons"].every((key) => Array.isArray(item[key]) && (item[key] as unknown[]).every((part) => typeof part === "string"))
+    && typeof item.truncated_tail === "boolean"
+    && typeof acceptance === "object" && acceptance !== null
+    && Number.isInteger((acceptance as Record<string, unknown>).total)
+    && Number.isInteger((acceptance as Record<string, unknown>).covered)
+    && ["missing", "valid", "stale", "invalid"].includes(String(item.receipt_status));
 }
 
 /** 检查器失败一律返回 null：调用方按“暂停”处理，不能当完成。 */
@@ -138,7 +171,8 @@ export function inspectRun(cwd: string, runId: string, timeoutMs = 5_000): Promi
           return;
         }
         try {
-          resolve(JSON.parse(stdout) as InspectSnapshot);
+          const parsed: unknown = JSON.parse(stdout);
+          resolve(validInspectSnapshot(parsed, runId) ? parsed : null);
         } catch {
           resolve(null);
         }
@@ -150,8 +184,8 @@ export function inspectRun(cwd: string, runId: string, timeoutMs = 5_000): Promi
 export function xrPath(cwd: string): string | null {
   const candidates = [
     process.env.X_RAIL_XR,
+    fileURLToPath(new URL("../scripts/xr", import.meta.url)),
     path.join(cwd, "skills", "x-rail", "scripts", "xr"),
-    path.join(os.homedir(), ".pi", "agent", "skills", "x-rail", "scripts", "xr"),
   ].filter((item): item is string => Boolean(item));
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate;
@@ -217,5 +251,77 @@ export function readBoundary(dir: string): BoundaryMark | null {
     };
   } catch {
     return null;
+  }
+}
+
+export function workerUnit(identity: HostIdentity): string | null {
+  const dir = path.join(identity.workspace, ".work-docs", "runs", identity.runId);
+  const lines = readOrEmpty(path.join(dir, "units.tsv")).trim().split("\n");
+  const header = lines.shift()?.split("\t") ?? [];
+  const state = header.indexOf("state");
+  const id = header.indexOf("id");
+  const doing = lines.map((line) => line.split("\t")).filter((row) => row[state] === "doing");
+  return doing.length === 1 ? doing[0][id] ?? null : null;
+}
+
+export function receiveWorker(identity: HostIdentity, unit: string, statusPath: string): boolean {
+  const bin = xrPath(identity.workspace);
+  if (!bin) return false;
+  try {
+    execFileSync(bin, ["--repo", identity.workspace, "--run-id", identity.runId,
+      "--session", identity.sessionId, "--generation", String(identity.generation),
+      "receive", unit, "--receipt", statusPath, "--record", "host:terminal-status"],
+    { timeout: 5_000, stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export interface HostIdentity {
+  workspace: string;
+  runId: string;
+  sessionId: string;
+  generation: number;
+}
+
+/** 经 `xr event` 写入宿主事件；身份、代次与去重由 xr 在运行锁内校验。 */
+export function recordHostEvent(
+  identity: HostIdentity,
+  eventId: string,
+  type: string,
+  detail: Record<string, unknown>,
+): "ok" | "duplicate" | "rejected" | "unavailable" {
+  const bin = xrPath(identity.workspace);
+  if (!bin) return "unavailable";
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "x-rail-event-"));
+  const file = path.join(dir, "record.json");
+  try {
+    fs.writeFileSync(file, JSON.stringify({
+      schema: 1,
+      event_id: eventId,
+      workspace: realpath(identity.workspace),
+      run_id: identity.runId,
+      session_id: identity.sessionId,
+      generation: identity.generation,
+      type,
+      detail,
+    }), { mode: 0o600 });
+    const out = execFileSync(
+      bin,
+      ["--repo", path.resolve(identity.workspace), "--run-id", identity.runId,
+       "--session", identity.sessionId, "--generation", String(identity.generation),
+       "event", "--record", file],
+      { encoding: "utf8", timeout: 5_000, stdio: ["ignore", "pipe", "pipe"] },
+    );
+    return out.includes(" duplicate") ? "duplicate" : "ok";
+  } catch {
+    return "rejected";
+  } finally {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // 临时目录清理失败不影响已写事件。
+    }
   }
 }
