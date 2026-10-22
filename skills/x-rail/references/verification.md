@@ -15,6 +15,3 @@
 - 没有 VERIFIED 时 `xr done <id>` 拒绝，并给下一步命令。
 - 输入、产物、报告或审查会话任一变化，旧证据变 stale，`inspect` 会把该单元列为 stale 并阻止完成；重跑 `xr verify` 或重新 `xr evidence record` 追加新记录，旧记录不删。
 - RUN.md 写 `review_required: true` 时，没有当前有效的 review 证据就阻止完成。
-- Land 还要在最终树上跑全量测试或 typecheck。高风险单元再调用 Skill 工具 code-review。
-
-`xr verify` 不能用于 observation/review 单元；那类单元也不能伪造一条 `--verify "true"` 蒙过去。

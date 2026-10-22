@@ -1,5 +1,11 @@
 # 项目决策
 
+## 2026-10-22：真实会话用例回放与收口文档缺口
+
+- 取样 2026-10-08 至 10-22 的本机会话（976 个窗口内文件，148 次 `task.py` 实调，21 次 `xr` 实调），把使用场景固化为 `docs/v4-usage-test-cases.md`（TC-01～TC-17），执行记录在 `plans/v4/evidence/v4-usage-test-run-20261022.md`。
+- 用例暴露出文档缺口：代码要求「`--kind integration` 收口单元 + 非空验收表」才 `done_met=true`，`land` 还要 `xr finish` 出收据，而阶段卡只写到 `xr done` / `xr status`。已在 `stages/plan.md`（第 3、4 步）和 `stages/land.md`（第 2 步）补最短命令，其他说明压缩等量字节，`scripts/check-size.py` 仍在预算内（run_docs 5107/5197，stages_references 9925/10018）。
+- 只记录未改代码的三项：`finish` 失败提示不给命令形状；`plans/v4/03-x-rail任务闭环.md` 把最终 integration 读作可选，与代码冲突；`XR_SESSION` 被宿主 `PI_SESSION_ID` 覆盖（优先级未写进文档）。改为默认行为前需要用户确认。
+
 ## 2026-10-22：v4 重构与 v3 隔离（硬规则）
 
 - 当前工作区 `.worktrees/v4`（分支 `v4`）是重构版本，`v3` 是现存可用版本。v4 的任何改动只在本分支/worktree 内生效，不得修改 `.worktrees/v3`、`~/.pi/agent/skills/`（x-rail 软链指向 `.worktrees/v3/skills/x-rail`）、`~/.agents/skills/` 或任何宿主已安装副本。
