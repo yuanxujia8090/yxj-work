@@ -14,7 +14,7 @@
     "skill_md_bytes": 4618,
     "run_docs_bytes": 5197,
     "stages_references_bytes": 10018,
-    "all_docs_bytes": 138530
+    "all_docs_bytes": 138668
   },
   "record_only": {
     "code_bytes": 303066
@@ -29,7 +29,7 @@
   "deltas_reason": {
     "run_docs_bytes": "+502：stages/execute.md 与 stages/review.md 增加 observation/review 证据命令；入口与其余四份不变。",
     "stages_references_bytes": "+1711：references/verification.md 重写（三种证据、报告不可覆盖、stale 规则），其余阶段卡只加两行命令说明。",
-    "all_docs_bytes": "+1711：同上，v4 未新增 stages/references 之外的说明文档。",
+    "all_docs_bytes": "+1849：同上，并为子代理调用形状和错误恢复边界增加 138 字节模板规则；没有新增 runtime 文档。",
     "code_bytes": "+49842：新增 inspect/finish/evidence/guard/handoff/acceptance 等命令、宿主事件记账、收据与审查校验、测试与探针；代码只记录不设上限。"
   }
 }

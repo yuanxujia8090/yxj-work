@@ -25,6 +25,7 @@ need scripts/test-skill-metadata.sh
 need tests/fixtures/v2-review-valid/contract.md
 need tests/fixtures/v2-review-valid/state.md
 need scripts/test-flow.sh
+need scripts/test-subagent-scenarios.py
 # Consumer records are ignored runtime data, never a source checkout prerequisite.
 
 for file in "$ROOT"/skills/x-rail/SKILL.md "$ROOT"/skills/x-rail-long/SKILL.md "$ROOT"/skills/x-handoff/SKILL.md "$ROOT"/skills/x-rail/playbooks/*.md; do
@@ -75,6 +76,7 @@ PY
 python3 "$ROOT/scripts/test-xr.py" >/dev/null || fail 'test-xr failed'
 bash "$ROOT/scripts/test-install-v3.sh" >/dev/null || fail 'test-install-v3 failed'
 bash "$ROOT/scripts/test-package-v4.sh" >/dev/null || fail 'test-package-v4 failed'
+PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/test-subagent-scenarios.py" >/dev/null || fail 'test-subagent-scenarios failed'
 python3 "$ROOT/scripts/check-size.py" --root "$ROOT" >/dev/null || fail 'check-size failed'
 bash "$ROOT/scripts/test-size-check.sh" >/dev/null || fail 'test-size-check failed'
 node "$ROOT/scripts/stress-guard.mjs" >/dev/null || fail 'stress-guard failed'
