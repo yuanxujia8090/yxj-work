@@ -93,3 +93,12 @@
 - 处理：`agent_start` 时校对 `ctx.sessionManager.getSessionId()`，与已绑定会话不同才重新 `bind`（generation 递增）；绑不上就清空绑定并提示，不用旧身份写状态。
 - 中止用真实 RPC 控制通道：`prompt → abort` 后 `agent_settled.aborted=true`，续跑数为 0；切会话后旧身份不再产生任何任务事件，绑定文件不被静默改写。
 - 已知取舍：切会话后的重新接管需要用户显式 `xr bind` 或重开进程，不自动抢占；宁可停摆也不猜身份。
+
+## 2026-10-22 阶段 E/F 实施修订
+
+- 插件宿主验收用隔离 agent dir 加本地假模型，覆盖“未配置/配置无效/链中模型不可用”三种零请求路径；真实模型只在 `RECOVERY_REAL_MODEL=1` 下跑，默认不联网。
+- 实测发现：`--model model-recovery/auto` 会被 Pi 解析成 provider/model 两段；必须写成 `--provider model-recovery --model auto`。这条写进探针，避免以后误判为“虚拟模型没生效”。
+- 真实模型验收范围只到“虚拟模型路由到 `bai/deepseek-v4.1-flash` 并拿到正常回答”。网关错误分类、余额/鉴权分支、工具副作用只执行一次属于未验证，不据此声称线上可靠性。
+- 打包选型：只导出 `skills/x-rail` 与 `plugins/pi-model-recovery`，排除 `node_modules`、`plans/`、`.work-docs`、凭据、`.pyc` 与旧 failover 入口（`x-failover.ts`、`failover.test.ts`）。导出到已存在目录一律拒绝，不做备份覆盖。
+- 未选：把两个产物合成一个包，或让包内附带用户配置样例自动写入。理由：产物独立性是用户明确要求，自动写配置会改变用户环境。
+- 已知取舍：manifest 的来源提交取自当前 `git rev-parse HEAD`；工作区未提交时导出会把未提交改动打进去，但 manifest 仍标 HEAD。需要严格可复现时先提交再导出。
