@@ -30,6 +30,21 @@ XML（Extensible Markup Language，可扩展标记语言）像组件标签，只
 
 复杂或大范围实施必须先按逻辑独立性、复杂度、范围和依赖拆成可验证工作项，并持久记录。多个独立复杂逻辑、一个跨模块大范围需求，或单需求内权限/并发/多步写入，都不能因需求少免拆。多个局部简单同源改动可合项并说明依据；不按五个、六个数量分流。已有合格计划核对覆盖后复用。只读分析在回复列项、不落盘；仅要方案文档只写授权位置。拆分不自动进入长模式，但不抵消 `/x-rail` 已有的当前目标范围委派授权。
 
+## v4：任务守卫与模型恢复插件
+
+v4 把任务执行与模型恢复拆成两个可独立安装的产物：
+
+- 任务守卫：`skills/x-rail/`（`xr` 记账 + `x-run-guard.ts`），完成判断只看 `xr inspect --json`。
+- 模型恢复插件：`plugins/pi-model-recovery/`，只在用户选择 `model-recovery/auto` 时生效。
+
+证据分 `command`/`observation`/`review` 三种，写同一个 `ledger.tsv`；审查必须来自独立会话。
+细节、配置示例、打包命令和实测过的宿主事实见 [v4 说明](docs/v4-task-guard-and-model-recovery.md)。
+
+```bash
+bash scripts/package-v4.sh --dest <新目录> --dry-run   # 只打印两个产物的入口、提交和摘要
+bash scripts/test-package-v4.sh                        # 导出、拒绝覆盖、清单互斥
+```
+
 ## 安装
 
 需要 Bash 和 Python 3.10 或更新版本。只使用标准库，不新增第三方包。`zoneinfo` 使用系统时区数据。

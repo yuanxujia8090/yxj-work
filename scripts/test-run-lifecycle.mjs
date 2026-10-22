@@ -265,6 +265,27 @@ try {
     assert.equal(guardMemory.continues, 3);
     assert.ok(guardMemory.stalled >= 2, `stalled=${guardMemory.stalled}`);
   });
+  const failDir = path.join(evidence, "failstop");
+  fs.mkdirSync(failDir, { recursive: true });
+  const failSession = randomUUID();
+  spawnSync("python3", [xr, "init", "failstop", "--session", failSession], { cwd: failDir, encoding: "utf8", env: xrEnv });
+  const failRun = fs.readFileSync(path.join(failDir, ".work-docs/runs/ACTIVE"), "utf8").trim();
+  const failRunDir = path.join(failDir, ".work-docs/runs", failRun);
+  // 检查器读不动（表头坏）且 handoff.md 本身是个目录，写入必然失败。
+  fs.writeFileSync(path.join(failRunDir, "units.tsv"), "broken\theader\n");
+  fs.mkdirSync(path.join(failRunDir, "handoff.md"));
+  scenario = "cont";
+  await run("failstop", ["--extension", path.join(root, "skills/x-rail/extensions/x-run-guard.ts"), "--session-id", failSession], "HOST_PROBE_FAILSTOP: reply DONE.", failDir);
+  const failExit = JSON.parse(fs.readFileSync(path.join(evidence, "failstop.exit.json"), "utf8"));
+  const failEvents = jsonl(path.join(failRunDir, "events.jsonl"));
+  check("检查器失败且 handoff 写不下去时停下并记下原因", () => {
+    assert.equal(failExit.code, 0, `exit=${JSON.stringify(failExit)}`);
+    assert.equal(failEvents.filter((event) => event.type === "resume").length, 0);
+    const failed = failEvents.find((event) => event.type === "handoff-failed");
+    assert.ok(failed, `no handoff-failed event: ${failEvents.map((event) => event.type).join(",")}`);
+    assert.match(String(failed.detail?.reason ?? ""), /检查器/);
+    assert.match(String(failed.detail?.error ?? ""), /EISDIR|ENOTDIR|directory|is a directory/i);
+  });
   const rpcDir = path.join(evidence, "rpc");
   fs.mkdirSync(rpcDir, { recursive: true });
   const rpcSession = randomUUID();

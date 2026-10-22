@@ -74,5 +74,6 @@ PY
 
 python3 "$ROOT/scripts/test-xr.py" >/dev/null || fail 'test-xr failed'
 bash "$ROOT/scripts/test-install-v3.sh" >/dev/null || fail 'test-install-v3 failed'
+bash "$ROOT/scripts/test-package-v4.sh" >/dev/null || fail 'test-package-v4 failed'
 
 printf 'check-repo: passed\n'

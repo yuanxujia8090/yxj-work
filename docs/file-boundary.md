@@ -15,6 +15,17 @@ For a task running in `<execution-root>`:
 └── tmp/
 ```
 
+## v4 run files
+
+持久任务还可以使用 `.work-docs/runs/<run-id>/`：`RUN.md`、`units.tsv`、`ledger.tsv`、`acceptance.tsv`、
+`events.jsonl`、`binding.json`、`guard.json`、`finish.json`、`capsule.md`、`handoff.md`、`notes/`。
+
+- 只由 `xr` 在运行锁内写入；扩展不得直接改 TSV。
+- `ledger.tsv` 与 `notes/` 里的证据只增不改，报告副本独占创建。
+- `handoff.md` 是暂停记录；写入失败必须停下并报告，不能继续跑。
+
+模型恢复插件是仓库内独立产物 `plugins/pi-model-recovery/`，运行时只读配置、不写任务记录，也不写用户配置。
+
 ## Task id format
 
 `<task-id>` is the task directory name, never a bare slug:
