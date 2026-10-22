@@ -21,9 +21,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import frontier  # noqa: E402
 
 TZ = ZoneInfo("Asia/Shanghai")
-HEADER = ["id", "title", "state", "deps", "scope", "output_scope", "timebox_min", "attempts", "owner", "model", "verify_cmd", "evidence", "updated", "kind"]
+HEADER = ["id", "title", "state", "deps", "scope", "output_scope", "timebox_min", "attempts", "owner", "model", "verify_cmd", "verify_kind", "evidence", "updated", "kind"]
 LEGACY_HEADER = ["id", "title", "state", "deps", "scope", "timebox_min", "attempts", "owner", "model", "verify_cmd", "evidence", "updated", "kind"]
-LEDGER = ["unit", "tree_hash", "cmd_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
+COMMAND_LEDGER = ["unit", "tree_hash", "cmd_hash", "verdict", "cmd", "exit_code", "evidence_path", "report_hash", "model", "ts"]
+LEDGER = COMMAND_LEDGER + ["evidence_kind", "observer", "session_path", "session_hash", "input_scope", "input_hash", "final_hash", "record"]
+PREVIOUS_LEDGER = ["unit", "tree_hash", "cmd_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
 LEGACY_LEDGER = ["unit", "tree_hash", "verdict", "cmd", "exit_code", "evidence_path", "model", "ts"]
 DECISIONS = ["ts", "unit", "decision", "reason", "alternatives", "reversible", "by_model"]
 ID_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
@@ -31,6 +33,8 @@ SLUG_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 KINDS = {"impl", "review", "research", "bugfix", "integration"}
 ACCEPTANCE = ["id", "statement", "source", "units", "status"]
 EXPLICIT_RUN_ID: str | None = None
+CALLER_SESSION: str | None = None
+CALLER_GENERATION: int | None = None
 FAIL_KINDS = {"cap", "net", "tool", "logic", "verify", "unknown"}
 WRITERS = {"impl", "bugfix"}
 TERMINAL = {"done", "abandoned"}
@@ -106,22 +110,120 @@ def write_tsv(path: Path, header: list[str], rows: list[dict[str, str]]) -> None
 
 
 @contextmanager
-def run_lock(run: Path):
+def run_lock(run: Path, *, validate: bool = True):
     lock_path = run / ".lock"
     with lock_path.open("a+") as handle:
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         try:
+            if validate:
+                check_writer(run)
             yield
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
-def event(run: Path, payload: dict) -> None:
-    payload = {"ts": stamp(), **payload}
+def check_writer(run: Path) -> None:
+    global CALLER_GENERATION
+    binding = read_binding(run)
+    if not binding or binding.get("_invalid"):
+        die("写入需要有效会话绑定；旧运行请先显式 bind")
+    if binding.get("workspace") != str(run.parent.parent.parent.resolve()) or binding.get("run_id") != run.name:
+        die("绑定与当前工作区或运行不一致")
+    if not CALLER_SESSION or binding.get("session_id") != CALLER_SESSION:
+        die("session 与当前绑定不一致，拒绝旧会话写入")
+    generation = binding.get("generation")
+    if not isinstance(generation, int) or generation < 1:
+        die("绑定缺少 generation；请显式 bind 或接管旧运行")
+    if CALLER_GENERATION is None:
+        CALLER_GENERATION = generation
+    if CALLER_GENERATION != generation:
+        die("generation 已过期，拒绝延迟写入")
+    if binding.get("lease") == "released":
+        die("运行已释放，拒绝写入")
+
+
+def append_event_record(run: Path, record: dict) -> None:
     with (run / "events.jsonl").open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
         handle.flush()
         os.fsync(handle.fileno())
+
+
+def event(run: Path, payload: dict) -> None:
+    binding = read_binding(run) or {}
+    record = {"schema": 1, "event_id": os.urandom(16).hex(), "ts": stamp(),
+              "workspace": str(run.parent.parent.parent.resolve()), "run_id": run.name,
+              "session_id": binding.get("session_id"), "generation": binding.get("generation"),
+              "detail": payload.copy(), **payload}
+    append_event_record(run, record)
+
+
+def event_ids(run: Path) -> set[str]:
+    path = run / "events.jsonl"
+    if not path.is_file():
+        return set()
+    found = set()
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(item, dict) and isinstance(item.get("event_id"), str):
+            found.add(item["event_id"])
+    return found
+
+
+def cmd_event(args: argparse.Namespace) -> None:
+    repo = repo_of(args)
+    record_path = Path(args.record).resolve()
+    if not record_path.is_file():
+        die(f"找不到事件记录 {args.record}。正确命令：xr event --record <本进程私有临时文件>")
+    try:
+        record = json.loads(record_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        die(f"事件记录不是合法 JSON：{args.record}")
+    if not isinstance(record, dict):
+        die("事件记录必须是 JSON 对象")
+    event_id = record.get("event_id")
+    if not isinstance(event_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", event_id):
+        die("事件记录缺 event_id（1-128 位字母数字或 _-）")
+    if not isinstance(record.get("type"), str) or not record["type"]:
+        die("事件记录缺 type")
+    run = run_dir(repo, record.get("run_id"))
+    with run_lock(run):
+        binding = read_binding(run) or {}
+        if record.get("workspace") != str(repo.resolve()) or record.get("run_id") != run.name:
+            die("事件记录的 workspace 或 run 与当前运行不一致")
+        if record.get("session_id") != binding.get("session_id"):
+            die("事件记录的 session 与当前绑定不一致，拒绝旧会话写入")
+        if record.get("generation") != binding.get("generation"):
+            die("事件记录的 generation 已过期，拒绝延迟写入")
+        if event_id in event_ids(run):
+            say(f"ok event {event_id} duplicate")
+            return
+        detail = record.get("detail") if isinstance(record.get("detail"), dict) else {}
+        if record["type"] == "worker_started":
+            detail = prepare_worker(repo, run, detail)
+        append_event_record(run, {**record, "schema": 1, "ts": stamp(), "detail": detail})
+    say(f"ok event {event_id} {record['type']}")
+
+
+def cmd_op_reconcile(args: argparse.Namespace) -> None:
+    if args.resolution not in {"completed", "not-started", "failed"}:
+        die("resolution 只能是 completed、not-started 或 failed")
+    if not args.record:
+        die("核实需要 --record 引用现场证据")
+    run = run_dir(repo_of(args))
+    with run_lock(run):
+        pending, truncated = unresolved_ops(run)
+        if truncated:
+            die("事件日志损坏，无法核实动作；先修复 events.jsonl")
+        if args.op not in pending:
+            die(f"没有未决动作 {args.op}。正确命令：xr inspect --json 查看 unresolved_ops")
+        event(run, {"type": "op_reconcile", "op_id": args.op, "resolution": args.resolution, "record": args.record})
+    say(f"ok op {args.op} {args.resolution}")
 
 
 RUN_ID_RE = re.compile(r"\d{8}-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*(?:-\d+)?")
@@ -165,9 +267,12 @@ def units(run: Path) -> list[dict[str, str]]:
     header = path.read_text().splitlines()[0].split("\t")
     if header == HEADER:
         return read_tsv(path, HEADER)
+    previous = [key for key in HEADER if key != "verify_kind"]
+    if header == previous:
+        return [{**row, "verify_kind": "command"} for row in read_tsv(path, previous)]
     if header != LEGACY_HEADER:
         die("units.tsv 表头不对。正确命令：不要手改 TSV，用 xr 命令重写")
-    return [{**row, "output_scope": row["scope"]} for row in read_tsv(path, LEGACY_HEADER)]
+    return [{**row, "output_scope": row["scope"], "verify_kind": "command"} for row in read_tsv(path, LEGACY_HEADER)]
 
 
 def save_units(run: Path, rows: list[dict[str, str]]) -> None:
@@ -215,20 +320,7 @@ def cycles(rows: list[dict[str, str]]) -> bool:
     return any(walk(name) for name in graph)
 
 
-def breaker_open() -> bool:
-    path = os.environ.get("X_FAILOVER_STATE")
-    if not path or not Path(path).is_file():
-        return False
-    try:
-        data = json.loads(Path(path).read_text())
-    except json.JSONDecodeError:
-        return False
-    return any(item.get("open") for item in data.get("breakers", {}).values())
-
-
 def limits() -> tuple[int, int, int]:
-    if breaker_open():
-        return 2, 1, 2
     return 5, 2, 5
 
 
@@ -386,44 +478,55 @@ def cmd_init(args: argparse.Namespace) -> None:
     if not SLUG_RE.fullmatch(slug) or len(slug) > 40:
         die("slug 只能用小写字母、数字和短横线。正确命令：xr init my-task")
     repo = repo_of(args)
+    session = current_session(args)
+    if not session:
+        if not getattr(args, "offline", False):
+            die("缺少 session；使用 --session、PI_SESSION_ID、XR_SESSION，人工离线记录需显式 --offline")
+        session = "local"
     base = repo / ".work-docs" / "runs"
     base.mkdir(parents=True, exist_ok=True)
-    run_id = f"{now().strftime('%Y%m%d-%H%M')}-{slug}"
-    path = base / run_id
-    suffix = 2
-    while path.exists():
-        path = base / f"{run_id}-{suffix}"
-        suffix += 1
-        run_id = path.name
-    path.mkdir()
-    (path / "notes").mkdir()
-    (path / "RUN.md").write_text(skeleton(run_id, preflight(repo)))
-    write_tsv(path / "units.tsv", HEADER, [])
-    write_tsv(path / "ledger.tsv", LEDGER, [])
-    write_tsv(path / "decisions.tsv", DECISIONS, [])
-    (path / "gates.md").write_text("# gates\n\n")
-    (path / "events.jsonl").write_text("")
-    (path / "capsule.md").write_text("")
-    write_tsv(path / "acceptance.tsv", ACCEPTANCE, [])
-    atomic_write_text(path / "binding.json", json.dumps({
-        "schema": 1,
-        "workspace": str(repo.resolve()),
-        "run_id": run_id,
-        "session_id": "local",
-        "owner": "host",
-        "created_at": stamp(),
-        "lease": "active",
-    }, ensure_ascii=False, indent=2) + "\n")
-    (base / "ACTIVE").write_text(run_id + "\n")
-    event(path, {"type": "init", "run": run_id})
+    with (base / ".init.lock").open("a+") as init_lock:
+        fcntl.flock(init_lock.fileno(), fcntl.LOCK_EX)
+        active = base / "ACTIVE"
+        if active.is_file():
+            die(f"已有 active run {active.read_text().strip()}；先关闭或恢复该运行")
+        run_id = f"{now().strftime('%Y%m%d-%H%M')}-{slug}"
+        suffix = 2
+        path = base / run_id
+        while path.exists():
+            path = base / f"{run_id}-{suffix}"
+            suffix += 1
+            run_id = path.name
+        path.mkdir()
+        (path / "notes").mkdir()
+        (path / "RUN.md").write_text(skeleton(run_id, preflight(repo)))
+        write_tsv(path / "units.tsv", HEADER, [])
+        write_tsv(path / "ledger.tsv", LEDGER, [])
+        write_tsv(path / "decisions.tsv", DECISIONS, [])
+        (path / "gates.md").write_text("# gates\n\n")
+        (path / "events.jsonl").write_text("")
+        (path / "capsule.md").write_text("")
+        write_tsv(path / "acceptance.tsv", ACCEPTANCE, [])
+        atomic_write_text(path / "binding.json", json.dumps({
+            "schema": 1, "workspace": str(repo.resolve()), "run_id": run_id,
+            "session_id": session, "generation": 1, "owner": "host",
+            "created_at": stamp(), "lease": "active",
+        }, ensure_ascii=False, indent=2) + "\n")
+        atomic_write_text(active, run_id + "\n")
+        event(path, {"type": "init", "run": run_id, "session_id": session, "generation": 1})
     say(f"ok init {run_id}")
 
 
 def cmd_plan_add(args: argparse.Namespace) -> None:
     if not ID_RE.fullmatch(args.id):
         die(f"单元 id 不合法。正确命令：xr plan add {args.id or 'ID'} \"标题\" --deps none --files <路径> --verify \"<命令>\"")
-    if not args.title or not args.verify or not args.files or not args.deps:
-        die("参数不够。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\"")
+    if not args.title or not args.files or not args.deps:
+        die("参数不够。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> [--verify \"<命令>\"]")
+    verify_kind = args.verify_kind or "command"
+    if verify_kind not in {"command", "observation", "review"}:
+        die("verify-kind 只能是 command、observation、review")
+    if verify_kind == "command" and not args.verify:
+        die("command 验收必须提供 --verify；人工验收请用 --verify-kind observation|review")
     kind = args.kind or "impl"
     if kind not in KINDS:
         die("kind 只能是 impl、review、research、bugfix、integration。正确命令：xr plan add <id> \"标题\" --deps none --files <路径> --verify \"<命令>\" --kind impl")
@@ -445,7 +548,7 @@ def cmd_plan_add(args: argparse.Namespace) -> None:
         fresh = {
             "id": args.id, "title": cell(args.title), "state": "todo", "deps": deps, "scope": args.files,
             "output_scope": output_scope, "timebox_min": timebox, "attempts": "0", "owner": "unassigned", "model": model_of(run),
-            "verify_cmd": cell(args.verify), "evidence": "none", "updated": stamp(), "kind": kind,
+            "verify_cmd": cell(args.verify or ""), "verify_kind": verify_kind, "evidence": "none", "updated": stamp(), "kind": kind,
         }
         replaced = False
         for index, row in enumerate(rows):
@@ -469,13 +572,14 @@ def cmd_plan_add(args: argparse.Namespace) -> None:
     say(f"ok plan {args.id} {'updated' if replaced else 'added'} units={len(rows)} mode={mode_of(run, rows)}")
 
 
-def ready(row: dict[str, str], rows: list[dict[str, str]]) -> bool:
+def ready(repo: Path, run: Path, row: dict[str, str], rows: list[dict[str, str]]) -> bool:
     if row["state"] != "todo":
         return False
     if row["deps"] == "none":
         return True
     by_id = {item["id"]: item for item in rows}
-    return all(by_id[dep]["state"] == "done" for dep in row["deps"].split(",") if dep in by_id)
+    dependencies = [by_id.get(dep) for dep in row["deps"].split(",") if dep]
+    return all(item is not None and item["state"] == "done" and try_verified(repo, run, item) for item in dependencies)
 
 
 def path_sets(row: dict[str, str]) -> tuple[list[str], list[str]]:
@@ -509,7 +613,7 @@ def cmd_next(args: argparse.Namespace) -> None:
             say("ok next none concurrency")
             return
         for row in rows:
-            if not ready(row, rows):
+            if not ready(repo_of(args), run, row, rows):
                 continue
             if any(overlaps(row, other) for other in occupied):
                 continue
@@ -534,10 +638,94 @@ def ledger_rows(run: Path) -> list[dict[str, str]]:
     first = path.read_text().splitlines()[0].split("\t")
     if first == LEDGER:
         return read_tsv(path, LEDGER)
-    if first != LEGACY_LEDGER:
-        die(f"ledger.tsv 表头不对。正确命令：不要手改 TSV，用 xr verify 重建")
-    rows = read_tsv(path, LEGACY_LEDGER)
-    return [{**row, "cmd_hash": command_hash(row["cmd"])} for row in rows]
+    if first not in (COMMAND_LEDGER, PREVIOUS_LEDGER, LEGACY_LEDGER):
+        die("ledger.tsv 表头不对。正确命令：不要手改 TSV，用 xr verify 重建")
+    return [{**{key: "" for key in LEDGER}, **row,
+             "cmd_hash": row.get("cmd_hash", command_hash(row["cmd"])), "evidence_kind": "command"}
+            for row in read_tsv(path, first)]
+
+
+def cmd_evidence(args: argparse.Namespace) -> None:
+    repo = repo_of(args)
+    run = run_dir(repo)
+    if args.kind not in {"observation", "review"} or not args.record:
+        die("人工证据需要 --kind observation|review 和 --record 引用")
+    with run_lock(run):
+        row = find_unit(units(run), args.id)
+        if row.get("verify_kind", "command") != args.kind:
+            die("证据类型与单元 verify-kind 不一致")
+        require_settled(run, args.id)
+        if row["state"] in {"todo", "blocked", "abandoned"}:
+            die("人工证据只能登记到已开工单元；先 xr next 或 reopen")
+        input_scope = args.inputs or row["scope"]
+        input_hash = tree_hash(repo, input_scope)
+        digest = verification_hash(repo, row)
+        final_hash = review_input_hash(repo, run) if args.kind == "review" else digest
+        report = (repo / args.report).resolve()
+        try:
+            report.relative_to(repo.resolve())
+        except ValueError:
+            die("报告必须位于当前仓库内")
+        try:
+            report.relative_to(run.resolve())
+            die("运行目录中的原始文件不能直接作为报告；请放到仓库或由 xr 保存到 notes")
+        except ValueError:
+            pass
+        if not report.is_file() or not report.read_text(encoding="utf-8").strip():
+            die("报告不存在或为空")
+        existing = ledger_rows(run)
+        if verified_now(repo, run, row):
+            die("该版本已有有效证据，不覆盖旧报告")
+        cell(args.record)
+        observer_session, observer_digest, observer_path = "", "", ""
+        if args.kind == "review":
+            if not args.observer:
+                die("review 必须提供 --observer <独立审查会话文件>")
+            observer = (repo / args.observer).resolve()
+            try:
+                transcript = observer.read_text(encoding="utf-8")
+                records = [json.loads(line) for line in transcript.splitlines() if line.strip()]
+                first = records[0]
+                observer_session = first.get("id")
+                if first.get("type") != "session" or not isinstance(observer_session, str) or not observer_session.strip():
+                    die("独立审查会话头无效")
+                if Path(first.get("cwd", "")).resolve() != repo:
+                    die("审查会话不属于当前工作区")
+                if observer_session in implementation_sessions(run):
+                    die("实现会话不能作为独立审查会话")
+                texts = [part.get("text", "") for entry in records if entry.get("type") == "message"
+                         and isinstance(entry.get("message"), dict) and entry["message"].get("role") == "assistant"
+                         and isinstance(entry["message"].get("content"), list)
+                         for part in entry["message"]["content"] if isinstance(part, dict) and part.get("type") == "text"]
+                if not any(report.read_text(encoding="utf-8").strip() in text for text in texts):
+                    die("审查报告内容与所给审查会话的实际输出不匹配")
+                observer_saved = run / "notes" / f"review-session-{args.id}-{len(existing) + 1}.jsonl"
+                with observer_saved.open("x", encoding="utf-8") as output:
+                    output.write(transcript)
+                    output.flush()
+                    os.fsync(output.fileno())
+                observer_path = observer_saved.relative_to(run).as_posix()
+                observer_digest = file_digest(observer_saved)
+            except (OSError, IndexError, ValueError, KeyError, TypeError, AttributeError):
+                die("独立审查会话无效或证据目标已存在")
+        saved = run / "notes" / f"evidence-{args.id}-{args.kind}-{len(existing) + 1}.md"
+        try:
+            with saved.open("x", encoding="utf-8") as output:
+                output.write(report.read_text(encoding="utf-8"))
+                output.flush()
+                os.fsync(output.fileno())
+        except OSError:
+            die("报告保存失败或目标已存在，保留旧文件")
+        item = {**{key: "" for key in LEDGER}, "unit": args.id, "tree_hash": digest,
+                "cmd_hash": command_hash(input_scope), "verdict": "VERIFIED", "cmd": input_scope, "exit_code": "0",
+                "evidence_path": saved.relative_to(run).as_posix(), "report_hash": hashlib.sha256(saved.read_bytes()).hexdigest(),
+                "model": model_of(run), "ts": stamp(), "evidence_kind": args.kind,
+                "observer": observer_session, "session_path": observer_path, "session_hash": observer_digest,
+                "input_scope": input_scope, "input_hash": input_hash, "final_hash": final_hash, "record": cell(args.record)}
+        existing.append(item)
+        write_tsv(run / "ledger.tsv", LEDGER, existing)
+        event(run, {"type": "evidence", "unit": args.id, "kind": args.kind, "report": item["evidence_path"]})
+    say(f"ok evidence {args.id} {args.kind}")
 
 
 def cmd_verify(args: argparse.Namespace) -> None:
@@ -545,12 +733,12 @@ def cmd_verify(args: argparse.Namespace) -> None:
     run = run_dir(repo)
     with run_lock(run):
         row = find_unit(units(run), args.id).copy()
+        require_settled(run, args.id)
         digest = verification_hash(repo, row)
         command = row["verify_cmd"]
-        existing = ledger_rows(run)
-        prior = [item for item in existing if item["unit"] == args.id and item["tree_hash"] == digest
-                 and item.get("cmd_hash") == command_hash(command) and item["verdict"] == "VERIFIED"]
-        if prior:
+        if row.get("verify_kind", "command") != "command":
+            die("该单元使用人工验收，请执行 xr evidence record")
+        if verified_now(repo, run, row):
             say(f"ok verify {args.id} VERIFIED {digest} cached")
             return
     timeout = int(args.timeout) if args.timeout else 180
@@ -568,14 +756,20 @@ def cmd_verify(args: argparse.Namespace) -> None:
         if current["verify_cmd"] != command or current_digest != digest:
             code = 125
             output += "\n验证期间单元判据或文件已变化；本次证据作废，请重新 xr verify。\n"
-        evidence = run / "notes" / f"verify-{args.id}.log"
-        atomic_write_text(evidence, output)
-        verdict = "VERIFIED" if code == 0 else "FAILED"
         existing = ledger_rows(run)
+        attempt = len(existing) + 1
+        evidence = run / "notes" / f"verify-{args.id}-attempt-{attempt}.log"
+        with evidence.open("x", encoding="utf-8") as report:
+            report.write(output)
+            report.flush()
+            os.fsync(report.fileno())
+        report_hash = hashlib.sha256(output.encode()).hexdigest()
+        verdict = "VERIFIED" if code == 0 else "FAILED"
         existing.append({
+            **{key: "" for key in LEDGER}, "evidence_kind": "command",
             "unit": args.id, "tree_hash": digest, "cmd_hash": command_hash(command), "verdict": verdict,
             "cmd": command.replace("\t", " "), "exit_code": str(code),
-            "evidence_path": evidence.relative_to(run).as_posix(),
+            "evidence_path": evidence.relative_to(run).as_posix(), "report_hash": report_hash,
             "model": current["model"] or model_of(run), "ts": stamp(),
         })
         write_tsv(run / "ledger.tsv", LEDGER, existing)
@@ -587,12 +781,87 @@ def cmd_verify(args: argparse.Namespace) -> None:
     say(f"ok verify {args.id} {verdict} {digest}")
 
 
-def verified_now(repo: Path, run: Path, row: dict[str, str]) -> bool:
+def implementation_sessions(run: Path) -> set[str]:
+    events, _ = read_events(run)
+    sessions = {str((read_binding(run) or {}).get("session_id", ""))}
+    for item in events:
+        if item.get("session_id"):
+            sessions.add(item["session_id"])
+    # 接收的实现子会话也不能自审；只读 review 子任务保留独立身份。
+    by_id = {row["id"]: row for row in units(run)}
+    started, received = worker_records(run)
+    for child, receipt in received.items():
+        start = started.get(child, {})
+        if by_id.get(start.get("unit"), {}).get("kind") == "review":
+            continue
+        try:
+            saved = json.loads((run / receipt["path"]).read_text())
+            sessions.update(saved["child_sessions"])
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+    return sessions
+
+
+def review_input_hash(repo: Path, run: Path) -> str:
+    # 排除审查工作项自身，避免登记审查报告造成自我失效。
+    parts = [{"id": row["id"], "kind": row["kind"], "deps": row["deps"], "scope": row["scope"],
+              "output": row["output_scope"], "verify": row["verify_cmd"], "verify_kind": row.get("verify_kind", "command"),
+              "digest": verification_hash(repo, row)} for row in units(run)
+             if row["kind"] != "review" and row["state"] != "abandoned"]
+    return hashlib.sha256((json.dumps(parts, sort_keys=True) + file_digest(run / "acceptance.tsv")).encode()).hexdigest()
+
+
+
+def verified_now(repo: Path, run: Path, row: dict[str, str], visiting: frozenset[str] = frozenset()) -> bool:
+    if row["id"] in visiting:
+        return False
+    visiting = visiting | {row["id"]}
+    by_id = {item["id"]: item for item in units(run)}
+    if row["deps"] != "none":
+        for dep in row["deps"].split(","):
+            previous = by_id.get(dep)
+            if previous is None or previous["state"] != "done" or not verified_now(repo, run, previous, visiting):
+                return False
     digest = verification_hash(repo, row)
-    command = command_hash(row["verify_cmd"])
-    return any(item["unit"] == row["id"] and item["tree_hash"] == digest
-               and item.get("cmd_hash") == command and item["verdict"] == "VERIFIED"
+    if row.get("verify_kind", "command") == "command":
+        command = command_hash(row["verify_cmd"])
+        return any(
+            item["unit"] == row["id"] and item["tree_hash"] == digest
+            and item.get("evidence_kind", "command") == "command"
+            and item.get("cmd_hash") == command and item["verdict"] == "VERIFIED"
+            and report_valid(run, item)
+            for item in ledger_rows(run)
+        )
+    return any(item["unit"] == row["id"] and item.get("evidence_kind") == row["verify_kind"]
+               and item["tree_hash"] == digest and item.get("verdict") == "VERIFIED"
+               and item.get("final_hash") == (review_input_hash(repo, run) if row["verify_kind"] == "review" else digest)
+               and item.get("cmd_hash") == command_hash(item.get("input_scope", ""))
+               and item.get("input_hash") == tree_hash(repo, item.get("input_scope", row["scope"]))
+               and report_valid(run, item)
+               and (row.get("verify_kind") != "review" or independent_review_valid(run, item))
                for item in ledger_rows(run))
+
+
+def independent_review_valid(run: Path, item: dict[str, str]) -> bool:
+    try:
+        path = (run / item["session_path"]).resolve()
+        path.relative_to((run / "notes").resolve())
+        first = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
+        return (item.get("evidence_kind") == "review" and item.get("observer")
+                and first.get("type") == "session" and item["observer"] not in implementation_sessions(run)
+                and first.get("id") == item["observer"]
+                and file_digest(path) == item.get("session_hash"))
+    except (OSError, ValueError, KeyError, IndexError, json.JSONDecodeError, TypeError):
+        return False
+
+
+def report_valid(run: Path, item: dict[str, str]) -> bool:
+    try:
+        report = (run / item["evidence_path"]).resolve()
+        report.relative_to((run / "notes").resolve())
+        return bool(item.get("report_hash")) and report.is_file() and hashlib.sha256(report.read_bytes()).hexdigest() == item["report_hash"]
+    except (OSError, ValueError, KeyError):
+        return False
 
 
 def cmd_done(args: argparse.Namespace) -> None:
@@ -602,6 +871,7 @@ def cmd_done(args: argparse.Namespace) -> None:
         rows = units(run)
         row = find_unit(rows, args.id)
         ensure_consistent(run)
+        require_settled(run, args.id)
         if row["state"] not in {"doing", "verifying", "done", "abandoned"}:
             die(f"单元 {args.id} 当前是 {row['state']}，只能从 doing/verifying 完成")
         if row["state"] == "abandoned":
@@ -620,7 +890,7 @@ def cmd_done(args: argparse.Namespace) -> None:
             "unattended": False,
         }))
         event(run, {"type": "done", "unit": args.id})
-    refresh_status(run)
+        refresh_status(run)
     say(f"ok done {args.id}")
 
 
@@ -833,6 +1103,11 @@ def section(text: str, title: str) -> str:
 
 def cmd_capsule(args: argparse.Namespace) -> None:
     run = run_dir(repo_of(args))
+    with run_lock(run):
+        write_capsule(run)
+
+
+def write_capsule(run: Path) -> None:
     run_md = (run / "RUN.md").read_text()
     rows = units(run)
     current = next((row for row in rows if row["state"] == "doing"), None)
@@ -880,16 +1155,19 @@ def cmd_close(args: argparse.Namespace) -> None:
     base = repo / ".work-docs" / "runs"
     run = run_dir(repo)
     active = base / "ACTIVE"
-    if active.read_text().strip() != run.name:
-        die(f"ACTIVE 不是当前 run {run.name}")
-    state = receipt_state(repo, run)
-    atomic_write_text(run / "closed", f"closed: {stamp()}\nfinish: {state}\n")
-    binding = read_binding(run)
-    if binding and not binding.get("_invalid"):
-        binding["lease"] = "released"
-        write_binding(run, binding)
-    active.unlink()
-    event(run, {"type": "close", "finish": state})
+    with (base / ".init.lock").open("a+") as pointer_lock:
+        fcntl.flock(pointer_lock.fileno(), fcntl.LOCK_EX)
+        with run_lock(run):
+            if not active.is_file() or active.read_text().strip() != run.name:
+                die(f"ACTIVE 不是当前 run {run.name}")
+            state = receipt_state(repo, run)
+            atomic_write_text(run / "closed", f"closed: {stamp()}\nfinish: {state}\n")
+            binding = read_binding(run)
+            if binding and not binding.get("_invalid"):
+                binding["lease"] = "released"
+                write_binding(run, binding)
+            active.unlink()
+            event(run, {"type": "close", "finish": state})
     say(f"ok close {run.name} finish={state}")
 
 
@@ -934,22 +1212,23 @@ def cmd_import(args: argparse.Namespace) -> None:
         rows.append({
             "id": name, "title": fields.get("title", name), "state": "todo", "deps": fields.get("depends") or "none",
             "scope": scope, "output_scope": scope, "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown",
-            "verify_cmd": "false", "evidence": f"imported:{args.task_id};rewrite verify_cmd before xr verify", "updated": stamp(), "kind": "impl",
+            "verify_cmd": "false", "verify_kind": "command", "evidence": f"imported:{args.task_id};rewrite verify_cmd before xr verify", "updated": stamp(), "kind": "impl",
         })
         imported += 1
     if imported == 0:
         rows.append({
             "id": "imported", "title": objective[:80], "state": "todo", "deps": "none", "scope": "README.md", "output_scope": "README.md",
-            "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown", "verify_cmd": "false",
+            "timebox_min": "45", "attempts": "0", "owner": "import", "model": "unknown", "verify_cmd": "false", "verify_kind": "command",
             "evidence": f"imported:{args.task_id};rewrite verify_cmd before xr verify", "updated": stamp(), "kind": "impl",
         })
     if cycles(rows):
         die("导入任务依赖有环，已拒绝")
-    save_units(run, rows)
-    after = {str(path.relative_to(repo)): sha_file(path) for path in (contract, state) if path.is_file()}
-    if before != after:
-        die("导入改动了旧任务文件，已停止")
-    event(run, {"type": "import", "task": args.task_id, "units": len(rows)})
+    with run_lock(run):
+        after = {str(path.relative_to(repo)): sha_file(path) for path in (contract, state) if path.is_file()}
+        if before != after:
+            die("导入期间旧任务文件改变，已停止")
+        save_units(run, rows)
+        event(run, {"type": "import", "task": args.task_id, "units": len(rows)})
     say(f"ok import {args.task_id} units={len(rows)}")
 
 
@@ -1078,11 +1357,18 @@ def automation_blocked(run: Path) -> str:
     binding = read_binding(run)
     if binding and not binding.get("_invalid") and binding.get("lease") not in {None, "active"}:
         return f"lease:{binding.get('lease')}"
+    pending, corrupt = unresolved_ops(run)
+    if corrupt:
+        return "事件日志损坏"
+    if pending:
+        return "unresolved:" + ",".join(pending)
+    if pending_workers(run):
+        return "pending-workers"
     return ""
 
 
-def current_session(args: argparse.Namespace) -> str:
-    return getattr(args, "session", None) or os.environ.get("XR_SESSION") or "local"
+def current_session(args: argparse.Namespace) -> str | None:
+    return getattr(args, "session", None) or CALLER_SESSION
 
 
 def source_ref(repo: Path, raw: str) -> str:
@@ -1140,24 +1426,161 @@ def unit_ids_of(raw: str) -> list[str]:
 def try_verified(repo: Path, run: Path, row: dict[str, str]) -> bool:
     try:
         return verified_now(repo, run, row)
-    except SystemExit:
+    except (SystemExit, OSError, ValueError):
         return False
 
 
-def unresolved_ops(run: Path) -> tuple[list[str], bool]:
+def read_events(run: Path) -> tuple[list[dict], bool]:
     path = run / "events.jsonl"
     if not path.is_file():
-        return [], False
-    lines = path.read_text().splitlines()
-    events = []
-    truncated = False
-    for index, line in enumerate(lines):
+        return [], True
+    records = []
+    corrupt = False
+    for line in path.read_text().splitlines():
         if not line.strip():
             continue
         try:
-            events.append(json.loads(line))
+            item = json.loads(line)
+            if not isinstance(item, dict) or not isinstance(item.get("type"), str):
+                corrupt = True
+            else:
+                records.append(item)
         except json.JSONDecodeError:
-            truncated = True
+            corrupt = True
+    return records, corrupt
+
+
+def prepare_worker(repo: Path, run: Path, detail: dict) -> dict:
+    for key in ("op_id", "unit", "child_run_id", "status_path", "launch_digest"):
+        if not isinstance(detail.get(key), str) or not detail[key]:
+            die(f"启动回执缺少 {key}")
+    row = find_unit(units(run), detail["unit"])
+    if row["state"] != "doing":
+        die("子任务只能绑定已认领的 doing 单元")
+    events, corrupt = read_events(run)
+    if corrupt:
+        die("事件日志损坏，拒绝登记启动")
+    if any(item["type"] == "worker_started" and item.get("detail", {}).get("child_run_id") == detail["child_run_id"] for item in events):
+        die("子运行已登记，不能重新绑定")
+    return {**detail, "input_hash": tree_hash(repo, row["scope"]), "status_path": str(Path(detail["status_path"]).resolve())}
+
+
+def worker_records(run: Path) -> tuple[dict[str, dict], dict[str, dict]]:
+    events, _ = read_events(run)
+    started: dict[str, dict] = {}
+    received: dict[str, dict] = {}
+    for item in events:
+        detail = item.get("detail", {})
+        if not isinstance(detail, dict):
+            continue
+        child = detail.get("child_run_id")
+        if not isinstance(child, str):
+            continue
+        if item["type"] == "worker_started":
+            started[child] = detail
+        elif item["type"] == "worker_received":
+            received[child] = detail
+    return started, received
+
+
+def received_valid(run: Path, start: dict, receipt: dict) -> bool:
+    try:
+        path = (run / receipt["path"]).resolve()
+        path.relative_to((run / "notes").resolve())
+        if file_digest(path) != receipt["digest"] or file_digest(Path(start["status_path"])) != receipt["status_digest"]:
+            return False
+        saved = json.loads(path.read_text())
+        return all(file_digest(Path(item["path"])) == item["digest"] for item in saved["artifacts"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
+def pending_workers(run: Path, unit: str | None = None) -> list[str]:
+    started, received = worker_records(run)
+    return [child for child, start in started.items() if (unit is None or start.get("unit") == unit)
+            and (child not in received or not received_valid(run, start, received[child]))]
+
+
+def require_settled(run: Path, unit: str) -> None:
+    pending, corrupt = unresolved_ops(run)
+    if corrupt or pending or pending_workers(run, unit):
+        die("有未核实工具或未接收子任务，不能验收：" + ",".join(pending + pending_workers(run, unit)))
+
+
+def cmd_receive(args: argparse.Namespace) -> None:
+    repo = repo_of(args)
+    run = run_dir(repo)
+    with run_lock(run):
+        row = find_unit(units(run), args.id)
+        try:
+            path = Path(args.receipt).resolve()
+            raw = path.read_bytes()
+            status = json.loads(raw)
+        except (OSError, ValueError):
+            die("无法读取宿主状态回执")
+        if not isinstance(status, dict):
+            die("回执必须是对象")
+        child = status.get("runId")
+        started, received = worker_records(run)
+        if not isinstance(child, str) or child not in started:
+            die("回执的子 run 未登记启动")
+        start = started[child]
+        if start["unit"] != args.id or Path(start["status_path"]).resolve() != path:
+            die("回执单元或状态路径与启动记录不一致")
+        if status.get("toolCallId") != start["op_id"] or status.get("launchContractDigest") != start["launch_digest"]:
+            die("回执的启动调用或合同摘要不一致")
+        if tree_hash(repo, row["scope"]) != start["input_hash"]:
+            die("子任务读入文件已改变，不能接收旧结果")
+        terminal = status.get("processTerminal")
+        steps = status.get("steps")
+        if status.get("state") != "complete" or not isinstance(terminal, dict) or terminal.get("state") != "observed" or terminal.get("runId") != child:
+            die("子任务终态或进程退出尚未确认成功")
+        instances = terminal.get("instances")
+        if not isinstance(instances, list) or not instances or any(not isinstance(item, dict) or item.get("exitCode") != 0 or item.get("signal") for item in instances):
+            die("进程退出失败或未知")
+        if not isinstance(steps, list) or not steps:
+            die("子任务步骤为空")
+        sessions = []
+        artifacts = []
+        try:
+            for step in steps:
+                if not isinstance(step, dict) or step.get("status") != "complete" or step.get("exitCode") != 0:
+                    die("子任务包含失败或未完成步骤")
+                session_path = Path(step["sessionFile"]).resolve()
+                first = json.loads(session_path.read_text().splitlines()[0])
+                if first.get("type") != "session" or not isinstance(first.get("id"), str):
+                    die("子会话标识无效")
+                sessions.append(first["id"])
+                artifacts.append({"path": str(session_path), "digest": file_digest(session_path)})
+            if status.get("outputFile"):
+                output = Path(status["outputFile"]).resolve()
+                if not output.is_file():
+                    die("子任务输出文件不可读")
+                artifacts.append({"path": str(output), "digest": file_digest(output)})
+        except (OSError, ValueError, KeyError, IndexError, TypeError):
+            die("子任务会话文件或输出证据无效")
+        if child in received:
+            if received_valid(run, start, received[child]):
+                say(f"ok receive {args.id} duplicate")
+                return
+            die("已接收回执的证据改变，保持阻塞；需核实后重新规划")
+        token = hashlib.sha256((child + start["op_id"]).encode()).hexdigest()
+        saved_path = run / "notes" / f"received-{token}.json"
+        saved = {"schema": 1, "child_run_id": child, "child_sessions": sessions, "unit": args.id,
+                 "input_hash": start["input_hash"], "output_hash": verification_hash(repo, row), "artifacts": artifacts,
+                 "status": status, "record": args.record}
+        with saved_path.open("x", encoding="utf-8") as output:
+            json.dump(saved, output, ensure_ascii=False, indent=2)
+            output.flush()
+            os.fsync(output.fileno())
+        event(run, {"type": "worker_received", "child_run_id": child, "unit": args.id,
+                    "path": saved_path.relative_to(run).as_posix(), "digest": file_digest(saved_path),
+                    "status_digest": "sha256:" + hashlib.sha256(raw).hexdigest()})
+    say(f"ok receive {args.id} {child}")
+
+
+def unresolved_ops(run: Path) -> tuple[list[str], bool]:
+    events, truncated = read_events(run)
     results: set[str] = set()
     intents: list[str] = []
     for item in events:
@@ -1165,9 +1588,12 @@ def unresolved_ops(run: Path) -> tuple[list[str], bool]:
         op_id = item.get("op_id") or detail.get("op_id")
         if not op_id:
             continue
-        if item.get("type") == "op_result":
+        kind = item.get("type")
+        if kind == "op_result" and (item.get("outcome") or detail.get("outcome")) == "success":
             results.add(str(op_id))
-        elif item.get("type") == "op_intent":
+        elif kind == "op_reconcile" and (item.get("resolution") or detail.get("resolution")) in {"completed", "not-started"}:
+            results.add(str(op_id))
+        elif kind == "op_intent":
             intents.append(str(op_id))
     return [op_id for op_id in intents if op_id not in results], truncated
 
@@ -1194,13 +1620,15 @@ def blank_inspect(run: Path, mode: str, reasons: list[str]) -> dict:
         "blocked": [],
         "stale_units": [],
         "unresolved_ops": [],
+        "pending_workers": [],
+        "receipt_status": "missing",
         "acceptance_status": {"total": 0, "covered": 0},
         "reasons": reasons,
         "truncated_tail": False,
     }
 
 
-def inspect_data(repo: Path, run: Path) -> dict:
+def inspect_data(repo: Path, run: Path, include_receipt: bool = True) -> dict:
     mode, reasons = classify_run(repo, run)
     if mode != "managed":
         return blank_inspect(run, mode, reasons)
@@ -1209,6 +1637,7 @@ def inspect_data(repo: Path, run: Path) -> dict:
     binding = read_binding(run) or {}
     acc = acceptance_rows(run)
     pending, truncated = unresolved_ops(run)
+    workers = pending_workers(run)
     stale = [row["id"] for row in rows if row["state"] == "done" and not try_verified(repo, run, row)]
     abandoned = [row["id"] for row in rows if row["state"] == "abandoned"]
     referenced = {part.strip() for item in acc for part in item["units"].split(",") if part.strip()}
@@ -1245,49 +1674,84 @@ def inspect_data(repo: Path, run: Path) -> dict:
         problems.append("缺少最终集成单元")
     for unit_id in stale:
         problems.append(f"stale:{unit_id}")
+    review_rows = [item for item in ledger_rows(run) if item.get("evidence_kind") == "review"]
+    valid_reviews = [item for item in review_rows if item["unit"] in by_id
+                     and by_id[item["unit"]]["state"] == "done" and try_verified(repo, run, by_id[item["unit"]])
+                     and report_valid(run, item) and independent_review_valid(run, item)
+                     and item.get("final_hash") == review_input_hash(repo, run)]
+    if review_rows and not valid_reviews:
+        problems.append("独立审查证据过期或无效")
+    receipt = receipt_state(repo, run, inspect_current=False) if include_receipt else "missing"
+    if include_receipt and receipt == "valid" and problems:
+        receipt = "stale"
+    if include_receipt and receipt in {"stale", "invalid"}:
+        problems.append(f"receipt:{receipt}")
+    if truncated:
+        problems.append("事件日志损坏")
     for op_id in pending:
         problems.append(f"unresolved:{op_id}")
+    for worker in workers:
+        problems.append(f"pending-worker:{worker}")
     for gate_id in open_gate_ids(run):
         problems.append(f"gate:{gate_id}")
-    if re.search(r"^review_required:\s*true\s*$", text, re.M):
-        if not any(row["kind"] == "review" and row["state"] == "done" for row in rows):
-            problems.append("缺少独立审查")
+    if re.search(r"^review_required:\s*true\s*$", text, re.M) and not valid_reviews:
+        problems.append("缺少独立审查")
     phase = phase_of(text)
     return {
         "schema_version": 1,
         "mode": "managed",
         "run_id": run.name,
         "phase": phase,
-        "automation_allowed": phase == "executing" and binding.get("lease") == "active",
+        "automation_allowed": phase == "executing" and not pending and not truncated and not workers and binding.get("lease") == "active" and binding.get("session_id") != "local" and isinstance(binding.get("generation"), int),
+        "binding": {key: binding.get(key) for key in ("session_id", "generation", "lease")},
         "done_met": not problems,
-        "ready": [row["id"] for row in rows if ready(row, rows)],
+        "ready": [row["id"] for row in rows if ready(repo, run, row, rows)],
         "doing": [row["id"] for row in rows if row["state"] == "doing"],
         "blocked": [row["id"] for row in rows if row["state"] == "blocked"],
         "stale_units": stale,
         "unresolved_ops": pending,
+        "pending_workers": workers,
+        "receipt_status": receipt,
         "acceptance_status": {"total": len(acc), "covered": covered},
         "reasons": problems,
         "truncated_tail": truncated,
     }
 
 
-def receipt_state(repo: Path, run: Path) -> str:
+def review_digest_of(run: Path) -> str:
+    valid = [item for item in ledger_rows(run) if item.get("evidence_kind") == "review"
+             and report_valid(run, item) and independent_review_valid(run, item)]
+    return hashlib.sha256("\n".join(item.get("session_hash", "") + item.get("report_hash", "") + item.get("final_hash", "")
+                                        for item in valid).encode()).hexdigest()
+
+
+def receipt_state(repo: Path, run: Path, inspect_current: bool = True) -> str:
     path = run / "finish.json"
     if not path.is_file():
         return "missing"
     try:
         data = json.loads(path.read_text())
-    except json.JSONDecodeError:
+        if not isinstance(data, dict) or data.get("schema") != 1:
+            return "invalid"
+    except (OSError, json.JSONDecodeError):
         return "invalid"
-    snap = inspect_data(repo, run)
+    snap = inspect_data(repo, run, include_receipt=False) if inspect_current else None
     text = (run / "RUN.md").read_text()
+    try:
+        parts = [row["id"] + "=" + verification_hash(repo, row) for row in units(run) if row["state"] == "done"]
+        tree = "sha256:" + hashlib.sha256("\n".join(parts).encode()).hexdigest()
+    except (OSError, ValueError, SystemExit):
+        return "stale"
     same = (
-        data.get("dispatch_epoch") == epoch_of(text)
+        data.get("run_id") == run.name
+        and data.get("tree_digest") == tree
+        and data.get("dispatch_epoch") == epoch_of(text)
         and data.get("acceptance_digest") == file_digest(run / "acceptance.tsv")
         and data.get("units_digest") == file_digest(run / "units.tsv")
         and data.get("ledger_digest") == file_digest(run / "ledger.tsv")
-        and snap.get("done_met") is True
-        and not snap.get("stale_units")
+        and data.get("review_digest") == review_digest_of(run)
+        and (snap is None or snap.get("done_met") is True)
+        and (snap is None or not snap.get("stale_units"))
     )
     return "valid" if same else "stale"
 
@@ -1383,6 +1847,7 @@ def cmd_finish(args: argparse.Namespace) -> None:
             "acceptance_digest": file_digest(run / "acceptance.tsv"),
             "units_digest": file_digest(run / "units.tsv"),
             "ledger_digest": file_digest(run / "ledger.tsv"),
+            "review_digest": review_digest_of(run),
             "tree_digest": "sha256:" + hashlib.sha256("\n".join(parts).encode()).hexdigest(),
             "dispatch_epoch": epoch,
             "unresolved_ops": 0,
@@ -1414,7 +1879,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
     repo = repo_of(args)
     run = run_dir(repo)
     session = current_session(args)
-    with run_lock(run):
+    if not session:
+        die("恢复需要真实 session，人工离线操作请显式 --offline")
+    with run_lock(run, validate=False):
         binding = read_binding(run)
         if not binding or binding.get("_invalid"):
             die("没有有效绑定。正确命令：xr bind --session <id>")
@@ -1427,6 +1894,7 @@ def cmd_resume(args: argparse.Namespace) -> None:
                 die(f"运行被会话 {previous} 占用。正确命令：xr resume --confirm --take-ownership --record <依据>")
             took_over = previous
             binding["session_id"] = session
+        binding["generation"] = int(binding.get("generation", 0)) + 1
         binding["lease"] = "active"
         write_binding(run, binding)
         text = set_phase((run / "RUN.md").read_text(), "executing")
@@ -1446,9 +1914,9 @@ def cmd_bind(args: argparse.Namespace) -> None:
         die("需要 --session。正确命令：xr bind --session <id>")
     repo = repo_of(args)
     run = run_dir(repo)
-    with run_lock(run):
+    with run_lock(run, validate=False):
         binding = read_binding(run)
-        if binding and not binding.get("_invalid") and binding.get("lease") == "active" and binding.get("session_id") != args.session:
+        if binding and not binding.get("_invalid") and binding.get("session_id") != args.session:
             die(f"该运行被另一会话占用：{binding.get('session_id')}。正确命令：xr resume --confirm --take-ownership --record <依据>")
         created = binding.get("created_at") if binding and not binding.get("_invalid") else stamp()
         write_binding(run, {
@@ -1456,6 +1924,7 @@ def cmd_bind(args: argparse.Namespace) -> None:
             "workspace": str(repo.resolve()),
             "run_id": run.name,
             "session_id": args.session,
+            "generation": int((binding or {}).get("generation", 0)) + 1,
             "owner": "host",
             "created_at": created,
             "lease": "active",
@@ -1470,6 +1939,7 @@ def build() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="verb")
     init = sub.add_parser("init")
     init.add_argument("slug")
+    init.add_argument("--offline", action="store_true")
     init.set_defaults(func=cmd_init)
     plan = sub.add_parser("plan")
     plan_sub = plan.add_subparsers(dest="plan_verb")
@@ -1480,6 +1950,7 @@ def build() -> argparse.ArgumentParser:
     add.add_argument("--files", default=None, help="readable inputs or legacy combined scope")
     add.add_argument("--output", dest="output_scope", help="exclusive outputs; defaults to --files for writer kinds")
     add.add_argument("--verify", default=None)
+    add.add_argument("--verify-kind", choices=["command", "observation", "review"], default="command")
     add.add_argument("--kind", default="impl")
     add.add_argument("--timebox", type=int)
     add.set_defaults(func=cmd_plan_add)
@@ -1489,6 +1960,16 @@ def build() -> argparse.ArgumentParser:
     verify.add_argument("id")
     verify.add_argument("--timeout", type=int)
     verify.set_defaults(func=cmd_verify)
+    evidence = sub.add_parser("evidence")
+    evidence_sub = evidence.add_subparsers(dest="evidence_verb")
+    record = evidence_sub.add_parser("record")
+    record.add_argument("id")
+    record.add_argument("--kind", choices=["observation", "review"], required=True)
+    record.add_argument("--report", required=True)
+    record.add_argument("--inputs", default=None, help="审查覆盖的仓库内输入路径，逗号分隔")
+    record.add_argument("--observer", default=None, help="独立审查会话 transcript 文件")
+    record.add_argument("--record", required=True)
+    record.set_defaults(func=cmd_evidence)
     done = sub.add_parser("done")
     done.add_argument("id")
     done.set_defaults(func=cmd_done)
@@ -1559,22 +2040,62 @@ def build() -> argparse.ArgumentParser:
     resume.add_argument("--confirm", action="store_true")
     resume.add_argument("--take-ownership", dest="take_ownership", action="store_true")
     resume.add_argument("--record", default=None)
+    init.add_argument("--session", default=None)
+    init.set_defaults(func=cmd_init)
     resume.add_argument("--session", default=None)
     resume.set_defaults(func=cmd_resume)
     bind = sub.add_parser("bind")
     bind.add_argument("--session", required=True)
     bind.set_defaults(func=cmd_bind)
+    host_event = sub.add_parser("event")
+    host_event.add_argument("--record", required=True)
+    host_event.set_defaults(func=cmd_event)
+    receive = sub.add_parser("receive")
+    receive.add_argument("id")
+    receive.add_argument("--receipt", required=True)
+    receive.add_argument("--record", required=True)
+    receive.set_defaults(func=cmd_receive)
+    op = sub.add_parser("op")
+    op_sub = op.add_subparsers(dest="op_verb")
+    reconcile = op_sub.add_parser("reconcile")
+    reconcile.add_argument("op")
+    reconcile.add_argument("--resolution", required=True)
+    reconcile.add_argument("--record", required=True)
+    reconcile.set_defaults(func=cmd_op_reconcile)
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
-    global EXPLICIT_RUN_ID
+    global EXPLICIT_RUN_ID, CALLER_SESSION, CALLER_GENERATION
     raw = list(sys.argv[1:] if argv is None else argv)
     repo = None
     explicit = None
+    CALLER_SESSION = os.environ.get("PI_SESSION_ID") or os.environ.get("XR_SESSION") or None
+    CALLER_GENERATION = None
     cleaned: list[str] = []
     index = 0
     while index < len(raw):
+        if raw[index] in {"--session", "--generation"} and index + 1 < len(raw):
+            flag, value = raw[index:index + 2]
+            if flag == "--session":
+                CALLER_SESSION = value
+                if any(verb in raw for verb in ("bind", "resume", "init")):
+                    cleaned.extend([flag, value])
+            else:
+                try:
+                    CALLER_GENERATION = int(value)
+                    if CALLER_GENERATION < 1:
+                        raise ValueError("non-positive generation")
+                except ValueError:
+                    die("generation 必须为正整数")
+            index += 2
+            continue
+        if raw[index] == "--offline":
+            CALLER_SESSION = "local"
+            if "init" in raw:
+                cleaned.append("--offline")
+            index += 1
+            continue
         if raw[index] == "--repo" and index + 1 < len(raw):
             repo = raw[index + 1]
             index += 2
