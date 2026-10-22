@@ -186,6 +186,12 @@ const NON_TRANSIENT = [
 ];
 
 export const TRANSIENT_MARKER = "[model-recovery: temporary gateway error]";
+/**
+ * Pi 1.3.0 的 isRetryableAssistantError 只认它自己的暂时故障文案；
+ * 四类网关原文都不在列表里。标记里带一句宿主认识的话，才真的会触发 retry。
+ * 只对下面四类已知文案追加，不改写、不扩大到鉴权/余额/未知错误。
+ */
+export const HOST_RETRY_HINT = "The service is temporarily unavailable";
 
 export type MarkerDecision =
   | { action: "keep"; reason: string }
@@ -199,7 +205,7 @@ export function markGatewayError(text: string, enabled: boolean): MarkerDecision
   if (NON_TRANSIENT.some((token) => body.includes(token))) return { action: "keep", reason: "鉴权/余额/权限类，不改写" };
   const hit = GATEWAY_PATTERNS.find((pattern) => body.includes(pattern));
   if (!hit) return { action: "keep", reason: "未命中已知网关文案" };
-  return { action: "mark", text: `${body}\n${TRANSIENT_MARKER}`, reason: `命中 ${hit}` };
+  return { action: "mark", text: `${body}\n${TRANSIENT_MARKER}\n${HOST_RETRY_HINT}`, reason: `命中 ${hit}` };
 }
 
 /** 状态必须能直接 JSON 往返；返回字符串供宿主保存。 */

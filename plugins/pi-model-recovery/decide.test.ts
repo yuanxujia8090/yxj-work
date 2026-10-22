@@ -3,6 +3,7 @@ import {
   CHAIN_EXHAUSTED,
   MISSING_FAILED,
   NOT_RETRYABLE,
+  HOST_RETRY_HINT,
   TRANSIENT_MARKER,
   decideRequest,
   emptyState,
@@ -214,7 +215,8 @@ for (const pattern of ["账号池暂无可用账号", "gateway_concurrency_limit
     assert.equal(decision.action, "mark");
     if (decision.action !== "mark") return;
     assert.ok(decision.text.includes(pattern), "原文必须保留");
-    assert.ok(decision.text.endsWith(TRANSIENT_MARKER));
+    assert.ok(decision.text.includes(TRANSIENT_MARKER));
+    assert.ok(decision.text.endsWith(HOST_RETRY_HINT));
   });
 }
 
