@@ -1870,8 +1870,10 @@ def cmd_finish(args: argparse.Namespace) -> None:
     run = run_dir(repo)
     with run_lock(run):
         snap = inspect_data(repo, run)
-        if snap["mode"] != "managed" or not snap["done_met"]:
-            why = ",".join(snap["reasons"]) or snap["mode"]
+        # 收据过期/损坏只能由 finish 自己刷新；除此之外的问题一律拒绝。
+        blocking = [reason for reason in snap["reasons"] if not reason.startswith("receipt:")]
+        if snap["mode"] != "managed" or blocking:
+            why = ",".join(blocking) or snap["mode"]
             die(f"不能 finish：{why}。正确命令：补齐验收和集成验证后重试")
         text = (run / "RUN.md").read_text()
         epoch = epoch_of(text) + 1

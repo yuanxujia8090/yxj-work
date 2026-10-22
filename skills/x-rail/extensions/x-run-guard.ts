@@ -187,7 +187,9 @@ export async function guardBoundary(event: AgentBeforeSettleEvent, ctx: Extensio
     guardEvent("wait-worker", { workers: snap.pending_workers });
     return;
   }
-  if (snap.done_met) {
+  // 只有收据过期的“未完成”是可由 finish 自行修复的，不能因此死锁。
+  const onlyReceipt = snap.reasons.length > 0 && snap.reasons.every((reason) => reason.startsWith("receipt:"));
+  if (snap.done_met || onlyReceipt) {
     const identity = boundIdentity();
     const finished = identity ? finishRun(identity) : false;
     guardEvent("finish", { ok: finished });

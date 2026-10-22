@@ -101,8 +101,7 @@ export function statusText(loaded: LoadedConfig, selection: string): string {
 
 export default function modelRecovery(pi: ExtensionAPI): void {
   const loaded = loadConfig();
-  let current: BranchState = parseState(undefined);
-  let active: RecoveryConfig | null = loaded.config;
+  const active: RecoveryConfig | null = loaded.config;
 
   pi.registerCommand("model-recovery", {
     description: "只读显示模型恢复插件的配置与宿主重试设置",
@@ -136,7 +135,8 @@ export default function modelRecovery(pi: ExtensionAPI): void {
       const decision = decideRequest({
         reason: request.reason,
         config,
-        state: parseState(request.state ?? current),
+        // 只信宿主分支状态；没有就是空状态，不用模块级变量跨会话共享。
+        state: parseState(request.state),
         now: Date.now(),
         failed,
         failedText: failedTextOf(request.failed?.message),
@@ -146,7 +146,6 @@ export default function modelRecovery(pi: ExtensionAPI): void {
         // 终止错误文本已避开暂时故障词，避免宿主再次当可重试错误。
         throw new Error(decision.error === MISSING_FAILED ? MISSING_FAILED : CHAIN_EXHAUSTED);
       }
-      if (decision.state) current = decision.state;
       const entry = config.chain[decision.index];
       const model = ctx.modelRegistry.find(entry.provider, entry.model);
       if (!model) {

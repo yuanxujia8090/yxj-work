@@ -330,6 +330,23 @@ class XrTests(unittest.TestCase):
         self.assertIn("缺少独立审查", inspected["reasons"])
         self.assertNotEqual(run(self.repo, "finish").returncode, 0)
 
+    def test_stale_receipt_can_be_refreshed_by_finish(self):
+        run_id = self.init()
+        self._finish_pair()
+        self.assertEqual(run(self.repo, "acceptance", "set", "A1", "两个单元都过", "--source", "README.md", "--units", "u,i").returncode, 0)
+        self.assertEqual(run(self.repo, "finish").returncode, 0)
+        run_dir = self.repo / ".work-docs" / "runs" / run_id
+        report = next(run_dir.glob("notes/verify-i-attempt-*.log"))
+        report.write_text("tampered\n")
+        stale = parse_json(run(self.repo, "inspect", "--json"))
+        self.assertEqual(stale["receipt_status"], "stale")
+        # 收据过期只能由 finish 刷新，不能因此把 finish 也挡死。
+        self.assertEqual(run(self.repo, "verify", "i").returncode, 0)
+        self.assertEqual(run(self.repo, "finish").returncode, 0)
+        fresh = parse_json(run(self.repo, "inspect", "--json"))
+        self.assertEqual(fresh["receipt_status"], "valid")
+        self.assertTrue(fresh["done_met"], fresh["reasons"])
+
     def test_session_acceptance_source_requires_saved_evidence(self):
         run_id = self.init()
         self._finish_pair()
