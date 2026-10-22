@@ -1,7 +1,7 @@
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import type { AgentBeforeSettleEvent, ExtensionAPI, ExtensionContext, SessionBoundaryDraft } from "@earendil-works/pi-coding-agent";
-import { boundaryDecision, nextStall, resumeHint, shouldContinue, watchdogDue } from "./guard-core.ts";
+import { boundaryDecision, nextStall, resumeHint, shouldContinue, watchdogDecision } from "./guard-core.ts";
 import { markWatchdog, takeWatchdog as markWasWatchdog } from "./watchdog.ts";
 import {
   appendEvent,
@@ -13,6 +13,7 @@ import {
   readBoundary,
   recordHostEvent,
   refreshCapsule,
+  runDoingFresh,
   saveGuardMemory,
   unitsFingerprint,
   xrPath,
@@ -25,7 +26,8 @@ import { randomUUID } from "node:crypto";
 
 let lastTokenAt = Date.now();
 let userAbort = false;
-let activeTools = 0;
+const activeToolStarts = new Map<string, number>();
+let graceUsed = false;
 let watchdogTimer: ReturnType<typeof setTimeout> | undefined;
 /** 宿主实际报告的边界结局，只用于记录，不猜测缺失字段。 */
 let lastOutcome: { outcome: string; aborted: boolean } | null = null;
@@ -88,9 +90,9 @@ export function registerGuardLifecycle(
   });
   pi.on("message_update", async () => { lastTokenAt = Date.now(); });
   pi.on("provider_stream_event", async () => { lastTokenAt = Date.now(); });
-  pi.on("tool_execution_start", async () => { activeTools += 1; lastTokenAt = Date.now(); });
+  pi.on("tool_execution_start", async (event) => { activeToolStarts.set(event.toolCallId, Date.now()); lastTokenAt = Date.now(); });
   pi.on("tool_execution_update", async () => { lastTokenAt = Date.now(); });
-  pi.on("tool_execution_end", async () => { activeTools = Math.max(0, activeTools - 1); lastTokenAt = Date.now(); });
+  pi.on("tool_execution_end", async (event) => { activeToolStarts.delete(event.toolCallId); lastTokenAt = Date.now(); });
   pi.on("agent_start", async (_event, ctx) => {
     // 新会话/切会话不会重发 session_start：开工前核对身份，变了就重新绑定并递增 generation。
     const sessionId = ctx.sessionManager.getSessionId();
@@ -108,14 +110,36 @@ export function registerGuardLifecycle(
       }
     }
     userAbort = false;
-    activeTools = 0;
+    activeToolStarts.clear();
+    graceUsed = false;
     lastTokenAt = Date.now();
     if (watchdogTimer) clearTimeout(watchdogTimer);
     const arm = () => {
       watchdogTimer = setTimeout(() => {
-        if (activeTools > 0) { lastTokenAt = Date.now(); arm(); return; }
-        if (watchdogDue(lastTokenAt, Date.now(), userAbort)) { markWatchdog(); ctx.abort(); return; }
-        arm();
+        const now = Date.now();
+        const located = findActiveRun(ctx.cwd);
+        const decision = watchdogDecision({
+          now,
+          lastTokenAt,
+          abortedByUser: userAbort,
+          toolAges: [...activeToolStarts.values()].map((started) => now - started),
+          runDoingFresh: located ? runDoingFresh(located.dir, now) : false,
+          graceUsed,
+        });
+        if (decision === "wait" || decision === "skip") { arm(); return; }
+        if (decision === "grace") {
+          graceUsed = true;
+          lastTokenAt = now;
+          guardEvent("watchdog-grace", { reason: "任务单元在推进，宽限 60 秒" });
+          arm();
+          return;
+        }
+        guardEvent("watchdog", {
+          reason: activeToolStarts.size > 0 ? "工具超过 50 分钟仍未结束" : "180 秒没有流事件",
+          tools: [...activeToolStarts.keys()],
+        });
+        markWatchdog();
+        ctx.abort();
       }, 5_000);
     };
     arm();
@@ -129,6 +153,8 @@ export function registerGuardLifecycle(
     guardEvent("settled", { settled, boundary });
     if (event.aborted && markWasWatchdog()) {
       await onWatchdogSettled?.(ctx);
+      // 单独装守卫时没有人接手看门狗中止：写一条暂停记录，别让会话静默停住。
+      if (!onWatchdogSettled) stopWithHandoff(ctx, [], "看门狗中止：长时间没有流式返回或工具超时");
       return;
     }
     if (event.aborted) userAbort = true;

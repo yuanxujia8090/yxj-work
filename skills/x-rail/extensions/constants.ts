@@ -20,6 +20,10 @@ export const SUMMARY_TIMEOUT_MS = 120_000;
 export const SUMMARY_MAX_CHARS = 3_000;
 export const CAPSULE_MAX_BYTES = 2_048;
 export const WATCHDOG_MS = 180_000;
+/** 工具超过这个时长仍没结束，视为挂起，不再无限豁免看门狗。 */
+export const TOOL_MAX_MS = 50 * 60_000;
+/** 任务单元刚开始推进时，看门狗到期后只宽限这一次。 */
+export const WATCHDOG_GRACE_MS = 60_000;
 export const MAX_CONTINUES_WITHOUT_PROGRESS = 3;
 export const MAX_CONTINUES_PER_RUN = 200;
 
