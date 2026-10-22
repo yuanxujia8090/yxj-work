@@ -19,9 +19,9 @@ import {
   nextStall,
   renderHandoff,
   shouldContinue,
-  watchdogDue,
+  idleExpired,
 } from "../skills/x-rail/extensions/guard-core.ts";
-import { MAX_CONTINUES_PER_RUN, MAX_CONTINUES_WITHOUT_PROGRESS, WATCHDOG_MS } from "../skills/x-rail/extensions/constants.ts";
+import { IDLE_STOP_MS, MAX_CONTINUES_PER_RUN, MAX_CONTINUES_WITHOUT_PROGRESS } from "../skills/x-rail/extensions/constants.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const xr = path.join(root, "skills/x-rail/scripts/xr");
@@ -207,9 +207,9 @@ step("guard", "指纹变化归零，不变则累加", () => {
 });
 
 step("guard", "看门狗与压缩边界", () => {
-  assert.equal(watchdogDue(0, WATCHDOG_MS - 1, false), false);
-  assert.equal(watchdogDue(0, WATCHDOG_MS, false), true);
-  assert.equal(watchdogDue(0, WATCHDOG_MS, true), false);
+  assert.equal(idleExpired({ now: IDLE_STOP_MS - 1, lastProgressAt: 0, abortedByUser: false }), false);
+  assert.equal(idleExpired({ now: IDLE_STOP_MS, lastProgressAt: 0, abortedByUser: false }), true);
+  assert.equal(idleExpired({ now: IDLE_STOP_MS, lastProgressAt: 0, abortedByUser: true }), false);
   assert.equal(boundaryDecision({ contextTokens: 1_000, provider: "openai26" }), "continue");
   assert.equal(boundaryDecision({ contextTokens: 999_999, provider: "openai26" }), "compact");
   assert.equal(compactText("capsule", null), "capsule");

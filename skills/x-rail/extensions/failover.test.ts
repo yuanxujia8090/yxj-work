@@ -10,8 +10,8 @@ import { decideFailback } from "./failback.ts";
 import { concurrencyLimits, dispatchModel, reviewerFamily } from "./subagent.ts";
 import { decideSwitch, freshMemory, memoryAfter } from "./switch.ts";
 import { loadState, saveState } from "./store.ts";
-import { boundaryDecision, compactText, nextStall, shouldContinue, watchdogDecision, watchdogDue } from "./guard-core.ts";
-import { TOOL_MAX_MS, WATCHDOG_MS } from "./constants.ts";
+import { boundaryDecision, compactText, idleExpired, nextStall, shouldContinue } from "./guard-core.ts";
+import { IDLE_STOP_MS } from "./constants.ts";
 
 const primary = { provider: "openai26", id: "gpt-6.1-sol" };
 const fallback = { provider: "bai", id: "deepseek-v4.1-flash" };
@@ -150,19 +150,13 @@ const capsule = "目标：x\nDone：y\n";
 const summary = compactText(capsule, "s".repeat(4000));
 assert.ok(summary.includes("对话要点"));
 assert.ok(summary.length < capsule.length + 4000);
-assert.equal(watchdogDue(0, WATCHDOG_MS, false), true);
-assert.equal(watchdogDue(0, WATCHDOG_MS, true), false);
+// 一条原则：有产出就继续；连续 IDLE_STOP_MS 没有产出才停。
+assert.equal(idleExpired({ now: IDLE_STOP_MS - 1, lastProgressAt: 0, abortedByUser: false }), false);
+assert.equal(idleExpired({ now: IDLE_STOP_MS, lastProgressAt: 0, abortedByUser: false }), true);
+assert.equal(idleExpired({ now: IDLE_STOP_MS * 10, lastProgressAt: 0, abortedByUser: true }), false);
+assert.equal(idleExpired({ now: 1_000, lastProgressAt: 0, abortedByUser: false, idleMs: 500 }), true);
+assert.ok(Number.isFinite(IDLE_STOP_MS) && IDLE_STOP_MS > 0);
 
-// 看门狗四态：用户中止、未到期、工具在跑（含超长工具）、任务刚更新宽限一次。
-const base = { abortedByUser: false, toolAges: [] as number[], runDoingFresh: false, graceUsed: false };
-assert.equal(watchdogDecision({ ...base, now: 0, lastTokenAt: 0, abortedByUser: true }), "skip");
-assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS - 1, lastTokenAt: 0 }), "wait");
-assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, toolAges: [1_000] }), "wait");
-assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, toolAges: [TOOL_MAX_MS + 1] }), "abort");
-// 一个工具挂住、另一个刚开始：不能因为新工具而永远豁免。
-assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, toolAges: [TOOL_MAX_MS + 1, 1_000] }), "abort");
-assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, runDoingFresh: true }), "grace");
-assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, runDoingFresh: true, graceUsed: true }), "abort");
 assert.equal(boundaryDecision({ contextTokens: 100_000, provider: "openai26" }), "continue");
 assert.equal(boundaryDecision({ contextTokens: 200_000, provider: "openai26" }), "compact");
 assert.equal(boundaryDecision({ contextTokens: 300_000, provider: "bai" }), "continue");

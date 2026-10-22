@@ -50,6 +50,7 @@ xr evidence record u3 --kind review --report reviews/a.md --inputs docs/a.md \
 
 - 有可做工作且没有未决副作用 → 注入一次续接，带运行目录和当前工作项。
 - 连续 3 次语义进度相同 → 写 `handoff.md` 并停。
+- 连续 `IDLE_STOP_MS`（默认 10 分钟，可用 `X_RAIL_IDLE_STOP_MS` 覆盖）没有任何产出 → 停并写 handoff。产出包括流事件、工具活动、单元表/账本变化；不按任务总时长或单工具总时长判断。
 - 剩余工作被 gate 挡住、检查器无结果、handoff 写不进去 → 停。
 - 等待活跃子代理 → 只提示，不重复派发，不计数。
 - 中止（Esc/abort）或切会话 → 不续跑；新会话必须重新 `xr bind` 才接管。

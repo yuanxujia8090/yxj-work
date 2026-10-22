@@ -1,7 +1,7 @@
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import type { AgentBeforeSettleEvent, ExtensionAPI, ExtensionContext, SessionBoundaryDraft } from "@earendil-works/pi-coding-agent";
-import { boundaryDecision, nextStall, resumeHint, shouldContinue, watchdogDecision } from "./guard-core.ts";
+import { boundaryDecision, idleExpired, nextStall, resumeHint, shouldContinue } from "./guard-core.ts";
 import { markWatchdog, takeWatchdog as markWasWatchdog } from "./watchdog.ts";
 import {
   appendEvent,
@@ -13,7 +13,6 @@ import {
   readBoundary,
   recordHostEvent,
   refreshCapsule,
-  runDoingFresh,
   saveGuardMemory,
   unitsFingerprint,
   xrPath,
@@ -24,10 +23,10 @@ import {
 import { registerHostEvents } from "./host-events.ts";
 import { randomUUID } from "node:crypto";
 
-let lastTokenAt = Date.now();
+let lastProgressAt = Date.now();
 let userAbort = false;
-const activeToolStarts = new Map<string, number>();
-let graceUsed = false;
+/** 语义进展：units/ledger 的内容变化也算“有产出”，不只是流事件。 */
+let lastProgressMark = "";
 let watchdogTimer: ReturnType<typeof setTimeout> | undefined;
 /** 宿主实际报告的边界结局，只用于记录，不猜测缺失字段。 */
 let lastOutcome: { outcome: string; aborted: boolean } | null = null;
@@ -88,11 +87,12 @@ export function registerGuardLifecycle(
     const hint = resumeHint(bound?.runId ?? null);
     if (hint) ctx.ui.notify(hint, "info");
   });
-  pi.on("message_update", async () => { lastTokenAt = Date.now(); });
-  pi.on("provider_stream_event", async () => { lastTokenAt = Date.now(); });
-  pi.on("tool_execution_start", async (event) => { activeToolStarts.set(event.toolCallId, Date.now()); lastTokenAt = Date.now(); });
-  pi.on("tool_execution_update", async () => { lastTokenAt = Date.now(); });
-  pi.on("tool_execution_end", async (event) => { activeToolStarts.delete(event.toolCallId); lastTokenAt = Date.now(); });
+  const markProgress = () => { lastProgressAt = Date.now(); };
+  pi.on("message_update", async () => markProgress());
+  pi.on("provider_stream_event", async () => markProgress());
+  pi.on("tool_execution_start", async () => markProgress());
+  pi.on("tool_execution_update", async () => markProgress());
+  pi.on("tool_execution_end", async () => markProgress());
   pi.on("agent_start", async (_event, ctx) => {
     // 新会话/切会话不会重发 session_start：开工前核对身份，变了就重新绑定并递增 generation。
     const sessionId = ctx.sessionManager.getSessionId();
@@ -110,34 +110,20 @@ export function registerGuardLifecycle(
       }
     }
     userAbort = false;
-    activeToolStarts.clear();
-    graceUsed = false;
-    lastTokenAt = Date.now();
+    lastProgressAt = Date.now();
+    lastProgressMark = "";
     if (watchdogTimer) clearTimeout(watchdogTimer);
     const arm = () => {
       watchdogTimer = setTimeout(() => {
         const now = Date.now();
-        const located = findActiveRun(ctx.cwd);
-        const decision = watchdogDecision({
-          now,
-          lastTokenAt,
-          abortedByUser: userAbort,
-          toolAges: [...activeToolStarts.values()].map((started) => now - started),
-          runDoingFresh: located ? runDoingFresh(located.dir, now) : false,
-          graceUsed,
-        });
-        if (decision === "wait" || decision === "skip") { arm(); return; }
-        if (decision === "grace") {
-          graceUsed = true;
-          lastTokenAt = now;
-          guardEvent("watchdog-grace", { reason: "任务单元在推进，宽限 60 秒" });
-          arm();
-          return;
+        // 文件也在产出：单元表/账本一变，说明任务在推进。
+        const mark = unitsFingerprint(bound?.dir ?? "");
+        if (mark !== lastProgressMark) {
+          lastProgressMark = mark;
+          lastProgressAt = now;
         }
-        guardEvent("watchdog", {
-          reason: activeToolStarts.size > 0 ? "工具超过 50 分钟仍未结束" : "240 秒没有流事件",
-          tools: [...activeToolStarts.keys()],
-        });
+        if (!idleExpired({ now, lastProgressAt, abortedByUser: userAbort })) { arm(); return; }
+        guardEvent("idle-stop", { idleMs: now - lastProgressAt });
         markWatchdog();
         ctx.abort();
       }, 5_000);

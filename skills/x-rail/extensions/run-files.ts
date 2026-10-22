@@ -3,7 +3,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { writeAtomic } from "./file-io.ts";
-import { WATCHDOG_GRACE_MS } from "./constants.ts";
 import { fileURLToPath } from "node:url";
 
 export interface ActiveRun {
@@ -218,21 +217,6 @@ export function refreshCapsule(identity: HostIdentity): boolean {
     // 胶囊失败不能挡住压缩或续跑，但必须让调用方知道没刷新成功。
     return false;
   }
-}
-
-/** run 里有 doing 单元且 updated 在宽限窗口内：用于避免落盘瞬间被看门狗误杀。 */
-export function runDoingFresh(dir: string, now: number): boolean {
-  const lines = readOrEmpty(path.join(dir, "units.tsv")).trim().split("\n").filter(Boolean);
-  const header = lines[0]?.split("\t") ?? [];
-  const stateAt = header.indexOf("state");
-  const updatedAt = header.indexOf("updated");
-  if (stateAt < 0 || updatedAt < 0) return false;
-  return lines.slice(1).some((line) => {
-    const cols = line.split("\t");
-    if (cols[stateAt] !== "doing") return false;
-    const updated = Date.parse(cols[updatedAt] ?? "");
-    return Number.isFinite(updated) && updated <= now && now - updated <= WATCHDOG_GRACE_MS;
-  });
 }
 
 export function guardMemoryPath(dir: string): string {
