@@ -12,6 +12,7 @@ import {
   CHAIN_EXHAUSTED,
   MISSING_FAILED,
   decideRequest,
+  isContextRecoveryStop,
   keyOf,
   markGatewayError,
   parseConfig,
@@ -85,7 +86,8 @@ export function statusText(loaded: LoadedConfig, selection: string): string {
     return lines.join("\n");
   }
   lines.push(`有效链：${loaded.config.chain.map(keyOf).join(" → ")}`);
-  lines.push(`冷却：${loaded.config.cooldownMs} ms；网关兼容：${loaded.config.gatewayCompatibility ? "开" : "关"}`);
+  lines.push(`冷却配置：${loaded.config.cooldownMs} ms（实际分支冷却由宿主保存，status 不读取）`);
+  lines.push(`网关兼容：${loaded.config.gatewayCompatibility ? "开" : "关"}`);
   lines.push(`当前选择：${selection}`);
   lines.push(hostRetrySettings());
   const suggested = Math.max(0, loaded.config.chain.length - 1);
@@ -100,10 +102,10 @@ export default function modelRecovery(pi: ExtensionAPI): void {
   pi.registerCommand("model-recovery", {
     description: "只读显示模型恢复插件的配置与宿主重试设置",
     handler: async (args: string, ctx: ExtensionContext) => {
-      const text = args.trim() === "status" || args.trim() === ""
-        ? statusText(loaded, ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "未知")
-        : statusText(loaded, ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "未知");
-      ctx.ui.notify(text, "info");
+      const selection = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "未知";
+      const text = statusText(loaded, selection);
+      ctx.ui.notify(args.trim() && args.trim() !== "status" ? `用法：/model-recovery status\n${text}` : text,
+        args.trim() && args.trim() !== "status" ? "warning" : "info");
     },
   });
 
@@ -123,9 +125,8 @@ export default function modelRecovery(pi: ExtensionAPI): void {
       const failed = request.failed
         ? { provider: request.failed.model.provider, model: request.failed.model.id }
         : null;
-      // 上下文溢出：failed.message 的 stopReason 反映宿主判断；沿用失败模型，不消耗链。
-      const contextRecovery = request.reason === "retry"
-        && (request.failed?.message as { stopReason?: string } | undefined)?.stopReason === "context_length_exceeded";
+      // 上下文/截断：沿用失败模型，不消耗故障链（stopReason 枚举见 Pi 的 StopReason）。
+      const contextRecovery = request.reason === "retry" && isContextRecoveryStop(request.failed?.message);
       const decision = decideRequest({
         reason: request.reason,
         config,

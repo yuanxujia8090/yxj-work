@@ -75,6 +75,21 @@ export function parseState(raw: unknown): BranchState {
 
 export type RequestReason = "user" | "continuation" | "retry" | "direct";
 
+/**
+ * 判断一次失败是否属于“上下文/截断”，这类重试沿用失败模型，不消耗故障链。
+ * 依据 Pi 的 StopReason：length（截断）与带上下文关键词的 error；
+ * 不是宿主内部的 isContextOverflow 全量实现，宁可少判也不把服务故障当溢出。
+ */
+export function isContextRecoveryStop(message: unknown): boolean {
+  const item = message as { stopReason?: unknown; errorMessage?: unknown } | undefined;
+  if (!item) return false;
+  if (item.stopReason === "length") return true;
+  if (item.stopReason === "error" && typeof item.errorMessage === "string") {
+    return /context[ _-]?(length|window|limit)|prompt is too long|maximum context|too many tokens|token limit|exceed[s]? (the )?(maximum|context)/i.test(item.errorMessage);
+  }
+  return false;
+}
+
 export interface DecideInput {
   reason: RequestReason;
   config: RecoveryConfig;

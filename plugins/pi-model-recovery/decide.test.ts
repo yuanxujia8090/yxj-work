@@ -8,6 +8,7 @@ import {
   emptyState,
   encodeState,
   keyOf,
+  isContextRecoveryStop,
   markGatewayError,
   parseConfig,
   parseState,
@@ -157,6 +158,16 @@ for (const [name, text] of [
     assert.equal(result.state, undefined, "不换链就不该写新状态");
   });
 }
+
+test("上下文/截断识别：length 与上下文类 error 才算，服务故障不算", () => {
+  assert.equal(isContextRecoveryStop({ stopReason: "length" }), true);
+  assert.equal(isContextRecoveryStop({ stopReason: "error", errorMessage: "maximum context length is 128000 tokens" }), true);
+  assert.equal(isContextRecoveryStop({ stopReason: "error", errorMessage: "prompt is too long: 300000 tokens" }), true);
+  assert.equal(isContextRecoveryStop({ stopReason: "error", errorMessage: "insufficient balance" }), false);
+  assert.equal(isContextRecoveryStop({ stopReason: "error", errorMessage: "The service is busy" }), false);
+  assert.equal(isContextRecoveryStop({ stopReason: "stop" }), false);
+  assert.equal(isContextRecoveryStop(undefined), false);
+});
 
 test("上下文溢出 retry 沿用失败模型，不消耗故障链", () => {
   const state = { schema: 1 as const, activeIndex: 1, cooldownUntil: 601_000, attempted: ["local-a/fixture-a"] };
