@@ -21,15 +21,9 @@ import {
 } from "./decide.ts";
 
 function failedTextOf(message: unknown): string {
-  const item = message as { errorMessage?: unknown; content?: unknown } | undefined;
-  if (typeof item?.errorMessage === "string") return item.errorMessage;
-  if (Array.isArray(item?.content)) {
-    return item.content
-      .filter((part): part is { type: string; text?: string } => typeof part === "object" && part !== null)
-      .map((part) => part.text ?? "")
-      .join("\n");
-  }
-  return "";
+  // 只认错误字段：assistant 正常回答里出现“余额/401”不代表请求失败原因。
+  const item = message as { errorMessage?: unknown } | undefined;
+  return typeof item?.errorMessage === "string" ? item.errorMessage : "";
 }
 
 export const PROVIDER = "model-recovery";
@@ -144,7 +138,7 @@ export default function modelRecovery(pi: ExtensionAPI): void {
       });
       if (decision.action === "fail") {
         // 终止错误文本已避开暂时故障词，避免宿主再次当可重试错误。
-        throw new Error(decision.error === MISSING_FAILED ? MISSING_FAILED : CHAIN_EXHAUSTED);
+        throw new Error(decision.error);
       }
       const entry = config.chain[decision.index];
       const model = ctx.modelRegistry.find(entry.provider, entry.model);

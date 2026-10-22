@@ -1,7 +1,7 @@
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import type { AgentBeforeSettleEvent, ExtensionAPI, ExtensionContext, SessionBoundaryDraft } from "@earendil-works/pi-coding-agent";
-import { boundaryDecision, compactText, nextStall, renderHandoff, resumeHint, shouldContinue, watchdogDue } from "./guard-core.ts";
+import { boundaryDecision, nextStall, resumeHint, shouldContinue, watchdogDue } from "./guard-core.ts";
 import { markWatchdog, takeWatchdog as markWasWatchdog } from "./watchdog.ts";
 import {
   appendEvent,
@@ -11,7 +11,6 @@ import {
   loadGuardMemory,
   readBinding,
   readBoundary,
-  readCapsule,
   recordHostEvent,
   refreshCapsule,
   saveGuardMemory,
@@ -22,7 +21,6 @@ import {
   type RunBinding,
 } from "./run-files.ts";
 import { registerHostEvents } from "./host-events.ts";
-import { writeAtomic } from "./file-io.ts";
 import { randomUUID } from "node:crypto";
 
 let lastTokenAt = Date.now();
@@ -142,7 +140,8 @@ export function registerGuardLifecycle(
   pi.on("session_before_compact", async (event, ctx) => {
     if (!bound) return;
     // 不覆盖宿主摘要：只刷新胶囊并记录，摘要仍由 Pi 生成，胶囊留作补充。
-    const refreshed = refreshCapsule(ctx.cwd);
+    const identity = boundIdentity();
+    const refreshed = identity ? refreshCapsule(identity) : false;
     guardEvent("compaction", { supplement: false, capsule: refreshed, firstKeptEntryId: event.preparation.firstKeptEntryId });
   });
 }
@@ -177,9 +176,15 @@ export async function guardBoundary(event: AgentBeforeSettleEvent, ctx: Extensio
   // 被接管或换过代次：旧会话不得继续推进，也不写状态。
   if (snap.binding.session_id !== bound.sessionId || snap.binding.generation !== bound.generation) {
     guardEvent("stale-binding", { bound: bound.generation, current: snap.binding.generation });
-    ctx.ui.notify(`本会话代次已失效（${bound.generation} → ${snap.binding.generation}），停止自动续跑。`, "warning");
-    bound = null;
-    return;
+    if (snap.binding.session_id === bound.sessionId && snap.binding.lease === "active") {
+      // 同会话 resume/bind 提了代：跟上新代次，别把自己锁死。
+      bound = { ...bound, generation: snap.binding.generation };
+      guardEvent("rebind", { generation: snap.binding.generation });
+    } else {
+      ctx.ui.notify(`本会话代次已失效（${bound.generation} → ${snap.binding.generation}），停止自动续跑。`, "warning");
+      bound = null;
+      return;
+    }
   }
   if (snap.pending_workers.length > 0) {
     // 子代理还在跑：不重复派发、不计数、不续接，等它的结构化通知。
@@ -193,7 +198,7 @@ export async function guardBoundary(event: AgentBeforeSettleEvent, ctx: Extensio
     const identity = boundIdentity();
     const finished = identity ? finishRun(identity) : false;
     guardEvent("finish", { ok: finished });
-    ctx.ui.notify(finished ? `run ${bound.runId} 判据已满足，已生成收据。` : `run ${bound.runId} 判据已满足，但收据生成失败，请看 handoff。`, finished ? "info" : "warning");
+    ctx.ui.notify(finished ? `run ${bound.runId} 判据已满足，已生成收据。` : `run ${bound.runId} 判据已满足，但 xr finish 失败（收据未更新），先查 xr inspect。`, finished ? "info" : "warning");
     return;
   }
   const memory = loadGuardMemory(bound.dir);
@@ -217,7 +222,9 @@ export async function guardBoundary(event: AgentBeforeSettleEvent, ctx: Extensio
     ctx.ui.notify(decision.reason, "warning");
     return;
   }
-  refreshCapsule(ctx.cwd);
+  const capsuleIdentity = boundIdentity();
+  const refreshed = capsuleIdentity ? refreshCapsule(capsuleIdentity) : false;
+  if (!refreshed) guardEvent("capsule-stale", {});
   const mark = readBoundary(bound.dir);
   const choice = boundaryDecision({
     contextTokens: ctx.getContextUsage()?.tokens ?? null,
@@ -233,11 +240,8 @@ export async function guardBoundary(event: AgentBeforeSettleEvent, ctx: Extensio
     return stopWithHandoff(ctx, inherited, "续跑计数写不进去（xr guard set 失败）");
   }
   guardEvent("resume", {});
+  // 摘要归 Pi：这里只追加续接消息，不注入自制 compaction（避免覆盖真实对话）。
   const entries: SessionBoundaryDraft[] = [...inherited];
-  if (choice === "compact") {
-    const capsule = readCapsule(bound.dir) || `run ${bound.runId}：胶囊缺失，先执行 xr capsule。`;
-    entries.push({ type: "compaction", summary: compactText(capsule, null), firstKeptEntryId: null });
-  }
   entries.push({ type: "custom_message", customType: "x-run-guard", content: continueMessage(snap, decision.message), display: true });
   return { continue: true, entries };
 }
@@ -276,9 +280,15 @@ function stopWithHandoff(
 ): { continue: false; entries: SessionBoundaryDraft[] } {
   const runId = bound?.runId ?? "unknown";
   try {
-    if (!bound) throw new Error("未绑定运行");
-    writeAtomic(path.join(bound.dir, "handoff.md"), renderHandoff(runId, why));
-    guardEvent("handoff", { reason: why });
+    const identity = boundIdentity();
+    if (!identity) throw new Error("未绑定运行");
+    const bin = xrPath(identity.workspace);
+    if (!bin) throw new Error("找不到 xr");
+    execFileSync(bin, [
+      "--repo", identity.workspace, "--run-id", identity.runId,
+      "--session", identity.sessionId, "--generation", String(identity.generation),
+      "handoff", "--reason", why,
+    ], { stdio: "ignore", timeout: 5_000 });
     ctx.ui.notify(`停止自动续跑：${why}`, "warning");
   } catch (error) {
     guardEvent("handoff-failed", { reason: why, error: error instanceof Error ? error.message : String(error) });

@@ -188,10 +188,14 @@ export function inspectRun(cwd: string, runId: string, timeoutMs = 5_000): Promi
 }
 
 export function xrPath(cwd: string): string | null {
+  // 安装后扩展在 <agent-dir>/extensions/x-rail，而 xr 在 <agent-dir>/skills/x-rail/scripts。
+  const agentDir = process.env.PI_CODING_AGENT_DIR || path.join(os.homedir(), ".pi", "agent");
   const candidates = [
     process.env.X_RAIL_XR,
     fileURLToPath(new URL("../scripts/xr", import.meta.url)),
     path.join(cwd, "skills", "x-rail", "scripts", "xr"),
+    path.join(agentDir, "skills", "x-rail", "scripts", "xr"),
+    path.join(os.homedir(), ".pi", "agent", "skills", "x-rail", "scripts", "xr"),
   ].filter((item): item is string => Boolean(item));
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate;
@@ -199,11 +203,15 @@ export function xrPath(cwd: string): string | null {
   return null;
 }
 
-export function refreshCapsule(cwd: string): boolean {
-  const bin = xrPath(cwd);
+export function refreshCapsule(identity: HostIdentity): boolean {
+  const bin = xrPath(identity.workspace);
   if (!bin) return false;
   try {
-    execFileSync(bin, ["capsule", "--repo", cwd], { stdio: "ignore" });
+    execFileSync(bin, [
+      "--repo", identity.workspace, "--run-id", identity.runId,
+      "--session", identity.sessionId, "--generation", String(identity.generation),
+      "capsule",
+    ], { stdio: "ignore", timeout: 5_000 });
     return true;
   } catch {
     // 胶囊失败不能挡住压缩或续跑，但必须让调用方知道没刷新成功。

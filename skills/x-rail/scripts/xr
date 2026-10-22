@@ -1387,9 +1387,9 @@ def source_ref(repo: Path, raw: str) -> str:
     return f"{raw}#sha256:{digest}"
 
 
-def source_ok(repo: Path, stored: str, run: Path | None = None) -> tuple[bool, str]:
+def source_ok(repo: Path, stored: str, run: Path | None = None, units: set[str] | None = None) -> tuple[bool, str]:
     if stored.startswith("session:"):
-        # 会话来源不能只看格式：必须有对应的审查会话副本在 notes/ 里。
+        # 会话来源不能只看格式：必须是覆盖该验收单元的审查证据，且副本在 notes/ 里。
         match = re.fullmatch(r"session:([A-Za-z0-9_-]+)#entry:[A-Za-z0-9_-]+", stored)
         if not match:
             return False, "source 不合法"
@@ -1399,13 +1399,18 @@ def source_ok(repo: Path, stored: str, run: Path | None = None) -> tuple[bool, s
         for item in ledger_rows(run):
             if item.get("observer") != session_id or not item.get("session_path"):
                 continue
+            if units is not None and item.get("unit") not in units:
+                continue
             try:
                 saved = (run / item["session_path"]).resolve()
                 saved.relative_to((run / "notes").resolve())
             except (OSError, ValueError):
                 continue
-            if saved.is_file() and item.get("session_hash"):
-                return True, ""
+            if not saved.is_file() or not item.get("session_hash"):
+                continue
+            if file_digest(saved) != item["session_hash"]:
+                continue
+            return True, ""
         return False, "session 来源没有对应审查会话证据"
     if "#sha256:" not in stored:
         return False, "source 缺摘要"
@@ -1674,8 +1679,8 @@ def inspect_data(repo: Path, run: Path, include_receipt: bool = True) -> dict:
     covered = 0
     by_id = {row["id"]: row for row in rows}
     for item in acc:
-        ok, why = source_ok(repo, item["source"], run)
         ids = [part.strip() for part in item["units"].split(",") if part.strip()]
+        ok, why = source_ok(repo, item["source"], run, set(ids))
         matched = []
         for unit_id in ids:
             row = by_id.get(unit_id)
@@ -1779,6 +1784,26 @@ def cmd_inspect(args: argparse.Namespace) -> None:
     say(json.dumps(snap, ensure_ascii=False))
     if snap["mode"] == "invalid":
         raise SystemExit(2)
+
+
+def cmd_handoff(args: argparse.Namespace) -> None:
+    """暂停记录只由 xr 写：扩展不得直接改运行目录。"""
+    repo = repo_of(args)
+    run = run_dir(repo)
+    reason = cell(args.reason)
+    if not reason:
+        die("handoff 需要非空 --reason")
+    with run_lock(run):
+        body = (
+            f"# handoff {run.name}\n\n"
+            f"阻塞：{reason}\n\n"
+            "已完成和未完成以 units.tsv 和 ledger.tsv 为准，这里不抄表。\n\n"
+            "下一条命令：\n\n```\nxr status\n```\n\n"
+            "恢复：读 capsule.md，再执行 xr status；不要重做已有 VERIFIED 单元。\n"
+        )
+        atomic_write_text(run / "handoff.md", body)
+        event(run, {"type": "handoff", "reason": reason})
+    say(f"ok handoff {run.name}")
 
 
 def cmd_guard(args: argparse.Namespace) -> None:
@@ -2002,6 +2027,9 @@ def build() -> argparse.ArgumentParser:
     verify.add_argument("id")
     verify.add_argument("--timeout", type=int)
     verify.set_defaults(func=cmd_verify)
+    handoff = sub.add_parser("handoff")
+    handoff.add_argument("--reason", required=True)
+    handoff.set_defaults(func=cmd_handoff)
     guard = sub.add_parser("guard")
     guard_sub = guard.add_subparsers(dest="guard_verb")
     guard_set = guard_sub.add_parser("set")

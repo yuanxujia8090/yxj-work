@@ -362,6 +362,8 @@ class XrTests(unittest.TestCase):
         self.assertEqual(run(self.repo, "plan", "add", "r", "审查", "--deps", "i", "--files", "req.md",
                              "--kind", "review", "--verify-kind", "review").returncode, 0)
         run(self.repo, "next")
+        # 验收要先指向审查单元；审查证据绑定 acceptance 摘要，改验收会让它过期。
+        self.assertEqual(run(self.repo, "acceptance", "rebind", "A1", "--units", "r").returncode, 0)
         report = self.repo / "review.md"
         report.write_text("reviewer-session")
         reviewer = self.repo / "review-session.jsonl"
@@ -370,7 +372,7 @@ class XrTests(unittest.TestCase):
         self.assertEqual(run(self.repo, "evidence", "record", "r", "--kind", "review", "--report", str(report),
                              "--observer", str(reviewer), "--record", "host:independent-review").returncode, 0)
         after = parse_json(run(self.repo, "inspect", "--json"))
-        self.assertFalse(any("session" in reason for reason in after["reasons"]), after["reasons"])
+        self.assertFalse(any("session 来源" in reason for reason in after["reasons"]), after["reasons"])
 
     def test_overlap_verify_done_and_fail(self):
         self.init()

@@ -289,7 +289,7 @@ try {
     const failed = failEvents.find((event) => event.type === "handoff-failed");
     assert.ok(failed, `no handoff-failed event: ${failEvents.map((event) => event.type).join(",")}`);
     assert.match(String(failed.detail?.reason ?? ""), /检查器/);
-    assert.match(String(failed.detail?.error ?? ""), /EISDIR|ENOTDIR|directory|is a directory/i);
+    assert.match(String(failed.detail?.error ?? ""), /Command failed|EISDIR|ENOTDIR|directory|handoff/i);
   });
   const rpcDir = path.join(evidence, "rpc");
   fs.mkdirSync(rpcDir, { recursive: true });
