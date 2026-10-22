@@ -84,6 +84,25 @@ class XrTests(unittest.TestCase):
         self.assertEqual((base / "ACTIVE").read_text().strip(), winner)
         self.assertEqual([path.name for path in base.iterdir() if path.is_dir()], [winner])
 
+    def test_concurrent_guard_writes_stay_valid(self):
+        """12 个并发 guard set 必须串行化，最后的 guard.json 必须是完整合法 JSON。"""
+        run_id = self.init()
+        run_dir = self.repo / ".work-docs" / "runs" / run_id
+
+        def write(index: int):
+            return run(self.repo, "guard", "set", "--continues", str(index), "--stalled", "0", "--fingerprint", f"f{index}")
+
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            results = list(pool.map(write, range(1, 13)))
+        self.assertEqual([item.returncode for item in results], [0] * 12,
+                         "\n".join(f"{item.returncode}: {item.stderr}" for item in results))
+        try:
+            guard = json.loads((run_dir / "guard.json").read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            self.fail(f"guard.json 被并发写坏：{exc}")
+        self.assertIn(guard["continues"], range(1, 13))
+        self.assertEqual(guard["schema"], 1)
+
     def test_takeover_advances_generation_and_rejects_stale_writer(self):
         run_id = self.init()
         changed = run(self.repo, "resume", "--session", "next-session", "--confirm", "--take-ownership", "--record", "user:handoff")

@@ -77,5 +77,6 @@ bash "$ROOT/scripts/test-install-v3.sh" >/dev/null || fail 'test-install-v3 fail
 bash "$ROOT/scripts/test-package-v4.sh" >/dev/null || fail 'test-package-v4 failed'
 python3 "$ROOT/scripts/check-size.py" --root "$ROOT" >/dev/null || fail 'check-size failed'
 bash "$ROOT/scripts/test-size-check.sh" >/dev/null || fail 'test-size-check failed'
+node "$ROOT/scripts/stress-guard.mjs" >/dev/null || fail 'stress-guard failed'
 
 printf 'check-repo: passed\n'

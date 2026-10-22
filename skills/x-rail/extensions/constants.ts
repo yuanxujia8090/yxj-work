@@ -20,7 +20,9 @@ export const SUMMARY_TIMEOUT_MS = 120_000;
 export const SUMMARY_MAX_CHARS = 3_000;
 export const CAPSULE_MAX_BYTES = 2_048;
 /** 原则：只要还有产出就继续等；连续这么久没有任何产出一律视为卡住。默认 240 秒，可用 X_RAIL_IDLE_STOP_MS 覆盖。 */
-export const IDLE_STOP_MS = Number(process.env.X_RAIL_IDLE_STOP_MS ?? 240_000);
+const RAW_IDLE_STOP_MS = Number(process.env.X_RAIL_IDLE_STOP_MS ?? 240_000);
+/** 非法/非正数回退默认值：NaN 会让比较永远为假，等于关掉空闲保护。 */
+export const IDLE_STOP_MS = Number.isFinite(RAW_IDLE_STOP_MS) && RAW_IDLE_STOP_MS > 0 ? RAW_IDLE_STOP_MS : 240_000;
 export const MAX_CONTINUES_WITHOUT_PROGRESS = 3;
 export const MAX_CONTINUES_PER_RUN = 200;
 
