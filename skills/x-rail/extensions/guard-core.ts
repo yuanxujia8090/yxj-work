@@ -107,8 +107,9 @@ export type WatchdogAction = "wait" | "grace" | "abort" | "skip";
 export function watchdogDecision(input: WatchdogInput): WatchdogAction {
   if (input.abortedByUser) return "skip";
   if (input.now - input.lastTokenAt < WATCHDOG_MS) return "wait";
-  // 工具在跑：长构建、长测试、同步子代理都归这里，不误杀；超过上限才算挂起。
-  if (input.toolAges.length > 0 && Math.min(...input.toolAges) < TOOL_MAX_MS) return "wait";
+  // 工具在跑：长构建、长测试、同步子代理都归这里，不误杀。
+  // 用最老的工具判断：只要有一个工具超过上限就视为挂起，避免“新工具不断续命”。
+  if (input.toolAges.length > 0 && Math.max(...input.toolAges) < TOOL_MAX_MS) return "wait";
   if (input.toolAges.length > 0) return "abort";
   // 没有工具，但任务单元刚更新过：给一次宽限，避免刚好在落盘时被中止。
   if (input.runDoingFresh && !input.graceUsed) return "grace";

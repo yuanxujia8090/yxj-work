@@ -159,6 +159,8 @@ assert.equal(watchdogDecision({ ...base, now: 0, lastTokenAt: 0, abortedByUser: 
 assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS - 1, lastTokenAt: 0 }), "wait");
 assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, toolAges: [1_000] }), "wait");
 assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, toolAges: [TOOL_MAX_MS + 1] }), "abort");
+// 一个工具挂住、另一个刚开始：不能因为新工具而永远豁免。
+assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, toolAges: [TOOL_MAX_MS + 1, 1_000] }), "abort");
 assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, runDoingFresh: true }), "grace");
 assert.equal(watchdogDecision({ ...base, now: WATCHDOG_MS, lastTokenAt: 0, runDoingFresh: true, graceUsed: true }), "abort");
 assert.equal(boundaryDecision({ contextTokens: 100_000, provider: "openai26" }), "continue");

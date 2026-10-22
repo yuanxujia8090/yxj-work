@@ -135,7 +135,7 @@ export function registerGuardLifecycle(
           return;
         }
         guardEvent("watchdog", {
-          reason: activeToolStarts.size > 0 ? "工具超过 50 分钟仍未结束" : "180 秒没有流事件",
+          reason: activeToolStarts.size > 0 ? "工具超过 50 分钟仍未结束" : "240 秒没有流事件",
           tools: [...activeToolStarts.keys()],
         });
         markWatchdog();
