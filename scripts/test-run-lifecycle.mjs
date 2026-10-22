@@ -79,7 +79,7 @@ const server = http.createServer(async (request, response) => {
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const port = server.address().port;
 write("agent/auth.json", {});
-write("agent/models.json", { providers: { "host-probe": { baseUrl: `http://127.0.0.1:${port}/v1`, api: "openai-completions", apiKey: "local-fixture-key", models: ["fixture-a", "fixture-b"].map((id) => ({ id, name: id, reasoning: false, input: ["text"], contextWindow: 32768, maxTokens: 1024, compat: { supportsDeveloperRole: false, supportsStore: false } })) } } });
+write("agent/models.json", { providers: { "host-probe": { baseUrl: `http://127.0.0.1:${port}/v1`, api: "openai-completions", apiKey: "local-fixture-key", models: ["fixture-a", "fixture-b"].map((id) => ({ id, name: id, reasoning: false, input: ["text"], contextWindow: 4096, maxTokens: 512, compat: { supportsDeveloperRole: false, supportsStore: false } })) } } });
 write("agent/settings.json", { defaultProvider: "host-probe", defaultModel: "fixture-a", defaultThinkingLevel: "off", retry: { enabled: true, maxRetries: 1, baseDelayMs: 1, maxDelayMs: 1 }, subagents: { disableBuiltins: true, defaultModel: "host-probe/fixture-a", modelScope: { allow: ["host-probe/fixture-a", "host-probe/fixture-b", "host-probe/auto"], enforce: true, strict: true } } });
 write("agent/extensions/subagent/config.json", { toolActivation: "eager" });
 write("agent/agents/probe-child.md", `---\nname: probe-child\ndescription: Local host lifecycle fixture\nmodel: host-probe/fixture-a\ntools: probe_action\nexcludeTools: contact_supervisor, subagent, subagent_supervisor, bg_wait\nextensions: ${observer}\nallowedAgents:\ninheritProjectContext: false\ninheritGlobalContext: false\ninheritSkills: false\nacceptanceRole: read-only\nacceptance: {"level":"none","reason":"local lifecycle fixture"}\nsystemPromptMode: replace\n---\nLocal fixture. Call probe_action with mode child once, then return CHILD_DONE. Never delegate.\n`);
@@ -138,6 +138,11 @@ async function runRpc(name, extra, cwd = work) {
   send({ id: "a1", type: "abort" });
   const afterAbort = await settled;
   const beforeState = lines.filter((record) => record.type === "agent_settled").length;
+  // 真实压缩：确认守卫用 capsule 作为摘要，而不是另找模型再总结。
+  const requestsBeforeCompact = requests.length;
+  send({ id: "c1", type: "compact" });
+  const compacted = await waitFor((record) => record.type === "response" && record.id === "c1", "compact response");
+  const compactionRequests = requests.length - requestsBeforeCompact;
   send({ id: "s1", type: "new_session" });
   await waitFor((record) => record.type === "response" && record.id === "s1", "new_session response");
   // 新会话里再跑一轮：旧会话的守卫不能再用旧 generation 写状态。
@@ -149,7 +154,7 @@ async function runRpc(name, extra, cwd = work) {
   await new Promise((resolve) => child.on("close", resolve));
   await new Promise((resolve) => stderr.end(resolve));
   await new Promise((resolve) => debug.end(resolve));
-  return { lines, afterAbort, beforeState };
+  return { lines, afterAbort, beforeState, compacted, compactionRequests };
 }
 function sessionFor(pid) { return events().find((event) => event.type === "session_start" && event.pid === pid); }
 function files(dir, name) {
@@ -303,6 +308,16 @@ try {
     assert.ok(settled.length >= 1, "no settled event");
     assert.equal(settled[0].detail.settled.aborted, true, JSON.stringify(settled[0].detail));
     assert.equal(rpcEvents.filter((event) => event.type === "resume").length, 0, "aborted run must not auto-continue");
+  });
+  check("真实 compact 命令可达：要么成功且不额外请求模型，要么明确拒绝", () => {
+    // 小会话时宿主直接回答 “Nothing to compact”；这不等于摘要路径已验证。
+    assert.equal(rpc.compactionRequests, 0, `compaction requests=${rpc.compactionRequests}`);
+    if (rpc.compacted.success) {
+      assert.ok(rpcEvents.find((event) => event.type === "compaction"), "no compaction event");
+    } else {
+      assert.match(String(rpc.compacted.error ?? ""), /Nothing to compact|too small/i);
+      write("compact-refused.json", { error: rpc.compacted.error });
+    }
   });
   check("session switch stops the old session from writing task state", () => {
     // 新会话会重置扩展状态；旧身份既不能续跑也不能继续记账。
