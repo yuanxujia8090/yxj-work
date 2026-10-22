@@ -79,7 +79,7 @@
 
 <header>
   <h1>x-rail v4 守卫：流程、边界、关键卡点</h1>
-  <div class="sub">对应实现：<code>skills/x-rail/extensions/x-run-guard.ts</code>、<code>guard-core.ts</code>、<code>scripts/xr</code>。日期 2026-10-22。</div>
+  <div class="sub">上半部分：任务守卫（<code>x-run-guard.ts</code>、<code>guard-core.ts</code>、<code>scripts/xr</code>）。下半部分：模型恢复插件（<code>plugins/pi-model-recovery</code>）。两者独立安装、互不依赖。日期 2026-10-22。</div>
 </header>
 
 <div class="principle">
@@ -336,7 +336,7 @@
   </div>
 </div>
 
-<h2>配置与文件</h2>
+<h2>任务守卫：配置与文件</h2>
 <table>
   <tr><th>项</th><th>默认</th><th>说明</th></tr>
   <tr><td><code>X_RAIL_IDLE_STOP_MS</code></td><td>240000</td><td>连续无产出的中止阈值；想更灵敏设 120000，想容忍安静长构建设 600000。</td></tr>
@@ -346,9 +346,101 @@
   <tr><td><code>guard.json</code></td><td>—</td><td>续跑计数与语义指纹；只由 <code>xr guard set</code> 写。</td></tr>
 </table>
 
+
+<h2>模型恢复插件：另一条独立的守卫</h2>
+<p>只做“模型选择”这一件事：不重试、不改写提示、不写用户配置。Pi 决定要不要重试，插件只决定“这次用哪个模型”。</p>
+
+<div class="flow">
+
+  <div class="step">
+    <div class="phase">注册</div>
+    <div class="card">
+      <h3>注册虚拟模型 <code>model-recovery/auto</code></h3>
+      <p>只在配置有效时注册；链 1–3 个<strong>物理</strong>模型，去重，不能指向虚拟模型自己。没有配置时插件只提供 <code>/model-recovery status</code>，不影响普通模型。</p>
+      <div class="branch s"><b>配置无效</b>（JSON 坏、链空、重复模型、cooldown 非正）→ 明确报错，不注册、不猜测。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">每次请求</div>
+    <div class="card">
+      <h3><code>route()</code> 按四种原因选模型</h3>
+      <table>
+        <tr><th>原因</th><th>选择</th><th>写状态</th></tr>
+        <tr><td><code>user</code></td><td>冷却已过 → 链首；未过 → 当前模型</td><td>是（新请求链）</td></tr>
+        <tr><td><code>continuation</code></td><td>沿用最近成功的模型</td><td>否</td></tr>
+        <tr><td><code>retry</code></td><td>从失败模型往后一个，不绕回</td><td>是</td></tr>
+        <tr><td><code>direct</code></td><td>按请求指定的模型</td><td>否</td></tr>
+      </table>
+      <div class="branch s"><b>卡点</b>：链尾再失败 → 终止错误，不再发物理请求；鉴权/余额/权限 → 终止，不换链。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">失败文案</div>
+    <div class="card">
+      <h3><code>message_end</code>：只修四类网关文案</h3>
+      <p>命中四类已知文案（账号池暂无可用账号、gateway_concurrency_limit、The service is busy、Upstream stream ended prematurely）时，保留原文、追加标记和一句宿主认识的暂时故障文案。</p>
+      <div class="branch b"><b>实测结论</b>：失败轮 <code>ctx.model</code> 是虚拟模型（<code>model-recovery/auto</code>），标记能写进去；但只有追加了宿主认识的那句话，Pi 才会真的重试。</div>
+      <div class="branch s"><b>不改写</b>：鉴权、余额、权限、未知错误一律不动，也不加“服务繁忙”。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">上下文溢出</div>
+    <div class="card">
+      <h3>沿用失败模型，不消耗故障链</h3>
+      <p>Pi 的 <code>StopReason</code> 只有 <code>length</code>，不存在 <code>context_length_exceeded</code>。判断改为：<code>length</code>，或 <code>error</code> 且文案含上下文/令牌关键词。</p>
+      <div class="branch w"><b>避免</b>：把“输出被截断”误当模型故障，切到未必更好的模型。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="phase">冷却</div>
+    <div class="card">
+      <h3>只影响下一条真实用户输入</h3>
+      <p>切换后进入冷却（默认 10 分钟）；冷却期内用户继续说话仍用当前模型；冷却结束后下一条用户消息回链首。任务自动继续不触发探测，不会自己切回去。</p>
+    </div>
+  </div>
+
+</div>
+
+<h2>模型恢复插件：配置与边界</h2>
+<table>
+  <tr><th>项</th><th>默认</th><th>说明</th></tr>
+  <tr><td><code>chain</code></td><td>必填</td><td>1–3 个物理模型；去重；不能是 <code>model-recovery/auto</code> 自己。</td></tr>
+  <tr><td><code>cooldownMs</code></td><td>600000</td><td>只作用于下一条用户消息；结束任务不会触发回切。</td></tr>
+  <tr><td><code>gatewayCompatibility</code></td><td>true</td><td>只给四类已知网关文案加标记，不改写其他错误。</td></tr>
+  <tr><td>配置文件</td><td><code>&lt;agent-dir&gt;/model-recovery.json</code></td><td>可用 <code>PI_MODEL_RECOVERY_CONFIG</code> 覆盖；插件只读，不创建不修改。</td></tr>
+  <tr><td>宿主 retry</td><td>不改</td><td>建议 <code>maxRetries = 链长 - 1</code>，由你自行应用。</td></tr>
+</table>
+
+<div class="two" style="margin-top:16px">
+  <div class="panel">
+    <h3>不会</h3>
+    <ul>
+      <li>不自建重试引擎、不加定时器、不保存跨会话的“当前模型”。</li>
+      <li>不改写提示词、不替换 Pi 的重试设置。</li>
+      <li>不写用户配置、不读凭据。</li>
+      <li>不把鉴权/余额/权限/未知错误当暂时故障。</li>
+      <li>不与任务守卫共享状态；子代理会话里也不替它做选择。</li>
+    </ul>
+  </div>
+  <div class="panel ok">
+    <h3>会</h3>
+    <ul>
+      <li>按 Pi 给的请求原因选择链上模型，并只前进不绕回。</li>
+      <li>把“为什么换模型”用一句话通知出来。</li>
+      <li>终止错误用不含暂时故障词的文案，避免再次触发重试。</li>
+      <li>只读展示配置与宿主重试设置。</li>
+      <li>对四类网关文案做最小兼容，保留原文。</li>
+    </ul>
+  </div>
+</div>
+
 <footer>
-  图的依据是当前代码，不是设计稿：<code>x-run-guard.ts</code> 的 <code>guardBoundary</code> 顺序、<code>guard-core.ts</code> 的 <code>shouldContinue</code> / <code>idleExpired</code>、<code>xr inspect</code> 的 reason 列表。
-  未验证：真实静默满阈值的中止路径（探针未跑满时长）。
+  图的依据是当前代码，不是设计稿：<code>x-run-guard.ts</code> 的 <code>guardBoundary</code> 顺序、<code>guard-core.ts</code> 的 <code>shouldContinue</code> / <code>idleExpired</code> / <code>isContextRecoveryStop</code>、<code>xr inspect</code> 的 reason 列表，以及 <code>scripts/test-model-recovery-marker.mjs</code> 的实测结果。
+  未验证：真实静默满 240 秒的中止路径（探针未跑满时长）；真实网关文案与余额/鉴权在真实宿主的行为（插件侧只保证不改写、不换链）。
 </footer>
 
 </div>
