@@ -133,6 +133,7 @@ export interface InspectSnapshot {
   stale_units: string[];
   unresolved_ops: string[];
   pending_workers: string[];
+  binding: { session_id: string; generation: number; lease: string };
   receipt_status: "missing" | "valid" | "stale" | "invalid";
   acceptance_status: { total: number; covered: number };
   reasons: string[];
@@ -143,8 +144,13 @@ export function validInspectSnapshot(value: unknown, runId: string): value is In
   if (typeof value !== "object" || value === null) return false;
   const item = value as Record<string, unknown>;
   const acceptance = item.acceptance_status;
+  const binding = item.binding as Record<string, unknown> | undefined;
   return item.schema_version === 1 && item.run_id === runId
     && ["managed", "legacy", "invalid"].includes(String(item.mode))
+    && typeof binding === "object" && binding !== null
+    && typeof binding.session_id === "string"
+    && typeof binding.generation === "number"
+    && typeof binding.lease === "string"
     && typeof item.phase === "string"
     && typeof item.automation_allowed === "boolean"
     && typeof item.done_met === "boolean"
@@ -193,13 +199,15 @@ export function xrPath(cwd: string): string | null {
   return null;
 }
 
-export function refreshCapsule(cwd: string): void {
+export function refreshCapsule(cwd: string): boolean {
   const bin = xrPath(cwd);
-  if (!bin) return;
+  if (!bin) return false;
   try {
     execFileSync(bin, ["capsule", "--repo", cwd], { stdio: "ignore" });
+    return true;
   } catch {
-    // 胶囊失败不能挡住压缩或续跑。
+    // 胶囊失败不能挡住压缩或续跑，但必须让调用方知道没刷新成功。
+    return false;
   }
 }
 
@@ -228,8 +236,24 @@ export function loadGuardMemory(dir: string): GuardMemory {
   }
 }
 
-export function saveGuardMemory(dir: string, memory: GuardMemory): void {
-  writeAtomic(guardMemoryPath(dir), `${JSON.stringify(memory)}\n`);
+/** 写入必须走 xr，保证在运行锁内且带代次校验；扩展不直接改运行目录状态。 */
+export function saveGuardMemory(identity: HostIdentity, memory: GuardMemory): boolean {
+  const bin = xrPath(identity.workspace);
+  if (!bin) return false;
+  try {
+    execFileSync(bin, [
+      "--repo", identity.workspace, "--run-id", identity.runId,
+      "--session", identity.sessionId, "--generation", String(identity.generation),
+      "guard", "set",
+      "--continues", String(memory.continues),
+      "--stalled", String(memory.stalled),
+      "--fingerprint", memory.fingerprint,
+      ...(memory.boundaryNonce ? ["--boundary-nonce", memory.boundaryNonce] : []),
+    ], { stdio: "ignore", timeout: 5_000 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export interface BoundaryMark {

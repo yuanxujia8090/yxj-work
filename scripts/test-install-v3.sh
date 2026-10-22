@@ -13,12 +13,13 @@ bash "$INSTALL" --home "$tmp" >"$tmp/apply.txt"
 [[ -L "$tmp/.pi/agent/skills/x-handoff" ]] || fail '缺少 x-handoff 技能软链'
 [[ -L "$tmp/.pi/agent/skills/x-worktree" ]] || fail '缺少 x-worktree 技能软链'
 [[ -L "$tmp/.pi/agent/skills/x-self-check" ]] || fail '缺少 x-self-check 技能软链'
-[[ -f "$tmp/.pi/agent/extensions/x-rail/x-failover.ts" ]] || fail '缺少 x-failover 扩展'
+[[ ! -f "$tmp/.pi/agent/extensions/x-rail/x-failover.ts" ]] || fail 'v4 安装不应加载旧 failover'
 [[ -f "$tmp/.pi/agent/extensions/x-rail/file-io.ts" ]] || fail '缺少扩展文件写入模块'
-[[ -f "$tmp/.pi/agent/extensions/x-rail/x-run-guard.ts" ]] || fail '缺少内部 guard 模块'
+[[ -f "$tmp/.pi/agent/extensions/x-rail/x-run-guard.ts" ]] || fail '缺少任务守卫入口'
+[[ -f "$tmp/.pi/agent/extensions/x-rail/host-events.ts" ]] || fail '缺少宿主事件模块'
 manifest="$(cat "$tmp/.pi/agent/extensions/x-rail/package.json")"
-[[ "$manifest" == *'"./x-failover.ts"'* ]] || fail '清单缺少单一入口'
-[[ "$manifest" != *'"./x-run-guard.ts"'* ]] || fail '清单仍加载第二入口'
+[[ "$manifest" == *'"./x-run-guard.ts"'* ]] || fail '清单缺少任务守卫入口'
+[[ "$manifest" != *'"./x-failover.ts"'* ]] || fail '清单仍加载旧 failover'
 bash "$INSTALL" --home "$tmp" >"$tmp/again.txt"
 grep -q '已是目标软链' "$tmp/again.txt"
 grep -q '扩展未变化' "$tmp/again.txt"

@@ -141,14 +141,9 @@ export function registerGuardLifecycle(
   });
   pi.on("session_before_compact", async (event, ctx) => {
     if (!bound) return;
-    refreshCapsule(ctx.cwd);
-    const capsule = readCapsule(bound.dir) || `run ${bound.runId}：胶囊缺失，先执行 xr capsule。`;
-    guardEvent("compaction", { supplement: false });
-    return { compaction: {
-      summary: compactText(capsule, null),
-      firstKeptEntryId: event.preparation.firstKeptEntryId,
-      tokensBefore: event.preparation.tokensBefore,
-    } };
+    // 不覆盖宿主摘要：只刷新胶囊并记录，摘要仍由 Pi 生成，胶囊留作补充。
+    const refreshed = refreshCapsule(ctx.cwd);
+    guardEvent("compaction", { supplement: false, capsule: refreshed, firstKeptEntryId: event.preparation.firstKeptEntryId });
   });
 }
 
@@ -178,6 +173,13 @@ export async function guardBoundary(event: AgentBeforeSettleEvent, ctx: Extensio
   if (!snap || snap.mode !== "managed") {
     const why = !snap ? "检查器无结果或超时" : `运行模式 ${snap.mode}：${snap.reasons.join(",") || "不可自动续跑"}`;
     return stopWithHandoff(ctx, inherited, why);
+  }
+  // 被接管或换过代次：旧会话不得继续推进，也不写状态。
+  if (snap.binding.session_id !== bound.sessionId || snap.binding.generation !== bound.generation) {
+    guardEvent("stale-binding", { bound: bound.generation, current: snap.binding.generation });
+    ctx.ui.notify(`本会话代次已失效（${bound.generation} → ${snap.binding.generation}），停止自动续跑。`, "warning");
+    bound = null;
+    return;
   }
   if (snap.pending_workers.length > 0) {
     // 子代理还在跑：不重复派发、不计数、不续接，等它的结构化通知。
@@ -216,7 +218,11 @@ export async function guardBoundary(event: AgentBeforeSettleEvent, ctx: Extensio
     guardEvent("boundary", { choice, nonce: mark.nonce });
     memory.boundaryNonce = mark.nonce;
   }
-  saveGuardMemory(bound.dir, { continues: memory.continues + 1, stalled, fingerprint, boundaryNonce: memory.boundaryNonce });
+  // 计数只经 xr 落盘；写失败就停，避免内存与磁盘分叉后无限续跑。
+  const identity = boundIdentity();
+  if (!identity || !saveGuardMemory(identity, { continues: memory.continues + 1, stalled, fingerprint, boundaryNonce: memory.boundaryNonce })) {
+    return stopWithHandoff(ctx, inherited, "续跑计数写不进去（xr guard set 失败）");
+  }
   guardEvent("resume", {});
   const entries: SessionBoundaryDraft[] = [...inherited];
   if (choice === "compact") {

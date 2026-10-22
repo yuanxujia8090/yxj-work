@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   CHAIN_EXHAUSTED,
   MISSING_FAILED,
+  NOT_RETRYABLE,
   TRANSIENT_MARKER,
   decideRequest,
   emptyState,
@@ -135,6 +136,27 @@ test("暂时性 retry：链尾耗尽返回终止错误且不再发请求", () =>
   assert.equal(result.error, CHAIN_EXHAUSTED);
   assert.equal(/busy|timeout|prematurely|concurrency/i.test(result.error), false, "终止错误不能被宿主当暂时故障");
 });
+
+for (const [name, text] of [
+  ["鉴权", "401 invalid_api_key"],
+  ["余额", "余额不足，请充值"],
+  ["权限", "permission_denied"],
+] as Array<[string, string]>) {
+  test(`${name}错误不换链，交给宿主结束`, () => {
+    const result = decideRequest({
+      reason: "retry",
+      config,
+      state: emptyState(),
+      failed: { provider: "local-a", model: "fixture-a" },
+      failedText: text,
+      now: 1000,
+    });
+    assert.equal(result.action, "fail");
+    if (result.action !== "fail") return;
+    assert.equal(result.error, NOT_RETRYABLE);
+    assert.equal(result.state, undefined, "不换链就不该写新状态");
+  });
+}
 
 test("上下文溢出 retry 沿用失败模型，不消耗故障链", () => {
   const state = { schema: 1 as const, activeIndex: 1, cooldownUntil: 601_000, attempted: ["local-a/fixture-a"] };

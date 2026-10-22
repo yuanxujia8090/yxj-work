@@ -81,6 +81,7 @@ export interface DecideInput {
   state: BranchState;
   now: number;
   failed?: { provider?: string; model?: string } | null;
+  failedText?: string;
   contextRecovery?: boolean;
 }
 
@@ -90,6 +91,7 @@ export type DecideResult =
 
 export const CHAIN_EXHAUSTED = "model-recovery: 配置链已用尽，不再发起物理请求";
 export const MISSING_FAILED = "model-recovery: 缺少失败模型信息，无法安全换链";
+export const NOT_RETRYABLE = "model-recovery: 该错误不由插件换链处理";
 
 function clampIndex(index: number, length: number): number {
   return index >= 0 && index < length ? index : 0;
@@ -129,6 +131,10 @@ export function decideRequest(input: DecideInput): DecideResult {
   }
   if (!input.failed || (!input.failed.provider && !input.failed.model)) {
     return { action: "fail", error: MISSING_FAILED };
+  }
+  // 鉴权、余额、权限类不换链：换模型只会绕过费用或凭据问题。
+  if (input.failedText && NON_TRANSIENT.some((token) => input.failedText!.includes(token))) {
+    return { action: "fail", error: NOT_RETRYABLE };
   }
   const failedKey = `${input.failed.provider ?? ""}/${input.failed.model ?? ""}`;
   const failedIndex = config.chain.findIndex((entry) => keyOf(entry) === failedKey);

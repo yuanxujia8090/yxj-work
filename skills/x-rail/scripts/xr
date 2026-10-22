@@ -1387,10 +1387,26 @@ def source_ref(repo: Path, raw: str) -> str:
     return f"{raw}#sha256:{digest}"
 
 
-def source_ok(repo: Path, stored: str) -> tuple[bool, str]:
+def source_ok(repo: Path, stored: str, run: Path | None = None) -> tuple[bool, str]:
     if stored.startswith("session:"):
-        ok = bool(re.fullmatch(r"session:[A-Za-z0-9_-]+#entry:[A-Za-z0-9_-]+", stored))
-        return ok, "" if ok else "source 不合法"
+        # 会话来源不能只看格式：必须有对应的审查会话副本在 notes/ 里。
+        match = re.fullmatch(r"session:([A-Za-z0-9_-]+)#entry:[A-Za-z0-9_-]+", stored)
+        if not match:
+            return False, "source 不合法"
+        if run is None:
+            return False, "session 来源需要运行目录"
+        session_id = match.group(1)
+        for item in ledger_rows(run):
+            if item.get("observer") != session_id or not item.get("session_path"):
+                continue
+            try:
+                saved = (run / item["session_path"]).resolve()
+                saved.relative_to((run / "notes").resolve())
+            except (OSError, ValueError):
+                continue
+            if saved.is_file() and item.get("session_hash"):
+                return True, ""
+        return False, "session 来源没有对应审查会话证据"
     if "#sha256:" not in stored:
         return False, "source 缺摘要"
     rel, digest = stored.rsplit("#sha256:", 1)
@@ -1658,7 +1674,7 @@ def inspect_data(repo: Path, run: Path, include_receipt: bool = True) -> dict:
     covered = 0
     by_id = {row["id"]: row for row in rows}
     for item in acc:
-        ok, why = source_ok(repo, item["source"])
+        ok, why = source_ok(repo, item["source"], run)
         ids = [part.strip() for part in item["units"].split(",") if part.strip()]
         matched = []
         for unit_id in ids:
@@ -1763,6 +1779,30 @@ def cmd_inspect(args: argparse.Namespace) -> None:
     say(json.dumps(snap, ensure_ascii=False))
     if snap["mode"] == "invalid":
         raise SystemExit(2)
+
+
+def cmd_guard(args: argparse.Namespace) -> None:
+    """守卫的续跑计数与阻塞指纹：必须在运行锁内写，扩展不得直接改运行目录。"""
+    if args.guard_verb != "set":
+        die("用法：xr guard set --continues N --stalled N --fingerprint F [--boundary-nonce N]")
+    repo = repo_of(args)
+    run = run_dir(repo)
+    with run_lock(run):
+        path = run / "guard.json"
+        data: dict[str, object] = {}
+        if path.is_file():
+            try:
+                loaded = json.loads(path.read_text())
+                if isinstance(loaded, dict):
+                    data = loaded
+            except json.JSONDecodeError:
+                data = {}
+        data.update({"schema": 1, "continues": args.continues, "stalled": args.stalled, "fingerprint": args.fingerprint})
+        if args.boundary_nonce:
+            data["boundaryNonce"] = args.boundary_nonce
+        atomic_write_text(path, json.dumps(data, ensure_ascii=False) + "\n")
+        event(run, {"type": "guard", "continues": args.continues, "stalled": args.stalled})
+    say(f"ok guard {args.continues} {args.stalled}")
 
 
 def cmd_acceptance_set(args: argparse.Namespace) -> None:
@@ -1960,6 +2000,14 @@ def build() -> argparse.ArgumentParser:
     verify.add_argument("id")
     verify.add_argument("--timeout", type=int)
     verify.set_defaults(func=cmd_verify)
+    guard = sub.add_parser("guard")
+    guard_sub = guard.add_subparsers(dest="guard_verb")
+    guard_set = guard_sub.add_parser("set")
+    guard_set.add_argument("--continues", type=int, required=True)
+    guard_set.add_argument("--stalled", type=int, required=True)
+    guard_set.add_argument("--fingerprint", required=True)
+    guard_set.add_argument("--boundary-nonce", default=None)
+    guard_set.set_defaults(func=cmd_guard)
     evidence = sub.add_parser("evidence")
     evidence_sub = evidence.add_subparsers(dest="evidence_verb")
     record = evidence_sub.add_parser("record")

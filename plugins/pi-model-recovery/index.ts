@@ -20,6 +20,18 @@ import {
   type RecoveryConfig,
 } from "./decide.ts";
 
+function failedTextOf(message: unknown): string {
+  const item = message as { errorMessage?: unknown; content?: unknown } | undefined;
+  if (typeof item?.errorMessage === "string") return item.errorMessage;
+  if (Array.isArray(item?.content)) {
+    return item.content
+      .filter((part): part is { type: string; text?: string } => typeof part === "object" && part !== null)
+      .map((part) => part.text ?? "")
+      .join("\n");
+  }
+  return "";
+}
+
 export const PROVIDER = "model-recovery";
 export const MODEL_ID = "auto";
 export const MODEL_NAME = "Model Recovery (auto)";
@@ -127,6 +139,7 @@ export default function modelRecovery(pi: ExtensionAPI): void {
         state: parseState(request.state ?? current),
         now: Date.now(),
         failed,
+        failedText: failedTextOf(request.failed?.message),
         contextRecovery,
       });
       if (decision.action === "fail") {

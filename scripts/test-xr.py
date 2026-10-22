@@ -330,6 +330,31 @@ class XrTests(unittest.TestCase):
         self.assertIn("缺少独立审查", inspected["reasons"])
         self.assertNotEqual(run(self.repo, "finish").returncode, 0)
 
+    def test_session_acceptance_source_requires_saved_evidence(self):
+        run_id = self.init()
+        self._finish_pair()
+        (self.repo / "req.md").write_text("需求：会话来源\n")
+        self.assertEqual(run(self.repo, "acceptance", "set", "A1", "会话来源", "--source",
+                             "session:reviewer-session#entry:e1", "--units", "i").returncode, 0)
+        run_dir = self.repo / ".work-docs/runs" / run_id
+        # 只有格式，没有审查会话副本：不算覆盖。
+        before = parse_json(run(self.repo, "inspect", "--json"))
+        self.assertFalse(before["done_met"])
+        self.assertTrue(any("session" in reason for reason in before["reasons"]), before["reasons"])
+        # 造一份真实审查证据后，同一来源才算覆盖。
+        self.assertEqual(run(self.repo, "plan", "add", "r", "审查", "--deps", "i", "--files", "req.md",
+                             "--kind", "review", "--verify-kind", "review").returncode, 0)
+        run(self.repo, "next")
+        report = self.repo / "review.md"
+        report.write_text("reviewer-session")
+        reviewer = self.repo / "review-session.jsonl"
+        reviewer.write_text(json.dumps({"type": "session", "id": "reviewer-session", "cwd": str(self.repo.resolve())}) + "\n" +
+                            json.dumps({"type": "message", "message": {"role": "assistant", "content": [{"type": "text", "text": "reviewer-session"}]}}) + "\n")
+        self.assertEqual(run(self.repo, "evidence", "record", "r", "--kind", "review", "--report", str(report),
+                             "--observer", str(reviewer), "--record", "host:independent-review").returncode, 0)
+        after = parse_json(run(self.repo, "inspect", "--json"))
+        self.assertFalse(any("session" in reason for reason in after["reasons"]), after["reasons"])
+
     def test_overlap_verify_done_and_fail(self):
         self.init()
         (self.repo / "src").mkdir()
