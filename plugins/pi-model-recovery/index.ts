@@ -161,9 +161,11 @@ export default function modelRecovery(pi: ExtensionAPI): void {
   });
 
   // 只处理真正失败的 assistant 消息；不改未知/鉴权/余额文案。
-  pi.on("message_end", async (event) => {
+  pi.on("message_end", async (event, ctx) => {
     const config = active;
     if (!config?.gatewayCompatibility) return;
+    // 只处理选中本虚拟模型的会话；普通物理模型会话一律不改写。
+    if (ctx.model?.provider !== PROVIDER || ctx.model.id !== MODEL_ID) return;
     const message = event.message as { role?: string; stopReason?: string; errorMessage?: string } | undefined;
     if (!message || message.role !== "assistant" || !message.stopReason || message.stopReason === "stop") return;
     const text = message.errorMessage ?? "";

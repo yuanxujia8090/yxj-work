@@ -29,7 +29,8 @@ dest = pathlib.Path(sys.argv[1])
 xr = json.loads((dest / "x-rail/manifest.json").read_text())
 plugin = json.loads((dest / "model-recovery/manifest.json").read_text())
 assert xr["product"] == "x-rail" and plugin["product"] == "model-recovery"
-assert xr["entry"].startswith("skills/x-rail/") and plugin["entry"].startswith("plugins/")
+assert xr["entry"] == "SKILL.md" and plugin["entry"] == "index.ts", (xr["entry"], plugin["entry"])
+assert (dest / "x-rail" / xr["entry"]).is_file() and (dest / "model-recovery" / plugin["entry"]).is_file()
 assert xr["source_commit"] and plugin["source_commit"] == xr["source_commit"]
 assert xr["tree_digest"].startswith("sha256:") and plugin["tree_digest"].startswith("sha256:")
 overlap = set(xr["files"]) & set(plugin["files"])

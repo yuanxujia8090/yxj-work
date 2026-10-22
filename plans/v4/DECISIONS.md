@@ -102,3 +102,14 @@
 - 打包选型：只导出 `skills/x-rail` 与 `plugins/pi-model-recovery`，排除 `node_modules`、`plans/`、`.work-docs`、凭据、`.pyc` 与旧 failover 入口（`x-failover.ts`、`failover.test.ts`）。导出到已存在目录一律拒绝，不做备份覆盖。
 - 未选：把两个产物合成一个包，或让包内附带用户配置样例自动写入。理由：产物独立性是用户明确要求，自动写配置会改变用户环境。
 - 已知取舍：manifest 的来源提交取自当前 `git rev-parse HEAD`；工作区未提交时导出会把未提交改动打进去，但 manifest 仍标 HEAD。需要严格可复现时先提交再导出。
+
+## 2026-10-22 独立审查后修订
+
+- 审查由另一上下文执行（报告在 `/tmp/v4-review/report.md`），结论“有条件可交付”。5 条阻塞全部修复并复测，不保留“已知问题待办”。
+- 压缩选型改回宿主主导：不再返回自制 compaction，只刷新 `capsule.md` 并记录事件。理由：用胶囊覆盖 Pi 摘要会丢掉真实对话细节，而胶囊本来就是补充材料。
+- 运行目录状态（`guard.json`）改由 `xr guard set` 在运行锁内写，并校验 session/generation。扩展只读不写，写失败即停。
+- `session:` 验收来源必须有对应的审查会话副本与摘要；只匹配 `session:...#entry:...` 格式不算证据。
+- 守卫续跑前比对 `inspect.binding` 与本会话绑定，被接管就停；`done_met` 时由守卫调用 `xr finish`，失败只记录不假装完成。
+- 安装清单入口统一为 `x-run-guard.ts`；旧 failover 源码保留在仓库，但既不进安装清单也不进导出包。
+- 插件网关标记只作用于选中虚拟模型的会话；鉴权/余额/权限错误返回 `NOT_RETRYABLE`，不换链。
+- 已知未验证边界（写进 05，不写进结论）：真实网关错误分类、工具副作用只执行一次、子代理等待探针、200 次上限、压缩摘要路径、`worker_started` 可否被模型伪造。

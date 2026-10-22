@@ -187,6 +187,13 @@ export async function guardBoundary(event: AgentBeforeSettleEvent, ctx: Extensio
     guardEvent("wait-worker", { workers: snap.pending_workers });
     return;
   }
+  if (snap.done_met) {
+    const identity = boundIdentity();
+    const finished = identity ? finishRun(identity) : false;
+    guardEvent("finish", { ok: finished });
+    ctx.ui.notify(finished ? `run ${bound.runId} 判据已满足，已生成收据。` : `run ${bound.runId} 判据已满足，但收据生成失败，请看 handoff。`, finished ? "info" : "warning");
+    return;
+  }
   const memory = loadGuardMemory(bound.dir);
   const fingerprint = unitsFingerprint(bound.dir);
   const stalled = memory.continues === 0 ? 0 : nextStall(memory.fingerprint, fingerprint, memory.stalled);
@@ -243,6 +250,20 @@ function continueMessage(snap: InspectSnapshot, base: string): string {
     next ? `下一步：xr next（当前 ${next}）` : "下一步：xr next",
     `不要重做已有 VERIFIED 单元；没有可做项就走 review 或 land。`,
   ].join("\n");
+}
+
+/** 判据满足时由守卫收口；失败只记录，不假装完成。 */
+function finishRun(identity: HostIdentity): boolean {
+  const bin = xrPath(identity.workspace);
+  if (!bin) return false;
+  try {
+    execFileSync(bin, ["--repo", identity.workspace, "--run-id", identity.runId,
+      "--session", identity.sessionId, "--generation", String(identity.generation), "finish"],
+      { stdio: "ignore", timeout: 10_000 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** handoff 写不下去也要停：宁可暂停，不带着失效状态继续跑。 */

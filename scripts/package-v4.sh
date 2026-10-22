@@ -36,14 +36,20 @@ list_files() {
 digest_tree() {
   # 逐文件哈希再汇总，避免依赖 tar 的元数据差异。
   local base="$1"
-  (cd "$ROOT/$base" && list_files "$base" | while IFS= read -r file; do
-    printf '%s  %s\n' "$(shasum -a 256 "$file" | cut -d' ' -f1)" "$file"
-  done | shasum -a 256 | cut -d' ' -f1)
+  (cd "$ROOT/$base" && list_files "$base" | python3 -c '
+import hashlib, sys
+h = hashlib.sha256()
+for line in sys.stdin:
+    name = line.rstrip("\n")
+    digest = hashlib.sha256(open(name, "rb").read()).hexdigest()
+    h.update(f"{digest}  {name}\n".encode())
+print(h.hexdigest())
+')
 }
 
 assert_clean() {
   local base="$1" bad
-  bad="$(list_files "$base" | grep -E '(^|/)(\.work-docs|plans|notes|sessions|auth\.json|\.env|node_modules)(/|$)|\.pyc$' || true)"
+  bad="$(list_files "$base" | grep -E '(^|/)(\.work-docs|plans|notes|sessions|auth\.json|node_modules)(/|$)|\.pyc$|(^|/)\.env|\.pem$|\.key$' || true)"
   [[ -z "$bad" ]] || { printf 'package: %s 含不该导出的文件：\n%s\n' "$base" "$bad" >&2; exit 1; }
 }
 
@@ -87,8 +93,8 @@ manifest() {
     printf '  ]\n}\n'
   } > "$out"
 }
-manifest x-rail skills/x-rail/SKILL.md "$XR_DIGEST" "$XR_FILES"
-manifest model-recovery plugins/pi-model-recovery/index.ts "$PLUGIN_DIGEST" "$PLUGIN_FILES"
+manifest x-rail SKILL.md "$XR_DIGEST" "$XR_FILES"
+manifest model-recovery index.ts "$PLUGIN_DIGEST" "$PLUGIN_FILES"
 
 printf 'package: 已导出到 %s\n' "$DEST"
 printf '  x-rail: %s 个文件，tree sha256:%s\n' "$(count "$XR_FILES")" "$XR_DIGEST"
