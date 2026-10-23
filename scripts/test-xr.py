@@ -302,7 +302,7 @@ class XrTests(unittest.TestCase):
         reviewer = self.repo / "review-session.jsonl"
         review_report.write_text("reviewer-session")
         reviewer.write_text(json.dumps({"type": "session", "id": "reviewer-session", "cwd": str(self.repo.resolve())}) + "\n" +
-                            json.dumps({"type": "message", "message": {"role": "assistant", "content": [{"type": "text", "text": review_report.read_text()}]}}) + "\n")
+                            json.dumps({"type": "message", "id": "e1", "message": {"role": "assistant", "content": [{"type": "text", "text": review_report.read_text()}]}}) + "\n")
         accepted = run(self.repo, "evidence", "record", "review", "--kind", "review", "--report", str(review_report), "--inputs", "README.md", "--observer", str(reviewer), "--record", "host:independent-review")
         self.assertEqual(accepted.returncode, 0, accepted.stdout + accepted.stderr)
         self.assertEqual(run(self.repo, "done", "review").returncode, 0)
@@ -387,11 +387,17 @@ class XrTests(unittest.TestCase):
         report.write_text("reviewer-session")
         reviewer = self.repo / "review-session.jsonl"
         reviewer.write_text(json.dumps({"type": "session", "id": "reviewer-session", "cwd": str(self.repo.resolve())}) + "\n" +
-                            json.dumps({"type": "message", "message": {"role": "assistant", "content": [{"type": "text", "text": "reviewer-session"}]}}) + "\n")
+                            json.dumps({"type": "message", "id": "e1", "message": {"role": "assistant", "content": [{"type": "text", "text": "reviewer-session"}]}}) + "\n")
         self.assertEqual(run(self.repo, "evidence", "record", "r", "--kind", "review", "--report", str(report),
                              "--observer", str(reviewer), "--record", "host:independent-review").returncode, 0)
         after = parse_json(run(self.repo, "inspect", "--json"))
         self.assertFalse(any("session 来源" in reason for reason in after["reasons"]), after["reasons"])
+        # 编号必须真实存在于审查会话：不存在的 entry 不能借用同一份证据通过。
+        self.assertEqual(run(self.repo, "acceptance", "set", "A1", "会话来源", "--source",
+                             "session:reviewer-session#entry:missing", "--units", "r").returncode, 0)
+        missing = parse_json(run(self.repo, "inspect", "--json"))
+        self.assertFalse(missing["done_met"])
+        self.assertTrue(any("session 来源" in reason for reason in missing["reasons"]), missing["reasons"])
 
     def test_overlap_verify_done_and_fail(self):
         self.init()

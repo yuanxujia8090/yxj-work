@@ -193,6 +193,7 @@ export function xrPath(cwd: string): string | null {
   const candidates = [
     process.env.X_RAIL_XR,
     fileURLToPath(new URL("../scripts/xr", import.meta.url)),
+    fileURLToPath(new URL("../../skills/x-rail/scripts/xr", import.meta.url)),
     path.join(cwd, "skills", "x-rail", "scripts", "xr"),
     path.join(agentDir, "skills", "x-rail", "scripts", "xr"),
     path.join(os.homedir(), ".pi", "agent", "skills", "x-rail", "scripts", "xr"),

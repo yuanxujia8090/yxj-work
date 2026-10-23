@@ -16,7 +16,7 @@ grep -q 'tree sha256:' "$WORK/dry.txt" || fail 'dry-run 缺少摘要'
 bash "$ROOT/scripts/package-v4.sh" --dest "$DEST" >"$WORK/export.txt"
 [[ -f "$DEST/x-rail/manifest.json" ]] || fail '缺少 x-rail manifest'
 [[ -f "$DEST/model-recovery/manifest.json" ]] || fail '缺少 model-recovery manifest'
-[[ -f "$DEST/x-rail/SKILL.md" ]] || fail '缺少 x-rail 入口'
+[[ -f "$DEST/x-rail/skills/x-rail/SKILL.md" ]] || fail '缺少 x-rail 入口'
 [[ -f "$DEST/model-recovery/index.ts" ]] || fail '缺少插件入口'
 
 if bash "$ROOT/scripts/package-v4.sh" --dest "$DEST" >/dev/null 2>&1; then
@@ -29,10 +29,14 @@ dest = pathlib.Path(sys.argv[1])
 xr = json.loads((dest / "x-rail/manifest.json").read_text())
 plugin = json.loads((dest / "model-recovery/manifest.json").read_text())
 assert xr["product"] == "x-rail" and plugin["product"] == "model-recovery"
-assert xr["entry"] == "SKILL.md" and plugin["entry"] == "index.ts", (xr["entry"], plugin["entry"])
+assert xr["entry"] == "skills/x-rail/SKILL.md" and plugin["entry"] == "index.ts", (xr["entry"], plugin["entry"])
 assert (dest / "x-rail" / xr["entry"]).is_file() and (dest / "model-recovery" / plugin["entry"]).is_file()
+assert (dest / "x-rail/package.json").is_file()
+assert (dest / "x-rail/skills/x-rail/SKILL.md").is_file()
+assert [p.name for p in (dest / "x-rail/extensions").glob("*.ts")] == ["x-run-guard.ts"]
+assert (dest / "x-rail/lib/x-rail/host-events.ts").is_file()
 assert xr["source_commit"] and plugin["source_commit"] == xr["source_commit"]
-assert xr["tree_digest"].startswith("sha256:") and plugin["tree_digest"].startswith("sha256:")
+assert xr["source_tree_digest"].startswith("sha256:") and plugin["source_tree_digest"].startswith("sha256:")
 overlap = set(xr["files"]) & set(plugin["files"])
 assert not overlap, f"清单重叠: {overlap}"
 for name, files in (("x-rail", xr["files"]), ("model-recovery", plugin["files"])):

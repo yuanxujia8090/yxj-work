@@ -33,8 +33,9 @@ BACKUP="$PI/v3-backup-$STAMP"
 
 # macOS 自带 bash 3.2 不支持关联数组，用函数代替
 link_of() { printf '%s' "$ROOT/skills/$1"; }
+LIB="$PI/lib/x-rail"
 
-# v4：任务守卫是唯一加载入口；旧 failover 源码保留在仓库，但新安装不加载它。
+# v4：扩展扫描目录只保留单一入口；实现模块放在不扫描的 lib 目录。
 EXT_FILES=(
   constants.ts classify.ts breaker.ts switch.ts compat.ts failback.ts subagent.ts
   file-io.ts store.ts watchdog.ts guard-core.ts run-files.ts host-events.ts x-run-guard.ts
@@ -63,15 +64,21 @@ if [[ "$DRY" -eq 1 ]]; then
   for name in x-rail x-handoff x-worktree x-self-check; do
     note "软链 $SKILLS/$name -> $(link_of "$name")"
   done
+  note "复制 $EXT/$EXT_ENTRY"
   for file in "${EXT_FILES[@]}"; do
-    note "复制 $EXT/$file"
+    [[ "$file" == "$EXT_ENTRY" ]] || note "复制 $LIB/$file"
   done
   note "写入 $EXT/package.json（pi 清单：$EXT_ENTRY 单一入口）"
   note "不修改 models.json、settings.json，不运行 skills-cleanup.sh"
   exit 0
 fi
 
-mkdir -p "$SKILLS" "$EXT"
+mkdir -p "$SKILLS" "$EXT" "$LIB"
+for stale in "$EXT"/*.ts; do
+  [[ -e "$stale" ]] || continue
+  [[ "$(basename "$stale")" == "$EXT_ENTRY" ]] && continue
+  backup_path "$stale"
+done
 for name in x-rail x-handoff x-worktree x-self-check; do
   dest="$SKILLS/$name"
   expect="$(link_of "$name")"
@@ -88,16 +95,24 @@ done
 
 for file in "${EXT_FILES[@]}"; do
   src="$ROOT/skills/x-rail/extensions/$file"
-  dest="$EXT/$file"
+  if [[ "$file" == "$EXT_ENTRY" ]]; then
+    dest="$EXT/$file"
+    tmp="$EXT/.${file}.tmp"
+    printf 'export { default } from "../../lib/x-rail/%s";\n' "$file" > "$tmp"
+  else
+    dest="$LIB/$file"
+    tmp="$dest.tmp"
+    cp "$src" "$tmp"
+  fi
   [[ -f "$src" ]] || { printf 'install: 缺少 %s\n' "$src" >&2; exit 1; }
-  if [[ -f "$dest" ]] && cmp -s "$src" "$dest"; then
-    note "扩展未变化 $dest"
+  if [[ -f "$dest" ]] && cmp -s "$tmp" "$dest"; then
+    rm -f "$tmp"; note "扩展未变化 $dest"
     continue
   fi
   if [[ -e "$dest" || -L "$dest" ]]; then
     backup_path "$dest"
   fi
-  cp "$src" "$dest"
+  mv "$tmp" "$dest"
   note "已安装 $dest"
 done
 

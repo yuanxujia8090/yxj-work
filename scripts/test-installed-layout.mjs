@@ -36,20 +36,27 @@ const check = (name, fn) => {
 };
 
 // 1) 安装到临时 HOME
-const install = spawnSync("bash", [path.join(root, "skills/x-rail/install.sh"), "--home", home], { encoding: "utf8" });
-check("临时 HOME 安装成功", () => assert.equal(install.status, 0, install.stdout + install.stderr));
-
+const pkg = path.join(work, "package");
+const exported = spawnSync("bash", [path.join(root, "scripts/package-v4.sh"), "--dest", pkg], { encoding: "utf8" });
+check("导出正式 x-rail 包", () => assert.equal(exported.status, 0, exported.stdout + exported.stderr));
 const agentDir = path.join(home, ".pi/agent");
-const extDir = path.join(agentDir, "extensions/x-rail");
-const installedXr = path.join(agentDir, "skills/x-rail/scripts/xr");
+const piInstall = spawnSync(pi, ["install", path.join(pkg, "x-rail")], {
+  encoding: "utf8",
+  env: { ...process.env, HOME: home, PI_CODING_AGENT_DIR: agentDir, PI_OFFLINE: "1", PI_TELEMETRY: "0" },
+});
+check("Pi 安装正式包到临时 HOME", () => assert.equal(piInstall.status, 0, piInstall.stdout + piInstall.stderr));
+
+const packageDir = path.join(pkg, "x-rail");
+const extDir = path.join(packageDir, "extensions");
+const installedXr = path.join(packageDir, "skills/x-rail/scripts/xr");
 
 check("安装清单只加载任务守卫入口", () => {
-  const manifest = parseJson(fs.readFileSync(path.join(extDir, "package.json"), "utf8"), "package.json");
+  const manifest = parseJson(fs.readFileSync(path.join(packageDir, "package.json"), "utf8"), "package.json");
   const entries = manifest.pi.extensions;
-  assert.deepEqual(entries, ["./x-run-guard.ts"], JSON.stringify(entries));
+  assert.deepEqual(entries, ["./extensions/x-run-guard.ts"], JSON.stringify(entries));
   assert.ok(fs.existsSync(path.join(extDir, "x-run-guard.ts")));
-  assert.ok(fs.existsSync(path.join(extDir, "host-events.ts")));
-  assert.equal(fs.existsSync(path.join(extDir, "x-failover.ts")), false);
+  assert.ok(fs.existsSync(path.join(packageDir, "lib/x-rail/host-events.ts")));
+  assert.deepEqual(fs.readdirSync(extDir).filter((name) => name.endsWith(".ts")), ["x-run-guard.ts"]);
 });
 
 check("已安装路径下能找到 xr", () => {
@@ -86,7 +93,10 @@ fs.writeFileSync(path.join(agentDir, "models.json"), JSON.stringify({
   },
 }, null, 2) + "\n");
 fs.writeFileSync(path.join(agentDir, "auth.json"), "{}\n");
-fs.writeFileSync(path.join(agentDir, "settings.json"), JSON.stringify({ defaultProvider: "install-probe", defaultModel: "fixture-a", defaultThinkingLevel: "off", retry: { enabled: true, maxRetries: 1, baseDelayMs: 1 } }, null, 2) + "\n");
+const settingsPath = path.join(agentDir, "settings.json");
+const settings = parseJson(fs.readFileSync(settingsPath, "utf8"), "settings.json");
+Object.assign(settings, { defaultProvider: "install-probe", defaultModel: "fixture-a", defaultThinkingLevel: "off", retry: { enabled: true, maxRetries: 1, baseDelayMs: 1 } });
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
 
 const session = randomUUID();
 fs.writeFileSync(path.join(project, "note.md"), "pending\n");
@@ -112,9 +122,8 @@ const env = {
   // 关键：不设 X_RAIL_XR，让守卫只能靠安装布局找 xr。
 };
 const args = [
-  "--mode", "json", "--no-extensions", "--no-skills", "--no-prompt-templates",
+  "--mode", "json", "--no-skills", "--no-prompt-templates",
   "--no-themes", "--no-context-files", "--no-mcp", "--thinking", "off",
-  "--extension", path.join(extDir, "x-run-guard.ts"),
   "--provider", "install-probe", "--model", "fixture-a",
   "--session-id", session,
   "INSTALL_PROBE: reply DONE.",

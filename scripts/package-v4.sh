@@ -53,7 +53,11 @@ assert_clean() {
   [[ -z "$bad" ]] || { printf 'package: %s 含不该导出的文件：\n%s\n' "$base" "$bad" >&2; exit 1; }
 }
 
-XR_FILES="$(list_files skills/x-rail)"
+XR_SOURCE_FILES="$(list_files skills/x-rail)"
+XR_FILES="$(printf '%s\n' "$XR_SOURCE_FILES" | grep -v '^extensions/' | sed 's|^|skills/x-rail/|')"
+XR_FILES="$(printf '%s\n' "$XR_FILES"; printf '%s\n' "$XR_SOURCE_FILES" | grep '^extensions/' | sed 's|^extensions/|lib/x-rail/|')"
+XR_FILES="$(printf '%s\n' "$XR_FILES"; printf '%s\n' extensions/x-run-guard.ts package.json)"
+XR_FILES="$(printf '%s\n' "$XR_FILES" | LC_ALL=C sort -u)"
 PLUGIN_FILES="$(list_files plugins/pi-model-recovery)"
 XR_DIGEST="$(digest_tree skills/x-rail)"
 PLUGIN_DIGEST="$(digest_tree plugins/pi-model-recovery)"
@@ -69,7 +73,7 @@ if ((DRY)); then
   printf 'package dry-run（未写任何文件）\n'
   printf 'dest: %s\n' "$DEST"
   printf 'commit: %s\n' "$COMMIT"
-  printf 'x-rail: skills/x-rail → %s 个文件，入口 skills/x-rail/SKILL.md，tree sha256:%s\n' "$(count "$XR_FILES")" "$XR_DIGEST"
+  printf 'x-rail: Pi 包 → %s 个文件，技能入口 skills/x-rail/SKILL.md，扩展入口 extensions/x-run-guard.ts，tree sha256:%s\n' "$(count "$XR_FILES")" "$XR_DIGEST"
   printf 'plugin: plugins/pi-model-recovery → %s 个文件，入口 plugins/pi-model-recovery/index.ts，tree sha256:%s\n' "$(count "$PLUGIN_FILES")" "$PLUGIN_DIGEST"
   printf '交叉收录: 无\n'
   exit 0
@@ -77,8 +81,29 @@ fi
 
 mkdir -p "$DEST/x-rail" "$DEST/model-recovery"
 while IFS= read -r file; do
-  mkdir -p "$DEST/x-rail/$(dirname "$file")"
-  cp -p "$ROOT/skills/x-rail/$file" "$DEST/x-rail/$file"
+  case "$file" in
+    extensions/x-run-guard.ts)
+      mkdir -p "$DEST/x-rail/extensions"
+      printf 'export { default } from "../lib/x-rail/x-run-guard.ts";\n' > "$DEST/x-rail/$file"
+      ;;
+    package.json)
+      printf '{\n  "name": "x-rail-v4",\n  "private": true,\n  "type": "module",\n  "pi": { "extensions": ["./extensions/x-run-guard.ts"] }\n}\n' > "$DEST/x-rail/package.json"
+      ;;
+    lib/x-rail/*)
+      src="${file#lib/x-rail/}"
+      mkdir -p "$DEST/x-rail/lib/x-rail"
+      cp -p "$ROOT/skills/x-rail/extensions/$src" "$DEST/x-rail/$file"
+      ;;
+    skills/x-rail/*)
+      src="${file#skills/x-rail/}"
+      mkdir -p "$DEST/x-rail/skills/x-rail/$(dirname "$src")"
+      cp -p "$ROOT/skills/x-rail/$src" "$DEST/x-rail/$file"
+      ;;
+    *)
+      mkdir -p "$DEST/x-rail/$(dirname "$file")"
+      cp -p "$ROOT/skills/x-rail/$file" "$DEST/x-rail/$file"
+      ;;
+  esac
 done <<< "$XR_FILES"
 while IFS= read -r file; do
   mkdir -p "$DEST/model-recovery/$(dirname "$file")"
@@ -88,12 +113,12 @@ done <<< "$PLUGIN_FILES"
 manifest() {
   local name="$1" entry="$2" tree="$3" files="$4" out="$DEST/$1/manifest.json"
   {
-    printf '{\n  "schema": 1,\n  "product": "%s",\n  "entry": "%s",\n  "source_commit": "%s",\n  "exported_at": "%s",\n  "tree_digest": "sha256:%s",\n  "files": [\n' "$name" "$entry" "$COMMIT" "$TS" "$tree"
+    printf '{\n  "schema": 1,\n  "product": "%s",\n  "entry": "%s",\n  "source_commit": "%s",\n  "exported_at": "%s",\n  "source_tree_digest": "sha256:%s",\n  "files": [\n' "$name" "$entry" "$COMMIT" "$TS" "$tree"
     printf '%s\n' "$files" | awk 'BEGIN{first=1} {if(!first) printf ",\n"; printf "    \"%s\"", $0; first=0} END{printf "\n"}'
     printf '  ]\n}\n'
   } > "$out"
 }
-manifest x-rail SKILL.md "$XR_DIGEST" "$XR_FILES"
+manifest x-rail skills/x-rail/SKILL.md "$XR_DIGEST" "$XR_FILES"
 manifest model-recovery index.ts "$PLUGIN_DIGEST" "$PLUGIN_FILES"
 
 printf 'package: 已导出到 %s\n' "$DEST"

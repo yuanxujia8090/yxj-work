@@ -1387,15 +1387,32 @@ def source_ref(repo: Path, raw: str) -> str:
     return f"{raw}#sha256:{digest}"
 
 
+def entry_exists(transcript: Path, entry_id: str) -> bool:
+    """#entry: 指向的记录必须真实存在；只校验格式会让任意编号都能当证据。"""
+    try:
+        for line in transcript.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                return False
+            if isinstance(item, dict) and item.get("id") == entry_id:
+                return True
+    except OSError:
+        return False
+    return False
+
+
 def source_ok(repo: Path, stored: str, run: Path | None = None, units: set[str] | None = None) -> tuple[bool, str]:
     if stored.startswith("session:"):
         # 会话来源不能只看格式：必须是覆盖该验收单元的审查证据，且副本在 notes/ 里。
-        match = re.fullmatch(r"session:([A-Za-z0-9_-]+)#entry:[A-Za-z0-9_-]+", stored)
+        match = re.fullmatch(r"session:([A-Za-z0-9_-]+)#entry:([A-Za-z0-9_-]+)", stored)
         if not match:
             return False, "source 不合法"
         if run is None:
             return False, "session 来源需要运行目录"
-        session_id = match.group(1)
+        session_id, entry_id = match.group(1), match.group(2)
         for item in ledger_rows(run):
             if item.get("observer") != session_id or not item.get("session_path"):
                 continue
@@ -1409,6 +1426,8 @@ def source_ok(repo: Path, stored: str, run: Path | None = None, units: set[str] 
             if not saved.is_file() or not item.get("session_hash"):
                 continue
             if file_digest(saved) != item["session_hash"]:
+                continue
+            if not entry_exists(saved, entry_id):
                 continue
             return True, ""
         return False, "session 来源没有对应审查会话证据"
