@@ -33,6 +33,7 @@ let scenario = "basic";
 let parentLaunched = false;
 let statusRequested = false;
 let retryAttempted = false;
+let sideEffectRetryAttempted = false;
 const requests = [];
 const server = http.createServer(async (request, response) => {
   let raw = "";
@@ -52,7 +53,17 @@ const server = http.createServer(async (request, response) => {
     response.end(JSON.stringify({ error: { message: "gateway_concurrency_limit" } }));
     return;
   }
-  if (scenario === "async" && child && !hasResult) toolCalls = [calls("child")];
+  if (scenario === "sideeffect" && !hasResult) toolCalls = [calls("ok")];
+  if (scenario === "sideeffect" && hasResult && !sideEffectRetryAttempted) {
+    sideEffectRetryAttempted = true;
+    response.writeHead(503, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: { message: "gateway_concurrency_limit" } }));
+    return;
+  }
+  if (scenario === "async" && child && !hasResult) {
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    toolCalls = [calls("child")];
+  }
   if (scenario === "async" && !child && !parentLaunched) {
     parentLaunched = true;
     toolCalls = [{ id: "probe_launch", type: "function", function: { name: "subagent", arguments: JSON.stringify({ agent: "probe-child", task: "HOST_PROBE_CHILD: call probe_action child once, then reply CHILD_DONE.", model: "host-probe/fixture-a", async: true, options: { timeoutMs: 30000 } }) } }];
@@ -434,8 +445,15 @@ try {
     assert.equal(statusResult.details.lifecycleStatus.processTerminal.state, "observed");
     assert.ok(asyncEvents.some((event) => event.type === "message_end" && event.message?.customType === "subagent-notify" && JSON.stringify(event.message).includes("CHILD_DONE") && JSON.stringify(event.message).includes(launch.details.runId)), "No correlated completion message in parent JSON stream");
   });
+  const taskLog = jsonl(path.join(asyncRunDir, "events.jsonl"));
+  check("task guard does not resume before child terminal receipt", () => {
+    const startedAt = taskLog.find((event) => event.type === "worker_started")?.ts;
+    const receivedAt = taskLog.find((event) => event.type === "worker_received")?.ts;
+    assert.ok(startedAt && receivedAt && receivedAt >= startedAt, JSON.stringify(taskLog));
+    assert.equal(taskLog.filter((event) => event.type === "resume" && event.ts < receivedAt).length, 0, JSON.stringify(taskLog));
+    assert.equal(taskLog.filter((event) => event.type === "worker_started").length, 1, JSON.stringify(taskLog));
+  });
   check("task guard receives the real child terminal result exactly once", () => {
-    const taskLog = jsonl(path.join(asyncRunDir, "events.jsonl"));
     const started = taskLog.filter((item) => item.type === "worker_started");
     const received = taskLog.filter((item) => item.type === "worker_received");
     assert.equal(started.length, 1, JSON.stringify(taskLog));
@@ -457,8 +475,20 @@ try {
     assert.ok(childSettled);
     assert.ok(launch.at < childSettled.at);
   });
+  scenario = "sideeffect";
+  sideEffectRetryAttempted = false;
+  const sideeffectEventsBefore = events().length;
+  await run("sideeffect", ["--tools", "probe_action"], "HOST_PROBE_SIDEEFFECT: execute probe_action once, then recover.");
+  const sideeffectEventsAfter = events().slice(sideeffectEventsBefore);
+  check("model retry after tool side effect does not replay the tool", () => {
+    const toolCalls = sideeffectEventsAfter.filter((event) => event.type === "tool_call" && event.toolCallId === "probe_ok");
+    const executions = sideeffectEventsAfter.filter((event) => event.type === "execute_enter" && event.mode === "ok");
+    assert.equal(executions.length, 1, JSON.stringify(sideeffectEventsAfter));
+    assert.equal(toolCalls.length, 1, JSON.stringify(sideeffectEventsAfter));
+    assert.equal(requests.filter((request) => request.scenario === "sideeffect").length, 3, "需包含首请求、带工具结果的失败请求和重试请求");
+  });
   check("all parent invocations exit successfully", () => {
-    for (const name of ["basic", "resume", "new", "retry", "async", "guard"]) assert.deepEqual(JSON.parse(fs.readFileSync(path.join(evidence, `${name}.exit.json`))), { code: 0, signal: null });
+    for (const name of ["basic", "resume", "new", "retry", "async", "guard", "sideeffect"]) assert.deepEqual(JSON.parse(fs.readFileSync(path.join(evidence, `${name}.exit.json`))), { code: 0, signal: null });
   });
   check("all Pi processes inherit isolation and connect only to fixture", () => {
     const network = jsonl(env.HOST_PROBE_NETWORK_LOG);
